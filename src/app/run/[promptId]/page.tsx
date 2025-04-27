@@ -19,20 +19,26 @@ export default function PromptRunPage({ params }: PromptRunPageProps) {
   // Access params directly without using React.use()
   const { promptId } = params;
   const router = useRouter();
-  const { getPrompt } = usePromptStore();
+  const promptStore = usePromptStore();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     // Load the prompt
-    const foundPrompt = getPrompt(promptId);
-    
-    if (foundPrompt) {
-      setPrompt(foundPrompt);
+    if (promptStore && typeof promptStore.getPrompt === 'function') {
+      const foundPrompt = promptStore.getPrompt(promptId);
+      
+      if (foundPrompt) {
+        setPrompt(foundPrompt);
+      } else {
+        console.error(`Prompt with ID ${promptId} not found`);
+      }
+    } else {
+      console.error('getPrompt function is not available');
     }
     
     setLoading(false);
-  }, [promptId, getPrompt]);
+  }, [promptId, promptStore]);
   
   const handleReturn = () => {
     router.push('/');
@@ -67,7 +73,7 @@ export default function PromptRunPage({ params }: PromptRunPageProps) {
   
   return (
     <div className="max-w-3xl mx-auto">
-      <CreditHeader />
+      {/* <CreditHeader /> */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">
           Run Prompt

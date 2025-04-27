@@ -4,7 +4,9 @@ import { toast } from 'react-hot-toast';
 import { Prompt, InputField, SonarModel } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
 import { validateInputFields, validateSystemPrompt, createInputField } from '@/lib/promptHelpers';
+import { executePrompt } from '@/lib/sonarApi';
 import Button from '@/components/shared/Button';
+import LoadingIndicator from '@/components/shared/LoadingIndicator';
 
 const PromptCreator: React.FC = () => {
   const router = useRouter();
@@ -18,7 +20,63 @@ const PromptCreator: React.FC = () => {
   ]);
   const [model, setModel] = useState<SonarModel>('sonar-medium-chat');
   const [creditCost, setCreditCost] = useState(25);
+  const [testMode, setTestMode] = useState(false);
+  const [testInputs, setTestInputs] = useState<Record<string, string>>({});
+  const [testOutput, setTestOutput] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaveButton, setShowSaveButton] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setTestInputs(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+  
+  const handleTestPrompt = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error('Please fix the errors before testing');
+      return;
+    }
+    
+    // Check if test inputs are provided
+    const missingFields = inputFields
+      .filter(field => field.required && !testInputs[field.id])
+      .map(field => field.label);
+    
+    if (missingFields.length > 0) {
+      toast.error(`Please fill in required test fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Call the Sonar API
+      const result = await executePrompt(
+        systemPrompt,
+        testInputs,
+        model
+      );
+      
+      // Set the output
+      setTestOutput(result);
+      setShowSaveButton(true);
+      
+      // Show success notification
+      toast.success('Test successful!');
+    } catch (err) {
+      console.error('Error testing prompt:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to test prompt');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -75,6 +133,8 @@ const PromptCreator: React.FC = () => {
     }
     
     try {
+      setIsSaving(true);
+      
       // Create new prompt
       const promptData: Omit<Prompt, 'id' | 'createdAt'> = {
         title,
@@ -82,7 +142,9 @@ const PromptCreator: React.FC = () => {
         systemPrompt,
         inputFields,
         model,
-        creditCost
+        creditCost,
+        // If we've tested the prompt, use the test output as an example
+        exampleOutput: testOutput || undefined
       };
       
       // Add to store
@@ -96,6 +158,8 @@ const PromptCreator: React.FC = () => {
     } catch (error) {
       console.error('Error creating prompt:', error);
       toast.error('Failed to create prompt');
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -106,9 +170,28 @@ const PromptCreator: React.FC = () => {
         <p className="text-sm text-gray-600 mt-1">
           Design a new prompt to add to the marketplace
         </p>
+        <div className="flex mt-2">
+          <button
+            type="button"
+            onClick={() => {
+              setTestMode(false);
+              setTestOutput(null);
+            }}
+            className={`px-3 py-1 text-sm rounded-l-md ${!testMode ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          >
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => setTestMode(true)}
+            className={`px-3 py-1 text-sm rounded-r-md ${testMode ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          >
+            Test
+          </button>
+        </div>
       </div>
       
-      <form onSubmit={handleSubmit} className="p-4 space-y-6">
+      <form onSubmit={testMode ? handleTestPrompt : handleSubmit} className="p-4 space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
           <h3 className="text-md font-medium text-gray-700">Basic Information</h3>
@@ -309,10 +392,112 @@ const PromptCreator: React.FC = () => {
             Cancel
           </Button>
           
-          <Button type="submit">
-            Create Prompt
-          </Button>
+          {testMode ? (
+            <Button 
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center">
+                  <LoadingIndicator size="sm" className="mr-2" />
+                  Testing...
+                </span>
+              ) : (
+                'Test Prompt'
+              )}
+            </Button>
+          ) : (
+            <Button 
+              type="submit"
+              disabled={isSaving || (!testOutput && !showSaveButton)}
+            >
+              {isSaving ? (
+                <span className="flex items-center">
+                  <LoadingIndicator size="sm" className="mr-2" />
+                  Saving...
+                </span>
+              ) : (
+                'Create Prompt'
+              )}
+            </Button>
+          )}
         </div>
+        
+        {/* Test Inputs (shown only in test mode) */}
+        {testMode && (
+          <div className="space-y-4 mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-md font-medium text-gray-700">Test Your Prompt</h3>
+            <p className="text-sm text-gray-500">
+              Fill in the input fields to test how your prompt works before publishing it.
+            </p>
+            
+            <div className="space-y-4">
+              {inputFields.map((field) => (
+                <div key={field.id} className="space-y-1">
+                  <label
+                    htmlFor={`test-${field.id}`}
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    {field.label}{field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  
+                  {field.label.toLowerCase().includes('code') || 
+                   field.placeholder.toLowerCase().includes('code') ? (
+                    <textarea
+                      id={`test-${field.id}`}
+                      name={field.id}
+                      placeholder={field.placeholder}
+                      value={testInputs[field.id] || ''}
+                      onChange={handleTestInputChange}
+                      required={field.required}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      id={`test-${field.id}`}
+                      name={field.id}
+                      placeholder={field.placeholder}
+                      value={testInputs[field.id] || ''}
+                      onChange={handleTestInputChange}
+                      required={field.required}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            {/* Test Output */}
+            {testOutput && (
+              <div className="mt-6 space-y-2">
+                <h4 className="text-sm font-medium text-gray-700">Output Preview</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                  <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner max-h-80 overflow-y-auto">
+                    {testOutput}
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-500">
+                    This output will be saved as an example for users to preview.
+                  </p>
+                  {showSaveButton && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setTestMode(false);
+                        toast.success('Ready to publish! Review and click Create Prompt.');
+                      }}
+                    >
+                      Use This Example & Publish
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );

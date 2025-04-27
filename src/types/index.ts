@@ -7,6 +7,7 @@ export interface Prompt {
   model: SonarModel;
   creditCost: number;
   createdAt: number;
+  exampleOutput?: string;
 }
 
 export interface InputField {
