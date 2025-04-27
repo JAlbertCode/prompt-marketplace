@@ -8,16 +8,16 @@ import PromptForm from '@/components/ui/PromptForm';
 import WebhookDisplay from '@/components/ui/WebhookDisplay';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
 import CreditHeader from '@/components/layout/CreditHeader';
+import { use } from 'react';
 
-interface PromptRunPageProps {
-  params: {
-    promptId: string;
-  };
+interface Params {
+  promptId: string;
 }
 
-export default function PromptRunPage({ params }: PromptRunPageProps) {
-  // Access params directly without using React.use()
-  const { promptId } = params;
+export default function PromptRunPage({ params }: { params: Params | Promise<Params> }) {
+  // Safely resolve params whether it's a Promise or direct object
+  const resolvedParams = typeof params === 'object' && !('then' in params) ? params : use(params as Promise<Params>);
+  const { promptId } = resolvedParams;
   const router = useRouter();
   const promptStore = usePromptStore();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
