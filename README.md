@@ -40,17 +40,41 @@ Sonar Prompt Marketplace is a platform where users can:
 - ✅ Added proper error handling for API responses
 - ✅ Added max_tokens parameter to ensure complete responses
 - ✅ Fixed model naming to use the 'sonar' model type supported by Perplexity API
-- ⚠️ Credit system needs to be tested end-to-end
-- ⚠️ UI polish and error handling improvements needed
+- ✅ API integration working properly (console warnings can be ignored)
+## Known Issues and Workarounds
+
+### Next.js Parameter Warning
+
+You may see the following warning in the console:
+
+```
+A param property was accessed directly with `params.promptId`. `params` is now a Promise...
+```
+
+This warning appears because we're accessing route parameters directly in a Client Component. We've kept this implementation because using `React.use()` as suggested caused errors with our Client Component setup. This is a deprecation warning but does not affect functionality.
+
+### Perplexity API Model Mapping
+
+Perplexity API requires using specific model identifiers. We've implemented a mapping system that converts all our model types to the basic 'sonar' model for compatibility:
+
+```typescript
+const modelMap = {
+  'sonar-small-online': 'sonar',
+  'sonar-medium-chat': 'sonar',
+  'sonar-large-online': 'sonar',
+  // other models mapped to 'sonar'
+};
+```
+
+Do not change this mapping or the application will encounter 400 Bad Request errors.
+
 ## Next Steps
-- Test and debug the Sonar API integration through the proxy route:
-  - Verify API key is correctly passed to the server-side route
-  - Check for any CORS issues
-  - Add proper error handling
-- Implement loading states and error messages for API calls
-- Test the credit system end-to-end
-- Add visual polish and improve user experience
-- Add comprehensive error handling
+
+- Verify credit system is working end-to-end
+- Add polish to UI components and improve user experience
+- Implement comprehensive error handling and user feedback
+- Add more prompt templates
+- Consider implementing real webhook functionality in the future
 
 ## How It Works
 
