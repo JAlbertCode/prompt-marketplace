@@ -20,35 +20,35 @@ Sonar Prompt Marketplace is a platform where users can:
 - **Notifications**: react-hot-toast
 - **API Integration**: Perplexity Sonar API
 
-## MVP Scope
+## Current Implementation Status
 
-### Core Features
+### Completed
+- Project structure and initial setup
+- Type definitions for prompts and API interactions
+- State management using Zustand stores (prompts and credits)
+- UI components for the marketplace
+- Basic routing and page templates
 
-1. **Prompt Browsing**
-   - View all available prompts
-   - Display title, description, and credit cost
+### In Progress
+- API integration with Sonar - Currently experiencing CORS issues
+- Proxy API route for Sonar API calls
+- Fixing client/server component architecture
 
-2. **Prompt Execution**
-   - Fill in required inputs
-   - Execute prompts with Sonar API
-   - View and download results (text or images)
-   - Deduct credits from user balance
-
-3. **Prompt Creation**
-   - Create new prompts with system instructions, input fields
-   - Select AI model (e.g., sonar-small-online, sonar-medium-chat)
-   - Set credit cost for execution
-   - Publish to marketplace
-
-4. **Credit System**
-   - Start with 1000 credits
-   - Deduct credits based on prompt cost
-   - Display remaining credits
-   - Show warnings for low balance
-
-5. **Optional: Webhook Integration**
-   - Display dummy webhook URLs for published prompts
-   - Copy webhook URL for external integration
+### Current Status
+- ✅ Fixed the React.use() error in the [promptId] page by removing React.use() and accessing params directly
+- ⚠️ Still need to test API integration with Sonar through the proxy route
+- ⚠️ Credit system needs to be tested end-to-end
+- ⚠️ UI polish and error handling improvements needed
+## Next Steps
+- ✅ Fix the React.use() error in the [promptId] page
+- Test and debug the Sonar API integration through the proxy route:
+  - Verify API key is correctly passed to the server-side route
+  - Check for any CORS issues
+  - Add proper error handling
+- Implement loading states and error messages for API calls
+- Test the credit system end-to-end
+- Add visual polish and improve user experience
+- Add comprehensive error handling
 
 ## How It Works
 
@@ -61,7 +61,7 @@ Sonar Prompt Marketplace is a platform where users can:
 
 ### Sonar API Integration
 
-- The application uses the Perplexity Sonar API for executing prompts
+- The application uses a server-side API route to proxy requests to Perplexity Sonar API
 - System prompts remain hidden from users during execution
 - Responses from the API are displayed and can be downloaded
 
@@ -90,7 +90,7 @@ Sonar Prompt Marketplace is a platform where users can:
 ### Environment Variables
 
 ```
-NEXT_PUBLIC_SONAR_API_KEY=your_api_key_here
+SONAR_API_KEY=your_api_key_here
 ```
 
 ## Directory Structure
@@ -102,11 +102,19 @@ NEXT_PUBLIC_SONAR_API_KEY=your_api_key_here
 │   ├── app/           # Next.js app router pages
 │   │   ├── page.tsx   # Home page (prompt listing)
 │   │   ├── run/       # Prompt execution pages
-│   │   └── submit/    # Prompt creation page
+│   │   ├── submit/    # Prompt creation page
+│   │   └── api/       # API routes for proxying Sonar requests
 │   ├── components/    # Reusable UI components
-│   ├── hooks/         # Custom React hooks
+│   │   ├── layout/    # Layout components (Header, Footer, ClientLayout)
+│   │   ├── shared/    # Shared UI components (Button, LoadingIndicator)
+│   │   └── ui/        # Specialized UI components (PromptCard, PromptForm, etc.)
 │   ├── lib/           # Utilities and helper functions
+│   │   ├── sonarApi.ts         # Sonar API integration
+│   │   ├── promptHelpers.ts    # Helpers for prompt management
+│   │   └── downloadHelpers.ts  # Functions for downloading outputs
 │   ├── store/         # Zustand store configurations
+│   │   ├── usePromptStore.ts   # Store for prompts data
+│   │   └── useCreditStore.ts   # Store for credit management
 │   └── types/         # TypeScript type definitions
 └── ... configuration files
 ```

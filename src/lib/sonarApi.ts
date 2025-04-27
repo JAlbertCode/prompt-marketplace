@@ -1,6 +1,7 @@
 import { SonarApiRequest, SonarApiResponse, SonarModel } from '@/types';
 
-const SONAR_API_ENDPOINT = 'https://sonar.perplexity.ai/ask';
+// Use our local API route instead of calling Sonar directly
+const SONAR_API_ENDPOINT = '/api/sonar';
 
 /**
  * Executes a prompt using the Sonar API
@@ -30,18 +31,10 @@ export async function executePrompt(
   };
 
   try {
-    // Get the API key from environment variables
-    const apiKey = process.env.NEXT_PUBLIC_SONAR_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('Sonar API key is not configured');
-    }
-
     const response = await fetch(SONAR_API_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify(request)
     });

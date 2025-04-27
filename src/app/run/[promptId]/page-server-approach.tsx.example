@@ -1,0 +1,29 @@
+// Server Component (no 'use client' directive)
+import React from 'react';
+import { notFound } from 'next/navigation';
+import ClientPromptRunner from './ClientPromptRunner';
+
+// This is a server component that can access params directly
+export default function PromptRunPage({ params }: { params: { promptId: string } }) {
+  const { promptId } = params;
+  
+  if (!promptId) {
+    notFound();
+  }
+  
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Run Prompt
+        </h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Fill in the required inputs and run the prompt
+        </p>
+      </div>
+      
+      {/* Pass the promptId to the client component */}
+      <ClientPromptRunner promptId={promptId} />
+    </div>
+  );
+}

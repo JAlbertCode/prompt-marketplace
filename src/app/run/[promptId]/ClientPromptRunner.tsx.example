@@ -8,15 +8,12 @@ import PromptForm from '@/components/ui/PromptForm';
 import WebhookDisplay from '@/components/ui/WebhookDisplay';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
 
-interface PromptRunPageProps {
-  params: {
-    promptId: string;
-  };
+interface ClientPromptRunnerProps {
+  promptId: string;
 }
 
-export default function PromptRunPage({ params }: PromptRunPageProps) {
-  // Access params directly without using React.use()
-  const { promptId } = params;
+// This is a client component that receives promptId as a prop
+const ClientPromptRunner: React.FC<ClientPromptRunnerProps> = ({ promptId }) => {
   const router = useRouter();
   const { getPrompt } = usePromptStore();
   const [prompt, setPrompt] = useState<Prompt | null>(null);
@@ -65,26 +62,17 @@ export default function PromptRunPage({ params }: PromptRunPageProps) {
   }
   
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Run Prompt
-        </h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Fill in the required inputs and run the prompt
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PromptForm 
+        prompt={prompt} 
+        onReturn={handleReturn} 
+      />
       
-      <div className="space-y-6">
-        <PromptForm 
-          prompt={prompt} 
-          onReturn={handleReturn} 
-        />
-        
-        <WebhookDisplay 
-          promptId={prompt.id} 
-        />
-      </div>
+      <WebhookDisplay 
+        promptId={prompt.id} 
+      />
     </div>
   );
-}
+};
+
+export default ClientPromptRunner;
