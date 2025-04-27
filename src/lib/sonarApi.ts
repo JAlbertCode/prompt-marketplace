@@ -16,8 +16,21 @@ export async function executePrompt(
     .map(([key, value]) => `${key}: ${value}`)
     .join('\n');
 
+  // Map model names to the correct format for the Perplexity API
+  // Use simpler model names for compatibility
+  const modelMap: Record<string, string> = {
+    'sonar-small-online': 'sonar',
+    'sonar-medium-chat': 'sonar',
+    'sonar-large-online': 'sonar',
+    'sonar-medium-online': 'sonar',
+    'sonar-small-chat': 'sonar',
+    'llama-3.1-sonar-small-128k-online': 'sonar'
+  };
+
+  const apiModel = modelMap[model] || 'sonar'; // Default to 'sonar' if model not found
+
   const request: SonarApiRequest = {
-    model,
+    model: apiModel,
     messages: [
       {
         role: 'system',
@@ -27,7 +40,8 @@ export async function executePrompt(
         role: 'user',
         content: userContent
       }
-    ]
+    ],
+    max_tokens: 1024
   };
 
   try {

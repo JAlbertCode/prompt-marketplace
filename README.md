@@ -35,12 +35,14 @@ Sonar Prompt Marketplace is a platform where users can:
 - Fixing client/server component architecture
 
 ### Current Status
-- ✅ Fixed the React.use() error in the [promptId] page by removing React.use() and accessing params directly
-- ⚠️ Still need to test API integration with Sonar through the proxy route
+- ✅ Fixed the React.use() error in the [promptId] page by keeping the original params access method
+- ✅ Updated the API endpoint from 'sonar.perplexity.ai/ask' to 'api.perplexity.ai/chat/completions'
+- ✅ Added proper error handling for API responses
+- ✅ Added max_tokens parameter to ensure complete responses
+- ✅ Fixed model naming to use the 'sonar' model type supported by Perplexity API
 - ⚠️ Credit system needs to be tested end-to-end
 - ⚠️ UI polish and error handling improvements needed
 ## Next Steps
-- ✅ Fix the React.use() error in the [promptId] page
 - Test and debug the Sonar API integration through the proxy route:
   - Verify API key is correctly passed to the server-side route
   - Check for any CORS issues
@@ -61,9 +63,10 @@ Sonar Prompt Marketplace is a platform where users can:
 
 ### Sonar API Integration
 
-- The application uses a server-side API route to proxy requests to Perplexity Sonar API
+- The application uses a server-side API route to proxy requests to Perplexity API through the `/chat/completions` endpoint
 - System prompts remain hidden from users during execution
 - Responses from the API are displayed and can be downloaded
+- Error handling is implemented for API failures
 
 ### Prompt Creation
 

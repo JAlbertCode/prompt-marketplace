@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward the request to the Sonar API
-    const response = await fetch('https://sonar.perplexity.ai/ask', {
+    console.log('Sending request to Perplexity API with model:', body.model);
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,6 +24,16 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify(body),
     });
+
+    // Check if the response is OK
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Perplexity API returned error ${response.status}:`, errorText);
+      return NextResponse.json(
+        { error: `Sonar API Error: ${response.status}` },
+        { status: response.status }
+      );
+    }
 
     // Get the response data
     const data = await response.json();

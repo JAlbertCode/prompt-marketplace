@@ -18,8 +18,12 @@ export interface InputField {
 
 export type SonarModel = 
   | 'sonar-small-online'
+  | 'sonar-medium-online'
   | 'sonar-medium-chat'
-  | 'sonar-large-online';
+  | 'sonar-large-online'
+  | 'sonar-small-chat'
+  | 'llama-3.1-sonar-small-128k-online'
+  | 'sonar';
 
 export interface PromptResult {
   text?: string;
@@ -31,6 +35,7 @@ export interface PromptResult {
 export interface SonarApiRequest {
   model: SonarModel;
   messages: SonarMessage[];
+  max_tokens?: number;
 }
 
 export interface SonarMessage {
