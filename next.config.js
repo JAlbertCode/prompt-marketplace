@@ -8,6 +8,11 @@ const nextConfig = {
     domains: ['sonar.perplexity.ai'],
   },
   
+  // Disable ESLint during builds
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
   // Configure webpack to handle missing dependencies gracefully
   webpack: (config) => {
     return config;

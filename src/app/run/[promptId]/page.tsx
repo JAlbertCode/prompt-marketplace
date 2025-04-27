@@ -59,7 +59,7 @@ export default function PromptRunPage({ params }: PromptRunPageProps) {
           Prompt Not Found
         </h2>
         <p className="text-gray-600 mb-6">
-          The prompt you're looking for doesn't exist or has been removed.
+          The prompt you&apos;re looking for doesn&apos;t exist or has been removed.
         </p>
         <button
           onClick={handleReturn}

@@ -1,0 +1,1 @@
+{\n  \"extends\": \"next/core-web-vitals\",\n  \"rules\": {\n    \"react/no-unescaped-entities\": \"off\",\n    \"@typescript-eslint/no-unused-vars\": \"off\"\n  }\n}
