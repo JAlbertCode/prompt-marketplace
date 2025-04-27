@@ -93,7 +93,15 @@ const PromptForm: React.FC<PromptFormProps> = ({
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-gray-50/80 flex items-center justify-center z-10">
+          <div className="bg-white p-4 rounded-md shadow-md flex flex-col items-center">
+            <LoadingIndicator size="lg" />
+            <span className="mt-3 text-sm font-medium text-gray-700">Generating response...</span>
+          </div>
+        </div>
+      )}
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">{prompt.title}</h2>
         <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
@@ -167,7 +175,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                   {isLoading ? (
                     <span className="flex items-center">
                       <LoadingIndicator size="sm" className="mr-2" />
-                      Running...
+                      Generating...
                     </span>
                   ) : (
                     'Run Prompt'
@@ -183,7 +191,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 Output
               </h3>
               
-              <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap">
+              <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner min-h-[200px] max-h-[400px] overflow-y-auto">
                 {output}
               </div>
             </div>

@@ -7,6 +7,7 @@ import { usePromptStore } from '@/store/usePromptStore';
 import PromptForm from '@/components/ui/PromptForm';
 import WebhookDisplay from '@/components/ui/WebhookDisplay';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
+import CreditHeader from '@/components/layout/CreditHeader';
 
 interface PromptRunPageProps {
   params: {
@@ -66,6 +67,7 @@ export default function PromptRunPage({ params }: PromptRunPageProps) {
   
   return (
     <div className="max-w-3xl mx-auto">
+      <CreditHeader />
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">
           Run Prompt

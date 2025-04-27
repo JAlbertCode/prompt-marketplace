@@ -104,6 +104,111 @@ const initialPrompts: Prompt[] = [
     model: 'sonar-small-online',
     creditCost: 25,
     createdAt: Date.now()
+  },
+  {
+    id: '4',
+    title: 'Email Response Generator',
+    description: 'Craft professional email responses for any situation',
+    systemPrompt: 'You are an expert communication specialist. Create a well-crafted email response that is professional, clear, and appropriate for the context. Consider the tone needed for the recipient and situation.',
+    inputFields: [
+      {
+        id: 'originalEmail',
+        label: 'Original Email',
+        placeholder: 'Paste the email you received',
+        required: true
+      },
+      {
+        id: 'relationship',
+        label: 'Relationship',
+        placeholder: 'Colleague, Client, Manager, etc.',
+        required: true
+      },
+      {
+        id: 'tone',
+        label: 'Desired Tone',
+        placeholder: 'Formal, Friendly, Apologetic, etc.',
+        required: true
+      },
+      {
+        id: 'keyPoints',
+        label: 'Key Points to Include',
+        placeholder: 'List the main points to address',
+        required: false
+      }
+    ],
+    model: 'sonar-medium-chat',
+    creditCost: 20,
+    createdAt: Date.now()
+  },
+  {
+    id: '5',
+    title: 'Research Summary',
+    description: 'Summarize complex research into digestible content',
+    systemPrompt: 'You are a research analyst specializing in making complex topics accessible. Create a clear, concise summary of the research provided, highlighting key findings, methodology, and implications. Your summary should be understandable to an educated non-specialist.',
+    inputFields: [
+      {
+        id: 'researchTopic',
+        label: 'Research Topic',
+        placeholder: 'Enter the research topic or paste abstract',
+        required: true
+      },
+      {
+        id: 'keyFindings',
+        label: 'Key Findings',
+        placeholder: 'Enter any specific findings if available',
+        required: false
+      },
+      {
+        id: 'audienceLevel',
+        label: 'Audience Knowledge Level',
+        placeholder: 'Beginner, Intermediate, Advanced',
+        required: true
+      },
+      {
+        id: 'focusArea',
+        label: 'Focus Area',
+        placeholder: 'E.g., practical applications, methodology, etc.',
+        required: false
+      }
+    ],
+    model: 'sonar-large-online',
+    creditCost: 40,
+    createdAt: Date.now()
+  },
+  {
+    id: '6',
+    title: 'Social Media Post Generator',
+    description: 'Create engaging posts for various social platforms',
+    systemPrompt: 'You are a social media marketing expert. Create engaging, platform-appropriate social media content that will drive engagement and reflect the brand voice. Optimize the content length and style for the specified platform.',
+    inputFields: [
+      {
+        id: 'platform',
+        label: 'Platform',
+        placeholder: 'Instagram, Twitter, LinkedIn, etc.',
+        required: true
+      },
+      {
+        id: 'topic',
+        label: 'Topic/Announcement',
+        placeholder: 'What do you want to post about?',
+        required: true
+      },
+      {
+        id: 'brandVoice',
+        label: 'Brand Voice',
+        placeholder: 'Professional, Casual, Humorous, etc.',
+        required: true
+      },
+      {
+        id: 'callToAction',
+        label: 'Call to Action',
+        placeholder: 'What do you want readers to do?',
+        required: false
+      }
+    ],
+    model: 'sonar-small-online',
+    creditCost: 15,
+    createdAt: Date.now()
   }
 ];
 

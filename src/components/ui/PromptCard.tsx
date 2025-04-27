@@ -24,6 +24,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
       className={`
         bg-white rounded-lg shadow-md overflow-hidden
         border border-gray-200 hover:shadow-lg transition
+        transform hover:-translate-y-1 duration-200
         ${className}
       `}
     >
@@ -40,7 +41,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
         </p>
         
         <div className="flex justify-between items-center mt-auto">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
             {prompt.model}
           </div>
           

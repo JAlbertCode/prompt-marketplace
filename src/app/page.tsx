@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { usePromptStore } from '@/store/usePromptStore';
 import PromptCard from '@/components/ui/PromptCard';
 import Button from '@/components/shared/Button';
+import CreditHeader from '@/components/layout/CreditHeader';
 
 export default function HomePage() {
   const { prompts } = usePromptStore();
   
   return (
     <div>
+      <CreditHeader />
+      
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
