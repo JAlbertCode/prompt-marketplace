@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Prompt, InputField, SonarModel } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
 import { validateInputFields, validateSystemPrompt, createInputField } from '@/lib/promptHelpers';
+import { getBaselineCost, isValidCreditCost } from '@/lib/creditHelpers';
 import { executePrompt } from '@/lib/sonarApi';
 import Button from '@/components/shared/Button';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
@@ -19,7 +20,7 @@ const PromptCreator: React.FC = () => {
     createInputField('Input', 'Enter your input here')
   ]);
   const [model, setModel] = useState<SonarModel>('sonar-medium-chat');
-  const [creditCost, setCreditCost] = useState(25);
+  const [creditCost, setCreditCost] = useState(getBaselineCost('sonar-medium-chat'));
   const [testMode, setTestMode] = useState(false);
   const [testInputs, setTestInputs] = useState<Record<string, string>>({});
   const [testOutput, setTestOutput] = useState<string | null>(null);
@@ -27,6 +28,14 @@ const PromptCreator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveButton, setShowSaveButton] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Set the credit cost based on the model whenever it changes
+  useEffect(() => {
+    const baselineCost = getBaselineCost(model);
+    if (creditCost < baselineCost) {
+      setCreditCost(baselineCost);
+    }
+  }, [model]);
   
   const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -97,8 +106,10 @@ const PromptCreator: React.FC = () => {
       newErrors.inputFields = 'At least one input field with a label is required';
     }
     
-    if (creditCost < 1) {
-      newErrors.creditCost = 'Credit cost must be at least 1';
+    // Check if credit cost is valid for the selected model
+    const baselineCost = getBaselineCost(model);
+    if (!isValidCreditCost(creditCost, model)) {
+      newErrors.creditCost = `Credit cost must be at least ${baselineCost} for the ${model} model`;
     }
     
     setErrors(newErrors);
@@ -353,7 +364,16 @@ const PromptCreator: React.FC = () => {
               <select
                 id="model"
                 value={model}
-                onChange={(e) => setModel(e.target.value as SonarModel)}
+                onChange={(e) => {
+                  const newModel = e.target.value as SonarModel;
+                  setModel(newModel);
+                  
+                  // Update credit cost based on model baseline
+                  const baselineCost = getBaselineCost(newModel);
+                  if (creditCost < baselineCost) {
+                    setCreditCost(baselineCost);
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
                 <option value="sonar-small-online">Sonar Small</option>
@@ -366,15 +386,20 @@ const PromptCreator: React.FC = () => {
               <label htmlFor="creditCost" className="block text-sm font-medium text-gray-700">
                 Credit Cost <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
-                id="creditCost"
-                value={creditCost}
-                onChange={(e) => setCreditCost(parseInt(e.target.value) || 0)}
-                min={1}
-                max={1000}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  id="creditCost"
+                  value={creditCost}
+                  onChange={(e) => setCreditCost(parseInt(e.target.value) || 0)}
+                  min={getBaselineCost(model)}
+                  max={1000}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  Baseline cost: {getBaselineCost(model)} credits (minimum for {model.split('-')[1] || 'this'} model)
+                </div>
+              </div>
               {errors.creditCost && (
                 <p className="text-sm text-red-600">{errors.creditCost}</p>
               )}

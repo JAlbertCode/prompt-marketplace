@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Prompt } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
 import Button from '@/components/shared/Button';
 import CreditBadge from '@/components/ui/CreditBadge';
+import ExampleModal from '@/components/ui/ExampleModal';
 import { toast } from 'react-hot-toast';
 
 interface PromptCardProps {
@@ -22,6 +23,12 @@ const PromptCard: React.FC<PromptCardProps> = ({
   
   const [showExample, setShowExample] = useState(false);
   const [favorite, setFavorite] = useState(isFavorite(prompt.id));
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Only enable client-side features after hydration
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const handleRunClick = () => {
     router.push(`/run/${prompt.id}`);
@@ -56,8 +63,13 @@ const PromptCard: React.FC<PromptCardProps> = ({
   };
 
   const toggleShowExample = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    setShowExample(!showExample);
+    setShowExample(true);
+  };
+
+  const closeExample = () => {
+    setShowExample(false);
   };
   
   return (
@@ -150,30 +162,14 @@ const PromptCard: React.FC<PromptCardProps> = ({
         </div>
       </div>
       
-      {/* Example output modal/overlay */}
-      {showExample && prompt.exampleOutput && (
-        <div className="fixed inset-0 z-50 overflow-auto bg-black bg-opacity-50 flex items-center justify-center" onClick={toggleShowExample}>
-          <div 
-            className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto m-4" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Example Output: {prompt.title}</h3>
-              <button 
-                onClick={toggleShowExample}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4 text-sm text-gray-700 overflow-y-auto">
-              <pre className="whitespace-pre-wrap">{prompt.exampleOutput}</pre>
-            </div>
-          </div>
-        </div>
+      {/* Example Modal - outside the card flow */}
+      {isMounted && (
+        <ExampleModal
+          isOpen={showExample}
+          title={prompt.title}
+          content={prompt.exampleOutput || null}
+          onClose={closeExample}
+        />
       )}
     </div>
   );
