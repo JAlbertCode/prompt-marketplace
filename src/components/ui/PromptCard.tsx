@@ -3,10 +3,14 @@ import { useRouter } from 'next/navigation';
 import { Prompt } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
+import { useUnlockedPromptStore } from '@/store/useUnlockedPromptStore';
 import Button from '@/components/shared/Button';
 import CreditBadge from '@/components/ui/CreditBadge';
+import CreditCostBreakdown from '@/components/ui/CreditCostBreakdown';
 import ExampleModal from '@/components/ui/ExampleModal';
 import { toast } from 'react-hot-toast';
+import { getBaselineCost } from '@/lib/creditHelpers';
+import { LuLock, LuKey, LuStar, LuTrash2, LuEye, LuShare2 } from 'react-icons/lu';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -20,10 +24,16 @@ const PromptCard: React.FC<PromptCardProps> = ({
   const router = useRouter();
   const { removePrompt } = usePromptStore();
   const { addFavorite, removeFavorite, isFavorite } = useFavoriteStore();
+  const { hasUnlockedPrompt, unlockPrompt } = useUnlockedPromptStore();
   
   const [showExample, setShowExample] = useState(false);
   const [favorite, setFavorite] = useState(isFavorite(prompt.id));
   const [isMounted, setIsMounted] = useState(false);
+  const [showCreditDetails, setShowCreditDetails] = useState(false);
+  
+  const isUnlocked = hasUnlockedPrompt(prompt.id);
+  const baselineCost = getBaselineCost(prompt.model);
+  const creatorFee = prompt.creditCost - baselineCost;
   
   // Only enable client-side features after hydration
   useEffect(() => {
@@ -78,6 +88,22 @@ const PromptCard: React.FC<PromptCardProps> = ({
     setShowExample(false);
   };
   
+  const handleUnlockPrompt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (isUnlocked) {
+      router.push(`/prompt/${prompt.id}/view`);
+      return;
+    }
+    
+    // In a real app, this would deduct credits and give access
+    // For the MVP, we'll just grant access
+    if (window.confirm(`Unlock the full system prompt for ${prompt.title}?`)) {
+      unlockPrompt(prompt.id);
+      toast.success('Prompt unlocked successfully!');
+    }
+  };
+  
   return (
     <div 
       className={`
@@ -105,22 +131,31 @@ const PromptCard: React.FC<PromptCardProps> = ({
               aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
               title={favorite ? 'Remove from favorites' : 'Add to favorites'}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={favorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
+              <LuStar fill={favorite ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={handleRemoveClick}
               className="text-sm text-red-500 hover:text-red-700"
               aria-label="Remove prompt"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
+              <LuTrash2 />
             </button>
-            <div className="whitespace-nowrap">
+            <div 
+              className="relative whitespace-nowrap"
+              onMouseEnter={() => setShowCreditDetails(true)}
+              onMouseLeave={() => setShowCreditDetails(false)}
+            >
               <CreditBadge cost={prompt.creditCost} size="sm" />
+              
+              {showCreditDetails && (
+                <div className="absolute z-10 mt-1 p-2 bg-white border border-gray-200 rounded shadow-lg right-0 w-48">
+                  <CreditCostBreakdown
+                    model={prompt.model}
+                    creatorFee={creatorFee}
+                    showUSD={true}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -133,8 +168,23 @@ const PromptCard: React.FC<PromptCardProps> = ({
         </div>
         
         <div className="flex justify-between items-center mt-4">
-          <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate max-w-[120px]">
-            {prompt.model}
+          <div className="flex items-center">
+            <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate max-w-[120px]">
+              {prompt.model}
+            </div>
+            
+            <button
+              onClick={handleUnlockPrompt}
+              className={`ml-2 text-xs px-2 py-1 rounded-full flex items-center ${
+                isUnlocked 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+              }`}
+              title={isUnlocked ? "View system prompt" : "Unlock system prompt"}
+            >
+              {isUnlocked ? <LuKey size={12} /> : <LuLock size={12} />}
+              <span className="ml-1">{isUnlocked ? 'Unlocked' : 'Unlock'}</span>
+            </button>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -144,20 +194,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
               title={prompt.exampleOutput ? "View example output" : "No example output available"}
               disabled={!prompt.exampleOutput}
             >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="16" 
-                height="16" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
+              <LuEye size={14} />
               <span className="ml-1">Example</span>
             </button>
             

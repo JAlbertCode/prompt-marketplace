@@ -6,6 +6,7 @@ import { usePromptStore } from '@/store/usePromptStore';
 import PromptCard from '@/components/ui/PromptCard';
 import Button from '@/components/shared/Button';
 import PromptSearch from '@/components/ui/PromptSearch';
+import Hero from '@/components/layout/Hero';
 import { toast } from 'react-hot-toast';
 import { Prompt, SonarModel } from '@/types';
 
@@ -76,13 +77,18 @@ export default function HomePage() {
   
   return (
     <div>
+      {/* Hero Section */}
+      <div className="mb-8">
+        <Hero />
+      </div>
+      
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Sonar Prompt Marketplace
-          </h1>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Browse Prompts
+          </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Browse and run optimized prompts powered by Perplexity Sonar
+            Discover and run optimized prompts powered by Perplexity Sonar
           </p>
         </div>
         

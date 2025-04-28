@@ -1,67 +1,63 @@
 /**
- * Downloads text content as a .txt file
+ * Utilities for downloading prompt outputs
  */
-export function downloadTextFile(content: string, filename = 'output.txt'): void {
-  // Create a blob with the text content
-  const blob = new Blob([content], { type: 'text/plain' });
+
+/**
+ * Download output text as a file
+ * @param content The content to download
+ * @param filename The name of the file
+ */
+export function downloadOutput(content: string, filename: string): void {
+  // Create a blob from the content
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   
-  // Create a download link
-  const url = URL.createObjectURL(blob);
+  // Create a link element
   const link = document.createElement('a');
   
   // Set link properties
-  link.href = url;
+  link.href = URL.createObjectURL(blob);
   link.download = filename;
   
-  // Append to body, click, and clean up
+  // Append link to body
   document.body.appendChild(link);
+  
+  // Click the link
   link.click();
+  
+  // Clean up
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(link.href);
 }
 
 /**
- * Downloads an image from a URL as a .jpg file
+ * Download image output as a file
+ * @param imageUrl The URL of the image
+ * @param filename The name of the file
  */
-export async function downloadImage(imageUrl: string, filename = 'output.jpg'): Promise<void> {
+export async function downloadImage(imageUrl: string, filename: string): Promise<void> {
   try {
-    // Fetch the image
+    // Fetch the image data
     const response = await fetch(imageUrl);
     const blob = await response.blob();
     
-    // Create a download link
-    const url = URL.createObjectURL(blob);
+    // Create a link element
     const link = document.createElement('a');
     
     // Set link properties
-    link.href = url;
+    link.href = URL.createObjectURL(blob);
     link.download = filename;
     
-    // Append to body, click, and clean up
+    // Append link to body
     document.body.appendChild(link);
+    
+    // Click the link
     link.click();
+    
+    // Clean up
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(link.href);
   } catch (error) {
     console.error('Error downloading image:', error);
     throw error;
   }
-}
-
-/**
- * Helper to generate a filename based on prompt title and current date
- */
-export function generateFilename(promptTitle: string, extension: string): string {
-  // Format the date
-  const date = new Date();
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  
-  // Clean the title to make it filename-friendly
-  const cleanTitle = promptTitle
-    .replace(/[^\w\s-]/g, '')  // Remove special characters
-    .trim()
-    .replace(/\s+/g, '-')      // Replace spaces with hyphens
-    .toLowerCase();
-  
-  return `${cleanTitle}-${dateStr}.${extension}`;
 }
