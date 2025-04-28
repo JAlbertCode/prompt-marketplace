@@ -156,10 +156,6 @@ export default function ImageDisplay({
         </div>
       )}
       
-      <div className="mt-4 text-xs text-gray-500">
-        <strong>Prompt:</strong> {prompt}
-      </div>
-      
       {error && (
         <div className="mt-2 text-sm text-red-600">
           {error}

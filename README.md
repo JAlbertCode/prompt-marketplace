@@ -1,5 +1,13 @@
 ## Recent Updates
 
+### UI and UX Improvements - April 2025
+
+- **Improved card layout**: Fixed text truncation issues with proper ellipsis and tooltips
+- **Enhanced privacy**: Removed prompt display from generated images to protect intellectual property
+- **Optimized image-only workflow**: Better support for image generation without text output
+- **Credit cost display**: Limited cost breakdown visibility to prompt creators only
+- **Better UI indicators**: More readable capability badges with proper truncation
+
 ### API Model Update - April 2025
 
 - **Updated Sonar API model names**: Fixed compatibility issues with Perplexity API by using the current model name 'sonar' instead of deprecated models
@@ -184,16 +192,71 @@ The UI clearly indicates which capabilities each prompt offers through intuitive
 - Sharing functionality for generated responses
 - Image generation capability with DALL-E integration
 - Webhook integration for external automation
+- Improved card layout to prevent content overflow
+- Enhanced prompt run page for both text and image outputs
+- Privacy improvements for image generation
 
 ### In Progress
-- Improved card layout to prevent content overflow
-- Complete image generation and display
-- Enhanced prompt run page for both text and image outputs
+- Multi-model support in prompt creation
 - API integration refinements
+- Test prompt cost control system
 
 ### Up Next
 - Auto top-up functionality for credit management
 - Expanded image generation options
+
+## Test Prompt Cost Control
+
+To prevent potential abuse of the test functionality during prompt creation and prevent excessive API costs, we're implementing a robust cost control system:
+
+### Planned Controls
+
+- **Daily Testing Limits**: Restrict free test runs to 5 per day per user
+- **Reduced-Quality Test Mode**: Use cheaper, lower-quality models for testing purposes
+- **Cost Confirmation**: Require explicit confirmation for tests exceeding a credit threshold
+- **Test Credit System**: Separate testing credits from regular credits
+- **Watermarked Outputs**: Apply visible watermarks to test outputs
+
+### Technical Implementation
+
+- Test usage tracking in user profiles
+- Rate limiting for test API endpoints
+- Scaled-down model selection for test runs
+- Clear UI indicators for test mode
+
+### Benefits
+
+This system balances the need for creators to test their prompts with protecting the platform from potential abuse, ensuring:
+
+- Creators can validate their prompts work correctly
+- The platform remains financially sustainable
+- Users are encouraged to publish quality prompts
+- API costs remain predictable and manageable
+
+## Multi-Model Support
+
+With the increasing complexity of AI tasks, we're enhancing PromptFlow to support multiple models in a single prompt workflow:
+
+### Key Features
+
+- **Model Combination**: Mix and match different models for specialized tasks
+- **Capability-Based Selection**: Automatically choose the best model for each capability
+- **Cost Optimization**: Use simpler models for basic tasks, premium models for complex ones
+- **Enhanced Creator Tools**: More granular control over which models handle different parts of a prompt
+
+### Implementation Plan
+
+- Expanded prompt creation interface with model selection per capability
+- Enhanced routing system to direct requests to appropriate models
+- Clearer cost breakdown for multi-model prompts
+- Advanced orchestration for sequential and parallel model execution
+
+### Use Cases
+
+- Text generation + specialized code generation
+- Initial content creation followed by image visualization
+- Multi-stage reasoning with different specialized models for each step
+- Dynamic model selection based on input complexity
 
 ## Webhook Integration
 

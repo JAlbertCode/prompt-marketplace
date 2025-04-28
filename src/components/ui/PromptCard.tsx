@@ -29,7 +29,6 @@ const PromptCard: React.FC<PromptCardProps> = ({
   const [showExample, setShowExample] = useState(false);
   const [favorite, setFavorite] = useState(isFavorite(prompt.id));
   const [isMounted, setIsMounted] = useState(false);
-  const [showCreditDetails, setShowCreditDetails] = useState(false);
   
   const isUnlocked = hasUnlockedPrompt(prompt.id);
   const baselineCost = getBaselineCost(prompt.model);
@@ -140,27 +139,13 @@ const PromptCard: React.FC<PromptCardProps> = ({
             >
               <LuTrash2 className="h-4 w-4" />
             </button>
-            <div 
-              className="relative whitespace-nowrap"
-              onMouseEnter={() => setShowCreditDetails(true)}
-              onMouseLeave={() => setShowCreditDetails(false)}
-            >
+            <div className="relative whitespace-nowrap">
               <CreditBadge cost={prompt.creditCost} size="sm" />
-              
-              {showCreditDetails && (
-                <div className="absolute z-10 mt-1 p-2 bg-white border border-gray-200 rounded shadow-lg right-0 w-48">
-                  <CreditCostBreakdown
-                    model={prompt.model}
-                    creatorFee={creatorFee}
-                    showUSD={true}
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
         
-        <p className="text-gray-600 text-sm mb-4 h-12 overflow-hidden">
+        <p className="text-gray-600 text-sm mb-4 h-12 line-clamp-2 overflow-hidden" title={prompt.description}>
           {prompt.description}
         </p>
         
@@ -181,7 +166,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
                 Code Generation
               </span>
             )}
-            <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate max-w-[120px]">
+            <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate" style={{maxWidth: '80px'}} title={prompt.model}>
               {prompt.model}
             </div>
           </div>
