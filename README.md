@@ -112,7 +112,7 @@ The credit system provides users with:
 - Credit system implementation with model-based baseline costs
 - Search and filtering functionality
 - Favorites system with dedicated page
-- Improved modal display for example outputs
+- Improved modal display for example outputs with React Portal
 
 ### In Progress
 - API integration with Sonar - Currently experiencing CORS issues
@@ -122,7 +122,7 @@ The credit system provides users with:
 ## Recent Improvements
 
 ### UI Enhancements
-1. **Example Display** - Moved example outputs from in-card to a modal overlay for better space utilization
+1. **Example Display** - Completely reimplemented example modal using React Portal for stable rendering
 2. **Card Layout** - Fixed styling to ensure consistent card heights and proper positioning of elements
 3. **Credit System** - Implemented full credit system with visual indicators for low balance
 4. **Search and Filtering** - Added search functionality with model type and credit cost filtering
@@ -132,13 +132,14 @@ The credit system provides users with:
 2. **Better Error Handling** - Added robust error checking throughout the application
 3. **Credit Warnings** - Visual feedback when credits are low or insufficient for a prompt
 4. **UI Polish** - Active state indicators for navigation, better spacing, and responsive design
-5. **Modal Examples** - View example outputs in a full-screen modal for better readability
+5. **Modal Animations** - Smooth animations for modal opening/closing with improved accessibility
 
 ### Bug Fixes
 1. Fixed hydration errors in the application
 2. Fixed "getPrompt is not a function" and "removePrompt is not a function" errors
 3. Ensured proper client-side initialization for components
 4. Fixed deployment issues on Vercel
+5. Fixed modal flickering and display issues with React Portal implementation
 
 ## Work In Progress and Handoff Notes
 
@@ -154,7 +155,9 @@ The credit system provides users with:
 - ✅ Fixed hydration errors by adding suppressHydrationWarning to body and implementing proper client-side initialization
 - ✅ Fixed the "getPrompt is not a function" error by checking for function existence before usage
 - ✅ Added better error handling for when store functions are unavailable
-- ✅ Fixed modal flickering issue with improved event handling
+- ✅ Fixed modal flickering issues with React Portal implementation
+- ✅ Added accessibility improvements to modals (keyboard handling, focus management)
+- ✅ Implemented smooth animations for modal transitions
 - ✅ Implemented model-based credit cost system with automatic baseline enforcement
 - ✅ Added favorites system for saving and accessing favorite prompts
 - ✅ Added search and filtering for finding specific prompts
@@ -184,6 +187,16 @@ The credit system provides users with:
 - Improve UI feedback during execution
 - Implement credit purchase system
 - Develop creator payout mechanism
+
+## Example Modal Implementation
+
+The application uses a completely redesigned modal implementation for displaying example outputs:
+
+- **React Portal** - Modals are rendered outside the normal DOM hierarchy using Portals
+- **SSR Compatible** - Custom ClientPortal component ensures compatibility with Next.js SSR
+- **Keyboard Support** - Modals can be closed with the Escape key
+- **Focus Management** - Focus is trapped within the modal for accessibility
+- **Smooth Animations** - Modals have fade and slide animations for a polished experience
 
 ## Known Issues and Workarounds
 
