@@ -65,7 +65,13 @@ const PromptCard: React.FC<PromptCardProps> = ({
   const toggleShowExample = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setShowExample(true);
+    
+    // Only show the example if we have one
+    if (prompt.exampleOutput) {
+      setShowExample(true);
+    } else {
+      toast.info('No example output available for this prompt');
+    }
   };
 
   const closeExample = () => {
@@ -127,29 +133,28 @@ const PromptCard: React.FC<PromptCardProps> = ({
           </div>
           
           <div className="flex items-center space-x-2">
-            {prompt.exampleOutput && (
-              <button 
-                onClick={toggleShowExample}
-                className="text-xs text-blue-500 hover:text-blue-700 flex items-center"
-                title="View example output"
+            <button 
+              onClick={toggleShowExample}
+              className={`text-xs ${prompt.exampleOutput ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'} flex items-center`}
+              title={prompt.exampleOutput ? "View example output" : "No example output available"}
+              disabled={!prompt.exampleOutput}
+            >
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="16" 
+                height="16" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="16" 
-                  height="16" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                >
-                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span className="ml-1">Example</span>
-              </button>
-            )}
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <span className="ml-1">Example</span>
+            </button>
             
             <Button 
               variant="primary"

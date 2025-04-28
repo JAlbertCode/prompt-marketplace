@@ -77,6 +77,14 @@ const PromptCreator: React.FC = () => {
       setTestOutput(result);
       setShowSaveButton(true);
       
+      // Populate input fields for Create mode
+      const formattedInputs = {};
+      inputFields.forEach(field => {
+        if (testInputs[field.id]) {
+          formattedInputs[field.id] = testInputs[field.id];
+        }
+      });
+      
       // Show success notification
       toast.success('Test successful!');
     } catch (err) {
@@ -141,6 +149,13 @@ const PromptCreator: React.FC = () => {
     if (!validateForm()) {
       toast.error('Please fix the errors in the form');
       return;
+    }
+    
+    // If we haven't tested the prompt yet, show a confirmation
+    if (!testOutput && !showSaveButton) {
+      if (!window.confirm('You haven\'t tested your prompt yet. Are you sure you want to create it without testing?')) {
+        return;
+      }
     }
     
     try {
@@ -434,7 +449,7 @@ const PromptCreator: React.FC = () => {
           ) : (
             <Button 
               type="submit"
-              disabled={isSaving || (!testOutput && !showSaveButton)}
+              disabled={isSaving}
             >
               {isSaving ? (
                 <span className="flex items-center">
@@ -512,6 +527,7 @@ const PromptCreator: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setTestMode(false);
+                        // Keep the test output for Create mode
                         toast.success('Ready to publish! Review and click Create Prompt.');
                       }}
                     >

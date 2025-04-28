@@ -7,8 +7,15 @@ import { Suspense } from 'react';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Sonar Prompt Marketplace',
-  description: 'Browse, run, and create AI prompts powered by Perplexity Sonar',
+  title: 'Sonar Prompt Marketplace | Run and Create Optimized AI Prompts',
+  description: 'Browse, run, and create optimized AI prompts powered by Perplexity Sonar API. Discover ready-to-use prompts or create your own with our easy-to-use interface.',
+  keywords: 'AI prompts, Perplexity, Sonar API, prompt marketplace, AI tools, prompt engineering',
+  authors: [{ name: 'Sonar Prompt Marketplace Team' }],
+  openGraph: {
+    title: 'Sonar Prompt Marketplace | Run and Create Optimized AI Prompts',
+    description: 'Browse, run, and create optimized AI prompts powered by Perplexity Sonar API.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({

@@ -275,18 +275,19 @@ export const usePromptStore = create<PromptState>()(
           return { ...currentState };
         }
         
-        // Get existing template IDs to check for duplicates
-        const existingIds = new Set(
-          persistedState.prompts.map((p: Prompt) => p.id)
-        );
+        // Identify default templates by fixed IDs (1-6)
+        const defaultTemplateIds = new Set(['1', '2', '3', '4', '5', '6']);
         
-        // Add new templates from the current state that don't exist yet
-        const newPrompts = currentState.prompts.filter(p => !existingIds.has(p.id));
+        // Get existing non-default template IDs to preserve user-created prompts
+        const userPrompts = persistedState.prompts.filter((p: Prompt) => !defaultTemplateIds.has(p.id));
         
+        // Get default templates from current state (guaranteed to be there)
+        const defaultPrompts = currentState.prompts.filter(p => defaultTemplateIds.has(p.id));
+        
+        // Merge user-created prompts with default templates
         return {
           ...currentState,
-          ...persistedState,
-          prompts: [...persistedState.prompts, ...newPrompts],
+          prompts: [...defaultPrompts, ...userPrompts],
         };
       }
     }
