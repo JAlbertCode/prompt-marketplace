@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executePrompt } from '@/lib/sonarApi';
 import { getBaselineCost } from '@/lib/creditHelpers';
 import { WebhookRequest, WebhookResponse, SonarModel } from '@/types';
+import { usePromptStore } from '@/store/usePromptStore';
 
-// For now, we'll store credit usage in memory as a mock
-// In a real app, this would be in a database
-const creditUsage: Record<string, number> = {};
+// For now, we'll mock this
+const userSettings: Record<string, {
+  apiKey?: string;
+  maxCredits: number;
+  usedCredits: number;
+}> = {
+  'anonymous': {
+    maxCredits: 1000,
+    usedCredits: 0
+  }
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,19 +36,38 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Mock prompt retrieval (in a real app, this would fetch from a database)
-    // For now, we'll use a simple mock structure
-    const mockPrompt = {
-      id: body.promptId,
-      systemPrompt: body.systemPrompt || 'You are a helpful assistant.',
-      model: body.model || 'sonar-medium-chat' as SonarModel,
-      creditCost: body.creditCost || getBaselineCost('sonar-medium-chat'),
-    };
+    // In a real app with authentication, we would check if the user has access to this prompt
+    // For now, we'll use the promptId directly with no authentication
+    
+    // For the webhook API in server context we'll use a mock prompt
+    // In production, we would fetch the actual prompt from a database
+    let mockPrompt;
+    
+    // Mock data settings
+    if (body.systemPrompt) {
+      // If the request includes a system prompt, use that
+      mockPrompt = {
+        id: body.promptId,
+        systemPrompt: body.systemPrompt,
+        model: body.model || 'sonar-medium-chat' as SonarModel,
+        creditCost: body.creditCost || getBaselineCost('sonar-medium-chat'),
+        isPrivate: true, // Treat custom prompt executions as private
+        ownerId: body.userId || 'anonymous'
+      };
+    } else {
+      // Otherwise use a default system prompt
+      mockPrompt = {
+        id: body.promptId,
+        systemPrompt: 'You are a helpful AI assistant. Respond to the user\'s query accurately and concisely.',
+        model: body.model || 'sonar-medium-chat' as SonarModel,
+        creditCost: body.creditCost || getBaselineCost('sonar-medium-chat'),
+      };
+    }
     
     // Mock credit checking
-    // In a real app, this would check against a user's account
+    // In a real app, this would check against a user's account in a database
     const userId = body.userId || 'anonymous';
-    const userCredits = 1000 - (creditUsage[userId] || 0);
+    const userCredits = 1000; // Mock unlimited credits for webhook testing
     
     if (userCredits < mockPrompt.creditCost) {
       return NextResponse.json(
@@ -55,15 +83,15 @@ export async function POST(req: NextRequest) {
       mockPrompt.model
     );
     
-    // Deduct credits (mock implementation)
-    creditUsage[userId] = (creditUsage[userId] || 0) + mockPrompt.creditCost;
+    // Mock credit deduction (in a real app, this would update a database)
+    const remainingCredits = userCredits - mockPrompt.creditCost;
     
     // Return the response
     const response: WebhookResponse = {
       result,
       promptId: mockPrompt.id,
       creditCost: mockPrompt.creditCost,
-      remainingCredits: 1000 - creditUsage[userId],
+      remainingCredits,
       timestamp: Date.now()
     };
     

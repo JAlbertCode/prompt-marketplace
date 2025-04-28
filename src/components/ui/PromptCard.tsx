@@ -92,6 +92,11 @@ const PromptCard: React.FC<PromptCardProps> = ({
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold text-gray-800 truncate">
             {prompt.title}
+            {prompt.isPrivate && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                Private
+              </span>
+            )}
           </h3>
           <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
             <button

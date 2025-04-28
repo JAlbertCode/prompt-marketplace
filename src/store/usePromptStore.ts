@@ -9,6 +9,8 @@ interface PromptState {
   getPrompt: (id: string) => Prompt | undefined;
   removePrompt: (id: string) => void;
   resetStore: () => void;
+  getPublicPrompts: () => Prompt[];
+  getUserPrompts: (userId: string) => Prompt[];
 }
 
 // Sample prompts to start with
@@ -19,29 +21,30 @@ const initialPrompts: Prompt[] = [
     description: 'Generate a full blog post on any topic with proper structure',
     systemPrompt: 'You are a professional blog writer. Create a well-structured blog post with an introduction, main sections with subheadings, and a conclusion. The blog post should be informative, engaging, and between 800-1000 words.',
     inputFields: [
-      {
-        id: 'topic',
-        label: 'Topic',
-        placeholder: 'Enter the blog topic',
-        required: true
-      },
-      {
-        id: 'tone',
-        label: 'Tone',
-        placeholder: 'Professional, casual, humorous, etc.',
-        required: false
-      },
-      {
-        id: 'targetAudience',
-        label: 'Target Audience',
-        placeholder: 'Who is this blog post for?',
-        required: false
-      }
+    {
+    id: 'topic',
+    label: 'Topic',
+    placeholder: 'Enter the blog topic',
+    required: true
+    },
+    {
+    id: 'tone',
+    label: 'Tone',
+    placeholder: 'Professional, casual, humorous, etc.',
+    required: false
+    },
+    {
+    id: 'targetAudience',
+    label: 'Target Audience',
+    placeholder: 'Who is this blog post for?',
+    required: false
+    }
     ],
     model: 'sonar-medium-chat',
     creditCost: 50,
     createdAt: Date.now(),
-    exampleOutput: "# The Future of Renewable Energy\n\n## Introduction\nAs the global community grapples with the challenges of climate change, renewable energy has emerged as a critical solution. This blog explores the latest trends, innovations, and future prospects of renewable energy technologies.\n\n## Current Landscape\nRenewable energy sources now account for over 26% of global electricity generation, with solar and wind leading the growth...\n\n[Example output continues]"
+    isPrivate: false,
+      exampleOutput: "# The Future of Renewable Energy\n\n## Introduction\nAs the global community grapples with the challenges of climate change, renewable energy has emerged as a critical solution. This blog explores the latest trends, innovations, and future prospects of renewable energy technologies.\n\n## Current Landscape\nRenewable energy sources now account for over 26% of global electricity generation, with solar and wind leading the growth...\n\n[Example output continues]"
   },
   {
     id: '2',
@@ -262,6 +265,27 @@ export const usePromptStore = create<PromptState>()(
       
       resetStore: () => {
         set({ prompts: initialPrompts });
+      },
+      
+      getPublicPrompts: () => {
+        const prompts = get().prompts;
+        if (!prompts || !Array.isArray(prompts)) {
+          return [];
+        }
+        return prompts.filter(prompt => !prompt.isPrivate);
+      },
+      
+      getUserPrompts: (userId) => {
+        const prompts = get().prompts;
+        if (!prompts || !Array.isArray(prompts)) {
+          return [];
+        }
+        return prompts.filter(prompt => {
+          // Return prompts that are either:
+          // 1. Public prompts
+          // 2. Private prompts owned by this user
+          return !prompt.isPrivate || (prompt.isPrivate && prompt.ownerId === userId);
+        });
       }
     }),
     {

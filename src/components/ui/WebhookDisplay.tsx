@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { generateWebhookUrl } from '@/lib/sonarApi';
 import WebhookDocumentation from './WebhookDocumentation';
+import WebhookTester from './WebhookTester';
 
 interface WebhookDisplayProps {
   promptId: string;
@@ -69,6 +70,11 @@ const WebhookDisplay: React.FC<WebhookDisplayProps> = ({
             webhookUrl={webhookUrl}
           />
         )}
+        
+        <WebhookTester
+          promptId={promptId}
+          webhookUrl={webhookUrl}
+        />
       </div>
     </div>
   );

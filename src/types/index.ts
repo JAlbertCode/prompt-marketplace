@@ -8,6 +8,8 @@ export interface Prompt {
   creditCost: number;
   createdAt: number;
   exampleOutput?: string;
+  isPrivate?: boolean;
+  ownerId?: string;
 }
 
 export interface InputField {

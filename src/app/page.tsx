@@ -11,18 +11,32 @@ import { Prompt, SonarModel } from '@/types';
 
 export default function HomePage() {
   const promptStore = usePromptStore();
-  const { prompts, resetStore } = promptStore;
+  const { getPublicPrompts, getUserPrompts, resetStore } = promptStore;
+  
+  // For the MVP, we'll use a mock current user ID
+  const currentUserId = 'current-user';
+  
+  // Get available prompts (public + user's private prompts)
+  const availablePrompts = useMemo(() => {
+    // In a real app with authentication, we would get the user's ID
+    // and filter prompts based on that
+    return getUserPrompts?.(currentUserId) || [];
+  }, [getUserPrompts, currentUserId]);
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [modelFilter, setModelFilter] = useState<SonarModel | 'all'>('all');
   const [creditFilter, setCreditFilter] = useState({ min: 0, max: 1000 });
+  const [showPrivateOnly, setShowPrivateOnly] = useState(false);
   
   // Filter prompts based on search and filters
   const filteredPrompts = useMemo(() => {
-    if (!Array.isArray(prompts)) return [];
+    if (!Array.isArray(availablePrompts)) return [];
     
-    return prompts.filter(prompt => {
+    return availablePrompts.filter(prompt => {
+      // Private filter
+      const matchesPrivacy = !showPrivateOnly || prompt.isPrivate;
+      
       // Search query filter
       const matchesSearch = searchQuery === '' || 
         prompt.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,9 +49,9 @@ export default function HomePage() {
       const matchesCredit = prompt.creditCost >= creditFilter.min && 
         prompt.creditCost <= creditFilter.max;
       
-      return matchesSearch && matchesModel && matchesCredit;
+      return matchesPrivacy && matchesSearch && matchesModel && matchesCredit;
     });
-  }, [prompts, searchQuery, modelFilter, creditFilter]);
+  }, [availablePrompts, searchQuery, modelFilter, creditFilter, showPrivateOnly]);
   
   const resetPromptStore = () => {
     if (window.confirm('This will reset the prompt store to its initial state. Any custom prompts will be lost. Continue?')) {
@@ -57,6 +71,7 @@ export default function HomePage() {
     setSearchQuery('');
     setModelFilter('all');
     setCreditFilter({ min: 0, max: 1000 });
+    setShowPrivateOnly(false);
   };
   
   return (
@@ -74,9 +89,15 @@ export default function HomePage() {
         <div className="flex space-x-2">
           <button 
             onClick={resetPromptStore}
-            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+            className="text-xs text-blue-600 hover:text-blue-800 hover:underline mr-2"
           >
             Reset Prompts
+          </button>
+          <button
+            onClick={() => setShowPrivateOnly(!showPrivateOnly)}
+            className={`px-3 py-1 text-xs mr-2 rounded-md ${showPrivateOnly ? 'bg-indigo-100 text-indigo-800 border border-indigo-300' : 'bg-gray-100 text-gray-600 border border-gray-300'}`}
+          >
+            {showPrivateOnly ? 'Showing Private Only' : 'Show All Prompts'}
           </button>
           <Link href="/submit">
             <Button>
@@ -93,7 +114,7 @@ export default function HomePage() {
         onCreditFilter={(min, max) => setCreditFilter({ min, max })}
       />
       
-      {Array.isArray(prompts) && prompts.length === 0 ? (
+      {Array.isArray(availablePrompts) && availablePrompts.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">
             No prompts available yet.

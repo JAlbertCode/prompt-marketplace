@@ -18,10 +18,11 @@ const PromptCreator: React.FC = () => {
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [inputFields, setInputFields] = useState<InputField[]>([
-    createInputField('Input', 'Enter your input here')
+  createInputField('Input', 'Enter your input here')
   ]);
   const [model, setModel] = useState<SonarModel>('sonar-medium-chat');
   const [creditCost, setCreditCost] = useState(getBaselineCost('sonar-medium-chat'));
+  const [isPrivate, setIsPrivate] = useState(false);
   
   // Test state
   const [testInputs, setTestInputs] = useState<Record<string, string>>({});
@@ -162,7 +163,10 @@ const PromptCreator: React.FC = () => {
         model,
         creditCost,
         // If we've tested the prompt, use the test output as an example
-        exampleOutput: testOutput || undefined
+        exampleOutput: testOutput || undefined,
+        isPrivate,
+        // In a real app, we would get the ownerId from the authenticated user
+        ownerId: 'current-user'
       };
       
       // Add to store
@@ -392,6 +396,24 @@ const PromptCreator: React.FC = () => {
                 <p className="text-sm text-red-600">{errors.creditCost}</p>
               )}
             </div>
+          </div>
+          
+          <div className="mt-4">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <span className="ml-3 text-sm font-medium text-gray-700">
+                {isPrivate ? 'Private Prompt' : 'Public Prompt'}
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1 ml-14">
+              {isPrivate ? 'Only you can see and use this prompt. It will still be accessible via webhook.' : 'This prompt will be visible to all users in the marketplace.'}
+            </p>
           </div>
         </div>
         
