@@ -216,15 +216,84 @@ Enhanced metadata and search engine optimization:
 - Implement credit purchase system
 - Develop creator payout mechanism
 
-## Example Modal Implementation
+## Webhook API Documentation
 
-The application uses a completely redesigned modal implementation for displaying example outputs:
+The Sonar Prompt Marketplace includes a webhook API for programmatic access to prompts. This allows you to execute prompts from external systems, automation tools, and services like N8N and Make.com.
 
-- **React Portal** - Modals are rendered outside the normal DOM hierarchy using Portals
-- **SSR Compatible** - Custom ClientPortal component ensures compatibility with Next.js SSR
-- **Keyboard Support** - Modals can be closed with the Escape key
-- **Focus Management** - Focus is trapped within the modal for accessibility
-- **Smooth Animations** - Modals have fade and slide animations for a polished experience
+### API Endpoints
+
+#### GET /api/webhook/[promptId]
+
+Retrieve information about a prompt including its input fields and webhook usage examples.
+
+**Response:**
+```json
+{
+  "id": "prompt_id",
+  "name": "Prompt Name",
+  "description": "Prompt description",
+  "inputFields": [
+    {
+      "id": "query",
+      "label": "Query",
+      "placeholder": "Enter your query here",
+      "required": true
+    }
+  ],
+  "webhookInfo": {
+    "url": "https://example.com/api/webhook",
+    "method": "POST",
+    "examplePayload": {
+      "promptId": "prompt_id",
+      "inputs": {
+        "query": "Example query text"
+      }
+    }
+  }
+}
+```
+
+#### POST /api/webhook
+
+Execute a prompt using the webhook API.
+
+**Request:**
+```json
+{
+  "promptId": "prompt_id",
+  "inputs": {
+    "query": "Your input text",
+    "additional_field": "Another input field"
+  },
+  "userId": "optional_user_id"
+}
+```
+
+**Response:**
+```json
+{
+  "result": "The output from the Sonar API",
+  "promptId": "prompt_id",
+  "creditCost": 25,
+  "remainingCredits": 975,
+  "timestamp": 1682451234567
+}
+```
+
+### Integration with N8N
+
+1. Add an HTTP Request node in your N8N workflow
+2. Set the Method to POST
+3. Set the URL to your webhook URL (e.g., `https://sonar-prompt-marketplace.vercel.app/api/webhook`)
+4. Configure the JSON payload with your promptId and inputs
+5. Connect the response to subsequent nodes in your workflow
+
+### Important Notes
+
+- Credits are deducted from your account when prompts are executed via webhooks
+- The webhook API is currently in beta and may change
+- Authentication will be added in a future update
+
 
 ## Known Issues and Workarounds
 

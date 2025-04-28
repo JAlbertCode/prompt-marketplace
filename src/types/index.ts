@@ -62,3 +62,35 @@ export interface SonarApiResponse {
     total_tokens: number;
   };
 }
+
+export interface WebhookRequest {
+  promptId: string;
+  inputs: Record<string, string>;
+  userId?: string;
+  systemPrompt?: string;
+  model?: SonarModel;
+  creditCost?: number;
+}
+
+export interface WebhookResponse {
+  result: string;
+  promptId: string;
+  creditCost: number;
+  remainingCredits: number;
+  timestamp: number;
+}
+
+export interface WebhookInfoResponse {
+  id: string;
+  name: string;
+  description: string;
+  inputFields: InputField[];
+  webhookInfo: {
+    url: string;
+    method: string;
+    examplePayload: {
+      promptId: string;
+      inputs: Record<string, string>;
+    };
+  };
+}

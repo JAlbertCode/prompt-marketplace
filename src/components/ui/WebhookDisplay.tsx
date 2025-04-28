@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { generateWebhookUrl } from '@/lib/sonarApi';
+import WebhookDocumentation from './WebhookDocumentation';
 
 interface WebhookDisplayProps {
   promptId: string;
@@ -11,6 +12,7 @@ const WebhookDisplay: React.FC<WebhookDisplayProps> = ({
   className = '',
 }) => {
   const [copied, setCopied] = useState(false);
+  const [showDocs, setShowDocs] = useState(false);
   const webhookUrl = generateWebhookUrl(promptId);
   
   const handleCopyClick = async () => {
@@ -30,8 +32,8 @@ const WebhookDisplay: React.FC<WebhookDisplayProps> = ({
       <div className="flex items-center justify-between p-3 border-b border-gray-200">
         <h3 className="text-sm font-medium text-gray-700">
           Webhook URL
-          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            Coming Soon
+          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+            Beta
           </span>
         </h3>
         <div className="relative">
@@ -49,10 +51,24 @@ const WebhookDisplay: React.FC<WebhookDisplayProps> = ({
           {webhookUrl}
         </div>
         
-        <p className="mt-2 text-xs text-gray-500">
-          Use this webhook URL to trigger this prompt from external systems.
-          Documentation on how to use webhooks will be available soon.
-        </p>
+        <div className="flex justify-between items-center mt-2">
+          <p className="text-xs text-gray-500">
+            Use this webhook URL to trigger this prompt from external systems.
+          </p>
+          <button
+            onClick={() => setShowDocs(!showDocs)}
+            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            {showDocs ? 'Hide Documentation' : 'Show Documentation'}
+          </button>
+        </div>
+        
+        {showDocs && (
+          <WebhookDocumentation 
+            promptId={promptId}
+            webhookUrl={webhookUrl}
+          />
+        )}
       </div>
     </div>
   );

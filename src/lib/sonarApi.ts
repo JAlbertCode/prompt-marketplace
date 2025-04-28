@@ -72,8 +72,14 @@ export async function executePrompt(
 }
 
 /**
- * Generates a dummy webhook URL for a prompt
+ * Generates a webhook URL for a prompt
  */
 export function generateWebhookUrl(promptId: string): string {
-  return `https://api.sonar-prompts.com/run/${promptId}`;
+  // In a production app, this would use the actual domain
+  // For local development, we'll use a relative URL
+  const baseUrl = typeof window !== 'undefined' 
+    ? window.location.origin
+    : 'https://sonar-prompt-marketplace.vercel.app';
+  
+  return `${baseUrl}/api/webhook/${promptId}`;
 }
