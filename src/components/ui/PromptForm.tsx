@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Prompt, InputField } from '@/types';
 import { executePrompt } from '@/lib/sonarApi';
-import { generateImage as generateStabilityImage } from '@/lib/stabilityApi';
+import { generateImage } from '@/lib/imageApi';
 import { formatUserInputs } from '@/lib/promptHelpers';
 import { downloadTextFile, generateFilename } from '@/lib/downloadHelpers';
 import { useCreditStore } from '@/store/useCreditStore';
@@ -28,8 +28,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [showCreditWarning, setShowCreditWarning] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
   
-  // Determine if this prompt has image capabilities
+  // Determine prompt capabilities
   const hasImageCapability = prompt.capabilities?.includes('image');
+  const hasTextCapability = prompt.capabilities?.includes('text');
   
   useEffect(() => {
     // Check if credits are insufficient and show warning
@@ -74,24 +75,21 @@ const PromptForm: React.FC<PromptFormProps> = ({
       // Format user inputs for the API
       const formattedInputs = formatUserInputs(prompt.inputFields, inputValues);
       
-      // Determine if this is a text prompt, image prompt, or both
-      const isTextPrompt = prompt.capabilities?.includes('text');
-      const isImagePrompt = prompt.capabilities?.includes('image');
-      
       let success = false;
       
       // Handle image-only prompts separately
-      if (isImagePrompt && !isTextPrompt) {
+      if (hasImageCapability && !hasTextCapability) {
         try {
-          // For image-only prompts, directly use the input values
-          const imagePrompt = Object.entries(formattedInputs)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join('\n\n');
+          // For image-only prompts, create a basic prompt from the first input
+          const subjectField = Object.values(formattedInputs)[0] || "";
+          const simplePrompt = `Professional image of ${subjectField}`;
           
-          // Call the Stability AI image generation API
-          const imgUrl = await generateStabilityImage(
-            imagePrompt,
-            'stable-diffusion-xl'
+          console.log('Generating image with prompt:', simplePrompt);
+          
+          // Call the OpenAI DALL-E API
+          const imgUrl = await generateImage(
+            simplePrompt,
+            'dall-e-3'
           );
           
           // Set the image URL
@@ -104,9 +102,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
         }
       } 
       // Handle text-based prompts (with or without image)
-      else if (isTextPrompt) {
+      else if (hasTextCapability) {
         try {
-          // First, call the Sonar API for text generation
+          // Call the Sonar API for text generation
           const textResult = await executePrompt(
             prompt.systemPrompt,
             formattedInputs,
@@ -117,13 +115,19 @@ const PromptForm: React.FC<PromptFormProps> = ({
           setOutput(textResult);
           success = true;
           
-          // If this prompt also has image capability, generate an image from the text
-          if (isImagePrompt && prompt.imageModel) {
+          // If this prompt also has image capability, generate an image
+          if (hasImageCapability && prompt.imageModel) {
             try {
-              // Call the Stability AI image generation API with the text result
-              const imgUrl = await generateStabilityImage(
-                textResult,
-                'stable-diffusion-xl'
+              // Create a simple prompt from the first input field
+              const subjectField = Object.values(formattedInputs)[0] || "";
+              const simplePrompt = `Professional image of ${subjectField}`;
+              
+              console.log('Generating image with prompt:', simplePrompt);
+              
+              // Call the OpenAI DALL-E API
+              const imgUrl = await generateImage(
+                simplePrompt,
+                'dall-e-3'
               );
               
               // Set the image URL
@@ -131,7 +135,6 @@ const PromptForm: React.FC<PromptFormProps> = ({
             } catch (imgErr) {
               console.error('Error generating image:', imgErr);
               toast.error('Failed to generate image, but text was generated successfully');
-              // Don't rethrow - we already have text result
             }
           }
         } catch (txtErr) {
@@ -173,13 +176,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
   
   const handleRegenerateImage = async () => {
     // Check if we have an image capability and model
-    if (!hasImageCapability || !prompt.imageModel) return;
+    if (!hasImageCapability) return;
     
     try {
       setIsLoading(true);
       
       // Check if user has enough credits for regeneration
-      // Usually regenerating just the image would cost less
       const regenerationCost = Math.ceil(prompt.creditCost / 2);
       
       if (credits < regenerationCost) {
@@ -187,17 +189,16 @@ const PromptForm: React.FC<PromptFormProps> = ({
         return;
       }
       
-      // Determine what to use as the prompt
-      const imagePrompt = output || (
-        Object.entries(formatUserInputs(prompt.inputFields, inputValues))
-          .map(([key, value]) => `${key}: ${value}`)
-          .join('\n\n')
-      );
+      // Create a simple prompt from the first input field
+      const subjectField = Object.values(inputValues)[0] || "";
+      const simplePrompt = `Professional image of ${subjectField}`;
       
-      // Generate a new image
-      const imgUrl = await generateStabilityImage(
-        imagePrompt,
-        'stable-diffusion-xl'
+      console.log('Regenerating image with prompt:', simplePrompt);
+      
+      // Generate a new image using DALL-E
+      const imgUrl = await generateImage(
+        simplePrompt,
+        'dall-e-3'
       );
       
       // Update the image URL
@@ -253,7 +254,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
         
       default:
         // Default to text input
-        // Also use textarea for code fields
+        // Use textarea for code fields
         if (field.label.toLowerCase().includes('code') || 
             field.placeholder.toLowerCase().includes('code')) {
           return (
@@ -293,14 +294,11 @@ const PromptForm: React.FC<PromptFormProps> = ({
             <LoadingIndicator size="lg" />
             <span className="mt-3 text-sm font-medium text-gray-700">
               {(() => {
-                const isTextPrompt = prompt.capabilities?.includes('text');
-                const isImagePrompt = prompt.capabilities?.includes('image');
-                
-                if (isTextPrompt && isImagePrompt) {
+                if (hasTextCapability && hasImageCapability) {
                   return 'Generating text and image...';
-                } else if (isTextPrompt) {
+                } else if (hasTextCapability) {
                   return 'Generating text...';
-                } else if (isImagePrompt) {
+                } else if (hasImageCapability) {
                   return 'Generating image...';
                 } else {
                   return 'Processing...';
@@ -310,6 +308,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
           </div>
         </div>
       )}
+      
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">{prompt.title}</h2>
         <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
@@ -317,6 +316,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
         {hasImageCapability && (
           <div className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
             Image Generation
+          </div>
+        )}
+        
+        {hasTextCapability && (
+          <div className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 ml-1">
+            Text Generation
           </div>
         )}
       </div>
@@ -387,8 +392,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
           </form>
         ) : (
           <div className="space-y-4">
-            {/* Show text output if available */}
-            {output && (
+            {/* Only show text output if this prompt has text capabilities */}
+            {hasTextCapability && output && (
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">
                   Text Output
@@ -405,11 +410,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
               <ImageDisplay
                 imageUrl={imageUrl}
                 alt={`Generated image for ${prompt.title}`}
-                prompt={output || 'Generated image'}
+                prompt=""
                 isLoading={isLoading}
                 onRegenerate={handleRegenerateImage}
                 promptId={prompt.id}
                 promptTitle={prompt.title}
+                showPrompt={false}
               />
             )}
             
@@ -428,7 +434,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 Back
               </Button>
               
-              {output && (
+              {hasTextCapability && output && (
                 <Button
                   onClick={handleDownload}
                 >

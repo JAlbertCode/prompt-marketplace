@@ -1,58 +1,117 @@
-import { InputField } from '@/types';
+/**
+ * Utilities for working with prompts
+ */
+
+import { v4 as uuidv4 } from 'uuid';
+import { InputField, Prompt } from '@/types';
 
 /**
- * Generates a new input field with default values
+ * Create a new input field with optional defaults
+ * @param label Default label for the field
+ * @param placeholder Default placeholder for the field
+ * @returns A new input field object
  */
-export function createInputField(label = '', placeholder = ''): InputField {
+export function createInputField(
+  label: string = '',
+  placeholder: string = ''
+): InputField {
   return {
-    id: generateFieldId(),
+    id: uuidv4(),
     label,
     placeholder,
-    required: true
+    required: true,
+    type: 'text'
   };
 }
 
 /**
- * Generates a simple ID for an input field
+ * Validate a system prompt
+ * @param systemPrompt The system prompt to validate
+ * @returns True if the prompt is valid, false otherwise
  */
-function generateFieldId(): string {
-  return `field_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+export function validateSystemPrompt(systemPrompt: string): boolean {
+  return systemPrompt.trim().length >= 10;
 }
 
 /**
- * Validates input fields to ensure they have at least a label
+ * Validate input fields
+ * @param inputFields The input fields to validate
+ * @returns True if the fields are valid, false otherwise
  */
-export function validateInputFields(fields: InputField[]): boolean {
-  if (fields.length === 0) return false;
+export function validateInputFields(inputFields: InputField[]): boolean {
+  // Must have at least one input field
+  if (!inputFields || inputFields.length === 0) {
+    return false;
+  }
   
-  return fields.every(field => field.label.trim() !== '');
-}
-
-/**
- * Validates a system prompt
- */
-export function validateSystemPrompt(prompt: string): boolean {
-  return prompt.trim().length >= 10;
-}
-
-/**
- * Formats user inputs according to input field definitions
- */
-export function formatUserInputs(
-  inputFields: InputField[],
-  values: Record<string, string>
-): Record<string, string> {
-  const formattedInputs: Record<string, string> = {};
-  
+  // All input fields must have a label
   for (const field of inputFields) {
-    // Get the value or use empty string as fallback
-    const value = values[field.id] || '';
-    
-    // Only include non-empty values
-    if (value.trim()) {
-      formattedInputs[field.label] = value;
+    if (!field.label || field.label.trim().length === 0) {
+      return false;
     }
   }
   
+  return true;
+}
+
+/**
+ * Format user inputs for API submission
+ * @param inputFields The input field definitions
+ * @param inputValues The input values
+ * @returns A record of formatted inputs
+ */
+export function formatUserInputs(
+  inputFields: InputField[],
+  inputValues: Record<string, string>
+): Record<string, string> {
+  // Start with an empty object
+  const formattedInputs: Record<string, string> = {};
+  
+  // Format each input field
+  for (const field of inputFields) {
+    // Get the value or use an empty string
+    const value = inputValues[field.id] || '';
+    
+    // Add to formatted inputs
+    formattedInputs[field.label] = value;
+  }
+  
   return formattedInputs;
+}
+
+/**
+ * Generate a simplified prompt data object for API requests
+ * @param prompt The full prompt object
+ * @returns A simplified prompt data object
+ */
+export function simplifyPromptForApi(prompt: Prompt): any {
+  return {
+    id: prompt.id,
+    title: prompt.title,
+    description: prompt.description,
+    inputFields: prompt.inputFields.map(field => ({
+      id: field.id,
+      label: field.label,
+      placeholder: field.placeholder,
+      required: field.required,
+      type: field.type
+    })),
+    model: prompt.model,
+    creditCost: prompt.creditCost,
+    capabilities: prompt.capabilities || ['text']
+  };
+}
+
+/**
+ * Extract input placeholders as a record
+ * @param inputFields The input fields to extract placeholders from
+ * @returns A record of placeholders
+ */
+export function getInputPlaceholders(
+  inputFields: InputField[]
+): Record<string, string> {
+  return inputFields.reduce((acc, field) => {
+    acc[field.id] = field.placeholder || '';
+    return acc;
+  }, {} as Record<string, string>);
 }

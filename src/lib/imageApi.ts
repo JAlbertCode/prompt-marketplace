@@ -25,7 +25,7 @@ export async function generateImage(
   } = {}
 ): Promise<string> {
   try {
-    // For the MVP, we will call our proxy API endpoint
+    // Call our proxy API endpoint
     const response = await fetch('/api/openai/image', {
       method: 'POST',
       headers: {
@@ -49,7 +49,7 @@ export async function generateImage(
     const data = await response.json();
     return data.data[0].url;
   } catch (error) {
-    console.error('Error generating image:', error);
+    console.error('Error generating image with DALL-E API:', error);
     throw error;
   }
 }
@@ -94,6 +94,8 @@ export function mapModelToApiModel(model: ImageModel): 'dall-e-2' | 'dall-e-3' {
     'dall-e-3': 'dall-e-3',
     'dall-e-2': 'dall-e-2',
     'stable-diffusion-xl': 'dall-e-3', // Fallback mappings
+    'stability-xl-turbo': 'dall-e-3',
+    'stability-xl-ultra': 'dall-e-3',
     'sdxl': 'dall-e-3',
     'sd3': 'dall-e-3',
   };

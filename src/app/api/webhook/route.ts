@@ -1,121 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executePrompt } from '@/lib/sonarApi';
-import { getBaselineCost } from '@/lib/creditHelpers';
-import { WebhookRequest, WebhookResponse, SonarModel } from '@/types';
-import { usePromptStore } from '@/store/usePromptStore';
-
-// For now, we'll mock this
-const userSettings: Record<string, {
-  apiKey?: string;
-  maxCredits: number;
-  usedCredits: number;
-}> = {
-  'anonymous': {
-    maxCredits: 1000,
-    usedCredits: 0
-  }
-};
+import { WebhookRequest, WebhookResponse } from '@/types';
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse request body
-    const body: WebhookRequest = await req.json();
+    const body = await req.json() as WebhookRequest;
     
-    // Basic validation
+    // Check for API key in header (would be required in production)
+    const apiKey = req.headers.get('Authorization')?.replace('Bearer ', '');
+    
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Missing API key' },
+        { status: 401 }
+      );
+    }
+    
+    // Validate required fields
     if (!body.promptId) {
       return NextResponse.json(
-        { error: 'Missing promptId in request' },
+        { error: 'promptId is required' },
         { status: 400 }
       );
     }
     
-    if (!body.inputs || typeof body.inputs !== 'object') {
+    if (!body.inputs || Object.keys(body.inputs).length === 0) {
       return NextResponse.json(
-        { error: 'Missing or invalid inputs in request' },
+        { error: 'inputs are required' },
         { status: 400 }
       );
     }
     
-    // In a real app with authentication, we would check if the user has access to this prompt
-    // For now, we'll use the promptId directly with no authentication
+    // In a real webhook implementation, this would:
+    // 1. Load the prompt from a database
+    // 2. Validate the API key belongs to a user with access to this prompt
+    // 3. Execute the prompt against Sonar API
+    // 4. Process payments/credits
+    // 5. Return the result
     
-    // For the webhook API in server context we'll use a mock prompt
-    // In production, we would fetch the actual prompt from a database
-    let mockPrompt;
-    
-    // Mock data settings
-    if (body.systemPrompt) {
-      // If the request includes a system prompt, use that
-      mockPrompt = {
-        id: body.promptId,
-        systemPrompt: body.systemPrompt,
-        model: body.model || 'sonar-medium-chat' as SonarModel,
-        creditCost: body.creditCost || getBaselineCost('sonar-medium-chat'),
-        isPrivate: true, // Treat custom prompt executions as private
-        ownerId: body.userId || 'anonymous'
-      };
-    } else {
-      // Otherwise use a default system prompt
-      mockPrompt = {
-        id: body.promptId,
-        systemPrompt: 'You are a helpful AI assistant. Respond to the user\'s query accurately and concisely.',
-        model: body.model || 'sonar-medium-chat' as SonarModel,
-        creditCost: body.creditCost || getBaselineCost('sonar-medium-chat'),
-      };
-    }
-    
-    // Mock credit checking
-    // In a real app, this would check against a user's account in a database
-    const userId = body.userId || 'anonymous';
-    const userCredits = 1000; // Mock unlimited credits for webhook testing
-    
-    if (userCredits < mockPrompt.creditCost) {
-      return NextResponse.json(
-        { error: 'Insufficient credits', remaining: userCredits, required: mockPrompt.creditCost },
-        { status: 402 } // 402 Payment Required
-      );
-    }
-    
-    // Execute the prompt with Sonar API
-    const result = await executePrompt(
-      mockPrompt.systemPrompt,
-      body.inputs,
-      mockPrompt.model
-    );
-    
-    // Mock credit deduction (in a real app, this would update a database)
-    const remainingCredits = userCredits - mockPrompt.creditCost;
-    
-    // Return the response
-    const response: WebhookResponse = {
-      result,
-      promptId: mockPrompt.id,
-      creditCost: mockPrompt.creditCost,
-      remainingCredits,
+    // For the MVP, we'll simulate a successful response
+    const mockResponse: WebhookResponse = {
+      result: "This is a simulated webhook response. In a production environment, this would be the actual generated output from running the prompt with your inputs.",
+      promptId: body.promptId,
+      creditCost: body.creditCost || 50,
+      remainingCredits: 950,
       timestamp: Date.now()
     };
     
-    return NextResponse.json(response);
+    // If this is an image-capable prompt, add a mock image URL
+    if (body.capabilities?.includes('image')) {
+      mockResponse.imageUrl = "https://picsum.photos/seed/webhook/1024/1024";
+    }
+    
+    // Return the response
+    return NextResponse.json(mockResponse);
   } catch (error) {
-    console.error('Error in webhook execution:', error);
+    console.error('Error in webhook route:', error);
     return NextResponse.json(
-      { error: 'Error processing webhook request', details: (error as Error).message },
+      { error: 'Error processing webhook request' },
       { status: 500 }
     );
   }
 }
 
-// GET handler for testing the webhook
 export async function GET(req: NextRequest) {
-  return NextResponse.json({
-    message: 'Webhook API is operational',
-    usage: 'Send a POST request with promptId and inputs to execute a prompt',
-    example: {
-      promptId: '123',
-      inputs: {
-        query: 'What is the capital of France?'
-      },
-      userId: 'user_123' // Optional
+  const promptId = req.nextUrl.searchParams.get('promptId');
+  
+  if (!promptId) {
+    return NextResponse.json(
+      { error: 'promptId parameter is required' },
+      { status: 400 }
+    );
+  }
+  
+  // In a real implementation, this would return information about the webhook
+  // for the specified prompt
+  const webhookInfo = {
+    id: promptId,
+    name: "Sample Prompt",
+    description: "This is information about the webhook for the specified prompt",
+    inputFields: [
+      {
+        id: "input1",
+        label: "Input 1",
+        placeholder: "Enter your input",
+        required: true
+      }
+    ],
+    webhookInfo: {
+      url: `https://api.sonar-prompts.com/run/${promptId}`,
+      method: "POST",
+      examplePayload: {
+        promptId,
+        inputs: {
+          "input1": "Sample input value"
+        }
+      }
     }
-  });
+  };
+  
+  return NextResponse.json(webhookInfo);
 }

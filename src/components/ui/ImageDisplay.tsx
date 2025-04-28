@@ -16,6 +16,7 @@ interface ImageDisplayProps {
   onDownload?: () => void;
   promptId: string;
   promptTitle: string;
+  showPrompt?: boolean;
 }
 
 export default function ImageDisplay({
@@ -26,7 +27,8 @@ export default function ImageDisplay({
   onRegenerate,
   onDownload,
   promptId,
-  promptTitle
+  promptTitle,
+  showPrompt = false
 }: ImageDisplayProps) {
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +145,14 @@ export default function ImageDisplay({
           style={{ maxHeight: '500px' }}
         />
       </div>
+      
+      {/* Only show the prompt if explicitly requested */}
+      {showPrompt && prompt && (
+        <div className="mt-3 text-xs text-gray-500 p-2 bg-gray-100 rounded border border-gray-200">
+          <p className="font-medium mb-1">Image prompt:</p>
+          <p className="whitespace-pre-wrap">{prompt}</p>
+        </div>
+      )}
       
       {onRegenerate && (
         <div className="mt-4 flex justify-center">

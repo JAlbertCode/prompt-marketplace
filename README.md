@@ -1,5 +1,12 @@
 ## Recent Updates
 
+### Image Generation Fix - April 2025
+
+- **Fixed DALL-E image generation**: Implemented reliable image generation with simplified prompts
+- **Improved UX for image-only prompts**: Text output is now only shown for text-capable prompts
+- **Added image regeneration capability**: Users can regenerate images with one click
+- **Fixed OpenAI API integration**: Resolved 400 Bad Request errors with better prompt handling
+
 ### UI and UX Improvements - April 2025
 
 - **Improved card layout**: Fixed text truncation issues with proper ellipsis and tooltips
@@ -13,14 +20,6 @@
 - **Updated Sonar API model names**: Fixed compatibility issues with Perplexity API by using the current model name 'sonar' instead of deprecated models
 - **Improved API error handling**: Better error messages and prevention of 400 errors by using valid model names
 - **Enhanced stability**: All API calls now use standardized model names to avoid compatibility issues
-
-### Image Generation Enhancement - Critical Fix (April 2025)
-
-- **Fixed critical bug**: Completely separated text and image generation paths to fix 400 errors
-- **Enhanced pure image mode**: Added support for image-only prompts that bypass text generation entirely
-- **Improved error handling**: Better isolation between text and image components to prevent cascading failures
-- **UI refinements**: More intuitive prompt flow with clearer status indicators
-- **More consistent interface**: Added Try Again button for easier iteration
 
 # Sonar Prompt Marketplace
 
@@ -121,13 +120,6 @@ The credit system provides users with:
 - Clear warnings when credits are insufficient for a prompt run
 - System automatically enforces minimum costs during prompt creation
 
-### Future Enhancements
-
-1. **Credit Purchases**: Ability to buy credits with real currency
-2. **Creator Payouts**: Mechanisms to compensate popular prompt creators
-3. **Subscription Models**: Options for unlimited access to certain prompt categories
-4. **Usage Analytics**: Tools for creators to see how their prompts are performing
-
 ## Image Generation Features
 
 PromptFlow now supports image generation using OpenAI's DALL-E models. This allows users to:
@@ -135,14 +127,21 @@ PromptFlow now supports image generation using OpenAI's DALL-E models. This allo
 1. **Create Visual Content**: Generate images from text descriptions
 2. **Combine with Text Prompts**: Use both text and image generation in the same prompt
 3. **Pure Image Generation**: Create image-only prompts without requiring text generation
-4. **Control Image Settings**: Specify size, quality, and style parameters
-5. **Share Generated Images**: Easily share or download generated images
+4. **Share Generated Images**: Easily share or download generated images
 
 ### Image Generation Models
 
-- **Stable Diffusion XL**: High-quality image generation with excellent detail
-- **Stability XL Turbo**: Faster generation with good quality
-- **Stability XL Ultra**: Premium quality with enhanced details and artistic styles
+- **DALL-E 3**: High-quality image generation with excellent detail
+- **DALL-E 2**: Faster generation with good quality
+
+### Image Generation Limitations
+
+For optimal results with image generation:
+
+- **Prompt Length**: Image prompts should be concise (under 250 characters)
+- **Prompt Structure**: Simple, clear descriptions work best
+- **Product/Subject Focus**: Always clearly identify the main subject
+- **Style Guidelines**: Include basic style information (e.g., "professional", "minimalist")
 
 ### Image Generation Use Cases
 
@@ -155,11 +154,10 @@ PromptFlow includes templates for various image generation scenarios:
 
 ### Technical Implementation
 
-- Secure proxy API endpoints to Perplexity Sonar API for text generation
-- Integration with Stability AI for image generation (using placeholders in development)
+- Secure proxy API endpoints to OpenAI's DALL-E API for image generation
 - Support for various image parameters including size, quality, and style
 - Independent text and image generation capabilities with clear UI indicators
-- Fallback mechanisms for development mode without requiring API keys
+- Proper error handling and fallback mechanisms
 
 ### Prompt Capabilities
 
@@ -217,22 +215,6 @@ To prevent potential abuse of the test functionality during prompt creation and 
 - **Test Credit System**: Separate testing credits from regular credits
 - **Watermarked Outputs**: Apply visible watermarks to test outputs
 
-### Technical Implementation
-
-- Test usage tracking in user profiles
-- Rate limiting for test API endpoints
-- Scaled-down model selection for test runs
-- Clear UI indicators for test mode
-
-### Benefits
-
-This system balances the need for creators to test their prompts with protecting the platform from potential abuse, ensuring:
-
-- Creators can validate their prompts work correctly
-- The platform remains financially sustainable
-- Users are encouraged to publish quality prompts
-- API costs remain predictable and manageable
-
 ## Multi-Model Support
 
 With the increasing complexity of AI tasks, we're enhancing PromptFlow to support multiple models in a single prompt workflow:
@@ -243,20 +225,6 @@ With the increasing complexity of AI tasks, we're enhancing PromptFlow to suppor
 - **Capability-Based Selection**: Automatically choose the best model for each capability
 - **Cost Optimization**: Use simpler models for basic tasks, premium models for complex ones
 - **Enhanced Creator Tools**: More granular control over which models handle different parts of a prompt
-
-### Implementation Plan
-
-- Expanded prompt creation interface with model selection per capability
-- Enhanced routing system to direct requests to appropriate models
-- Clearer cost breakdown for multi-model prompts
-- Advanced orchestration for sequential and parallel model execution
-
-### Use Cases
-
-- Text generation + specialized code generation
-- Initial content creation followed by image visualization
-- Multi-stage reasoning with different specialized models for each step
-- Dynamic model selection based on input complexity
 
 ## Webhook Integration
 
@@ -275,13 +243,6 @@ PromptFlow now includes webhook functionality, allowing for external automation 
 - API accepts POST requests with JSON payloads containing prompt inputs
 - Response includes the generated output, credit cost, and remaining credits
 - Security measures ensure only authorized users can execute prompts via webhooks
-
-### Use Cases
-
-- **Workflow Automation**: Integrate AI prompts into existing business workflows
-- **Batch Processing**: Process multiple inputs through the same prompt
-- **Scheduled Execution**: Run prompts on a schedule for recurring tasks
-- **Event-Triggered AI**: Automatically run prompts in response to external events
 
 ## Development
 
