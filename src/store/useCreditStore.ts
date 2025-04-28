@@ -47,7 +47,7 @@ export const useCreditStore = create<CreditState>()(
       autoTopUpThreshold: DEFAULT_AUTO_TOPUP_THRESHOLD,
       autoTopUpAmount: DEFAULT_AUTO_TOPUP_AMOUNT,
       
-      deductCredits: (amount: number, reason: string, promptId?: string) => {
+      deductCredits: (amount: number, reason: string = "Credit deduction", promptId?: string) => {
         const currentCredits = get().credits;
         
         // Check if user has enough credits
@@ -91,7 +91,7 @@ export const useCreditStore = create<CreditState>()(
         return true;
       },
       
-      addCredits: (amount: number, reason: string) => {
+      addCredits: (amount: number, reason: string = "Credit addition") => {
         // Create a transaction record
         const transaction: CreditTransaction = {
           id: generateTransactionId(),

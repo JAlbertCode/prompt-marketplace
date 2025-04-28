@@ -120,7 +120,7 @@ const initialPrompts: Prompt[] = [
     id: '7',
     title: 'Marketing Image Creator',
     description: 'Generate professional marketing images with DALL-E 3',
-    systemPrompt: 'You are an expert marketing designer. Create a detailed and visually compelling image description based on the user\'s requirements. Focus on creating marketing-ready visuals that would be appropriate for advertisements, social media posts, or promotional materials.',
+    systemPrompt: 'You are an expert marketing designer. Create a detailed and visually compelling image description based on the user\'s requirements. Focus on creating marketing-ready visuals that would be appropriate for advertisements, social media posts, or promotional materials. Include specific details about composition, lighting, colors, and style to ensure the generated image is professional and eye-catching.',
     inputFields: [
       {
         id: 'product',
@@ -160,7 +160,7 @@ const initialPrompts: Prompt[] = [
     id: '8',
     title: 'Product Visualization',
     description: 'Create realistic product images from descriptions',
-    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed image description that would result in a photorealistic product visualization based on the user\'s description. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic.',
+    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed image description that would result in a photorealistic product visualization based on the user\'s description. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic. Include specific details about studio setup, background, reflections, and shadows to achieve a professional product photography look.',
     inputFields: [
       {
         id: 'productDescription',
@@ -200,7 +200,7 @@ const initialPrompts: Prompt[] = [
     id: '9',
     title: 'Brand Mood Board Creator',
     description: 'Generate visual mood boards for brand identity',
-    systemPrompt: 'You are a brand identity specialist. Create a detailed description for a visual mood board that captures the essence of the brand described by the user. Focus on creating a cohesive visual language including color schemes, typography suggestions, imagery style, and overall aesthetic that aligns with the brand values and target audience.',
+    systemPrompt: 'You are a brand identity specialist. Create a detailed description for a visual mood board that captures the essence of the brand described by the user. Focus on creating a cohesive visual language including color schemes, typography suggestions, imagery style, and overall aesthetic that aligns with the brand values and target audience. The description should be detailed enough to generate a comprehensive mood board image that effectively communicates the brand\'s identity and appeal.',
     inputFields: [
       {
         id: 'brandName',

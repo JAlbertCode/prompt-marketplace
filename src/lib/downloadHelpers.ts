@@ -3,11 +3,11 @@
  */
 
 /**
- * Download output text as a file
+ * Download text output as a file
  * @param content The content to download
  * @param filename The name of the file
  */
-export function downloadOutput(content: string, filename: string): void {
+export function downloadTextFile(content: string, filename: string): void {
   // Create a blob from the content
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   
@@ -27,6 +27,26 @@ export function downloadOutput(content: string, filename: string): void {
   // Clean up
   document.body.removeChild(link);
   URL.revokeObjectURL(link.href);
+}
+
+/**
+ * Generate a filename for downloaded content
+ * @param title The base title for the filename
+ * @param extension The file extension (without the dot)
+ * @returns A formatted filename
+ */
+export function generateFilename(title: string, extension: string): string {
+  // Sanitize the title
+  const sanitizedTitle = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  
+  // Add timestamp for uniqueness
+  const timestamp = Date.now();
+  
+  // Return formatted filename
+  return `${sanitizedTitle}-${timestamp}.${extension}`;
 }
 
 /**
@@ -60,4 +80,13 @@ export async function downloadImage(imageUrl: string, filename: string): Promise
     console.error('Error downloading image:', error);
     throw error;
   }
+}
+
+/**
+ * Download output (backwards compatibility)
+ * @param content The content to download
+ * @param filename The name of the file
+ */
+export function downloadOutput(content: string, filename: string): void {
+  downloadTextFile(content, filename);
 }

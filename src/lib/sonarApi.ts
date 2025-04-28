@@ -1,37 +1,29 @@
-import { SonarApiRequest, SonarApiResponse, SonarModel } from '@/types';
+/**
+ * Utilities for interacting with the Sonar API
+ */
 
-// Use our local API route instead of calling Sonar directly
-const SONAR_API_ENDPOINT = '/api/sonar';
+import { SonarMessage, SonarModel } from '@/types';
 
 /**
- * Executes a prompt using the Sonar API
+ * Execute a prompt using the Sonar API
+ * @param systemPrompt The system prompt to use
+ * @param userInputs The user inputs to include
+ * @param model The Sonar model to use
+ * @returns A promise resolving to the generated text
  */
 export async function executePrompt(
   systemPrompt: string,
   userInputs: Record<string, string>,
-  model: SonarModel
+  model: SonarModel = 'sonar-medium-chat'
 ): Promise<string> {
-  // Format user inputs into a single string
-  const userContent = Object.entries(userInputs)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n');
-
-  // Map model names to the correct format for the Perplexity API
-  // Use simpler model names for compatibility
-  const modelMap: Record<string, string> = {
-    'sonar-small-online': 'sonar',
-    'sonar-medium-chat': 'sonar',
-    'sonar-large-online': 'sonar',
-    'sonar-medium-online': 'sonar',
-    'sonar-small-chat': 'sonar',
-    'llama-3.1-sonar-small-128k-online': 'sonar'
-  };
-
-  const apiModel = modelMap[model] || 'sonar'; // Default to 'sonar' if model not found
-
-  const request: SonarApiRequest = {
-    model: apiModel,
-    messages: [
+  try {
+    // Format user inputs into a string
+    const userContent = Object.entries(userInputs)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n\n');
+    
+    // Create message array
+    const messages: SonarMessage[] = [
       {
         role: 'system',
         content: systemPrompt
@@ -40,46 +32,61 @@ export async function executePrompt(
         role: 'user',
         content: userContent
       }
-    ],
-    max_tokens: 1024
-  };
-
-  try {
-    const response = await fetch(SONAR_API_ENDPOINT, {
+    ];
+    
+    // Make API request through our proxy
+    const response = await fetch('/api/sonar', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(request)
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens: 2048
+      })
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Sonar API Error: ${response.status} - ${errorText}`);
-    }
-
-    const data: SonarApiResponse = await response.json();
     
-    if (!data.choices || data.choices.length === 0) {
-      throw new Error('No response from Sonar API');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to execute prompt');
     }
-
-    return data.choices[0].message.content;
+    
+    const data = await response.json();
+    
+    // Extract the generated text
+    const generatedText = data.choices[0]?.message?.content || '';
+    
+    return generatedText;
   } catch (error) {
-    console.error('Error calling Sonar API:', error);
+    console.error('Error executing prompt:', error);
     throw error;
   }
 }
 
 /**
- * Generates a webhook URL for a prompt
+ * Calculate the token count for a message (approximate)
+ * @param text The text to count tokens for
+ * @returns Approximate token count
  */
-export function generateWebhookUrl(promptId: string): string {
-  // In a production app, this would use the actual domain
-  // For local development, we'll use a relative URL
-  const baseUrl = typeof window !== 'undefined' 
-    ? window.location.origin
-    : 'https://sonar-prompt-marketplace.vercel.app';
+export function estimateTokenCount(text: string): number {
+  // Rough approximation: 1 token ≈ 4 characters
+  return Math.ceil(text.length / 4);
+}
+
+/**
+ * Map internal model names to API model names
+ */
+export function mapModelToApiModel(model: SonarModel): string {
+  const modelMap: Record<SonarModel, string> = {
+    'sonar-small-online': 'sonar',
+    'sonar-medium-online': 'sonar',
+    'sonar-medium-chat': 'sonar',
+    'sonar-large-online': 'sonar',
+    'sonar-small-chat': 'sonar',
+    'llama-3.1-sonar-small-128k-online': 'sonar',
+    'sonar': 'sonar'
+  };
   
-  return `${baseUrl}/api/webhook/${promptId}`;
+  return modelMap[model] || 'sonar';
 }

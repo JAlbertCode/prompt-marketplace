@@ -22,12 +22,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Forward the request to the OpenAI API
+    // For the MVP, we'll return a placeholder image in development
+    // In production, we would call the OpenAI API
+    if (process.env.NODE_ENV === 'development') {
+      // Generate a hash from the prompt to make it somewhat deterministic
+      const hash = Buffer.from(body.prompt).toString('base64').substring(0, 10);
+      
+      // Get size from body or default to 1024x1024
+      const size = body.size || '1024x1024';
+      const dimensions = size.split('x').map(Number);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Return a placeholder image from picsum.photos
+      return NextResponse.json({
+        created: Date.now(),
+        data: [
+          {
+            url: `https://picsum.photos/seed/${hash}/${dimensions[0]}/${dimensions[1]}`,
+            revised_prompt: body.prompt
+          }
+        ]
+      });
+    }
+    
+    // In production, call the OpenAI API
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         prompt: body.prompt,
@@ -36,59 +61,23 @@ export async function POST(req: NextRequest) {
         size: body.size || '1024x1024',
         quality: body.quality || 'standard',
         style: body.style || 'vivid',
-        response_format: 'url',
-      }),
+        response_format: 'url'
+      })
     });
-
-    // Check if the response is OK
+    
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`OpenAI API returned error ${response.status}:`, errorText);
-      
-      // For safety, fall back to a placeholder image if OpenAI fails
-      if (process.env.NODE_ENV === 'development') {
-        // Generate a hash from the prompt to make it somewhat deterministic
-        const hash = Buffer.from(body.prompt).toString('base64').substring(0, 10);
-        const size = body.size === '1024x1024' ? '1024/1024' : 
-                    body.size === '1792x1024' ? '1792/1024' : 
-                    body.size === '1024x1792' ? '1024/1792' : '1024/1024';
-        
-        return NextResponse.json({
-          created: Date.now(),
-          data: [
-            {
-              url: `https://picsum.photos/seed/${hash}/${size.replace('x', '/')}`,
-            }
-          ]
-        });
-      }
-      
       return NextResponse.json(
         { error: `OpenAI API Error: ${response.status}` },
         { status: response.status }
       );
     }
-
-    // Get the response data
+    
     const data = await response.json();
-
-    // Return the response
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error in OpenAI image API route:', error);
-    
-    // For safety, in development, fall back to a placeholder
-    if (process.env.NODE_ENV === 'development') {
-      return NextResponse.json({
-        created: Date.now(),
-        data: [
-          {
-            url: 'https://picsum.photos/1024',
-          }
-        ]
-      });
-    }
-    
     return NextResponse.json(
       { error: 'Error processing request' },
       { status: 500 }

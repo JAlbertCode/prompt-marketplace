@@ -73,27 +73,36 @@ const PromptForm: React.FC<PromptFormProps> = ({
       // Format user inputs for the API
       const formattedInputs = formatUserInputs(prompt.inputFields, inputValues);
       
-      // Call the Sonar API for text generation
-      const textResult = await executePrompt(
-        prompt.systemPrompt,
-        formattedInputs,
-        prompt.model
-      );
-      
-      // Set the text output
-      setOutput(textResult);
+      // First, call the Sonar API for text generation
+      let textResult = "";
+      try {
+        textResult = await executePrompt(
+          prompt.systemPrompt,
+          formattedInputs,
+          prompt.model
+        );
+        
+        // Set the text output
+        setOutput(textResult);
+      } catch (txtErr) {
+        console.error('Error generating text:', txtErr);
+        toast.error('Failed to generate text');
+        throw txtErr;
+      }
       
       // If the prompt has image capability, also generate an image
       if (hasImageCapability && prompt.imageModel) {
         try {
           // Use the text output as the prompt for image generation
-          // or use a specific input field if one is designated for images
           const imagePrompt = textResult;
+          
+          // Map the internal model to DALL-E model
+          const apiModel = mapModelToApiModel(prompt.imageModel);
           
           // Call the image generation API
           const imgUrl = await generateImage(
             imagePrompt,
-            mapModelToApiModel(prompt.imageModel)
+            apiModel
           );
           
           // Set the image URL
@@ -101,11 +110,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
         } catch (imgErr) {
           console.error('Error generating image:', imgErr);
           toast.error('Failed to generate image, but text was generated successfully');
+          // Don't rethrow - we want to keep the text result even if image fails
         }
       }
       
       // Deduct credits
-      deductCredits(prompt.creditCost);
+      deductCredits(prompt.creditCost, "Run prompt", prompt.id);
       
       // Show success notification
       toast.success(`Prompt executed! -${prompt.creditCost} credits`);
@@ -134,24 +144,27 @@ const PromptForm: React.FC<PromptFormProps> = ({
       
       // Check if user has enough credits for regeneration
       // Usually regenerating just the image would cost less
-      const regenerationCost = prompt.creditCost / 2;
+      const regenerationCost = Math.ceil(prompt.creditCost / 2);
       
       if (credits < regenerationCost) {
         toast.error(`Not enough credits to regenerate image. Needs ${regenerationCost} credits.`);
         return;
       }
       
+      // Map the internal model to DALL-E model
+      const apiModel = mapModelToApiModel(prompt.imageModel);
+      
       // Generate a new image with the same text
       const imgUrl = await generateImage(
         output,
-        mapModelToApiModel(prompt.imageModel)
+        apiModel
       );
       
       // Update the image URL
       setImageUrl(imgUrl);
       
       // Deduct credits for regeneration
-      deductCredits(regenerationCost);
+      deductCredits(regenerationCost, "Regenerate image", prompt.id);
       
       toast.success(`Image regenerated! -${regenerationCost} credits`);
     } catch (err) {
