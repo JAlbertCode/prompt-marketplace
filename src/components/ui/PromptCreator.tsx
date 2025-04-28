@@ -13,6 +13,7 @@ const PromptCreator: React.FC = () => {
   const router = useRouter();
   const { addPrompt } = usePromptStore();
   
+  // Basic form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
@@ -21,12 +22,12 @@ const PromptCreator: React.FC = () => {
   ]);
   const [model, setModel] = useState<SonarModel>('sonar-medium-chat');
   const [creditCost, setCreditCost] = useState(getBaselineCost('sonar-medium-chat'));
-  const [testMode, setTestMode] = useState(false);
+  
+  // Test state
   const [testInputs, setTestInputs] = useState<Record<string, string>>({});
   const [testOutput, setTestOutput] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSaveButton, setShowSaveButton] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Set the credit cost based on the model whenever it changes
@@ -75,15 +76,6 @@ const PromptCreator: React.FC = () => {
       
       // Set the output
       setTestOutput(result);
-      setShowSaveButton(true);
-      
-      // Populate input fields for Create mode
-      const formattedInputs = {};
-      inputFields.forEach(field => {
-        if (testInputs[field.id]) {
-          formattedInputs[field.id] = testInputs[field.id];
-        }
-      });
       
       // Show success notification
       toast.success('Test successful!');
@@ -152,8 +144,8 @@ const PromptCreator: React.FC = () => {
     }
     
     // If we haven't tested the prompt yet, show a confirmation
-    if (!testOutput && !showSaveButton) {
-      if (!window.confirm('You haven\'t tested your prompt yet. Are you sure you want to create it without testing?')) {
+    if (!testOutput) {
+      if (!window.confirm('You haven\'t tested your prompt yet. We recommend testing it before creating. Continue anyway?')) {
         return;
       }
     }
@@ -194,30 +186,11 @@ const PromptCreator: React.FC = () => {
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">Create New Prompt</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Design a new prompt to add to the marketplace
+          Design a custom prompt to publish to the marketplace
         </p>
-        <div className="flex mt-2">
-          <button
-            type="button"
-            onClick={() => {
-              setTestMode(false);
-              setTestOutput(null);
-            }}
-            className={`px-3 py-1 text-sm rounded-l-md ${!testMode ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Create
-          </button>
-          <button
-            type="button"
-            onClick={() => setTestMode(true)}
-            className={`px-3 py-1 text-sm rounded-r-md ${testMode ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Test
-          </button>
-        </div>
       </div>
       
-      <form onSubmit={testMode ? handleTestPrompt : handleSubmit} className="p-4 space-y-6">
+      <form onSubmit={handleSubmit} className="p-4 space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
           <h3 className="text-md font-medium text-gray-700">Basic Information</h3>
@@ -422,19 +395,55 @@ const PromptCreator: React.FC = () => {
           </div>
         </div>
         
-        {/* Submit */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push('/')}
-          >
-            Cancel
-          </Button>
+        {/* Test Your Prompt */}
+        <div className="space-y-4 pt-6 border-t border-gray-200">
+          <h3 className="text-md font-medium text-gray-700">Test Your Prompt</h3>
+          <p className="text-sm text-gray-500">
+            Try out your prompt with sample inputs before publishing it to the marketplace.
+          </p>
           
-          {testMode ? (
+          <div className="space-y-4">
+            {inputFields.map((field) => (
+              <div key={field.id} className="space-y-1">
+                <label
+                  htmlFor={`test-${field.id}`}
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  {field.label}{field.required && <span className="text-red-500">*</span>}
+                </label>
+                
+                {field.label.toLowerCase().includes('code') || 
+                 field.placeholder.toLowerCase().includes('code') ? (
+                  <textarea
+                    id={`test-${field.id}`}
+                    name={field.id}
+                    placeholder={field.placeholder}
+                    value={testInputs[field.id] || ''}
+                    onChange={handleTestInputChange}
+                    required={field.required}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    id={`test-${field.id}`}
+                    name={field.id}
+                    placeholder={field.placeholder}
+                    value={testInputs[field.id] || ''}
+                    onChange={handleTestInputChange}
+                    required={field.required}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="flex justify-end">
             <Button 
-              type="submit"
+              type="button"
+              onClick={handleTestPrompt}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -446,99 +455,46 @@ const PromptCreator: React.FC = () => {
                 'Test Prompt'
               )}
             </Button>
-          ) : (
-            <Button 
-              type="submit"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <span className="flex items-center">
-                  <LoadingIndicator size="sm" className="mr-2" />
-                  Saving...
-                </span>
-              ) : (
-                'Create Prompt'
-              )}
-            </Button>
-          )}
+          </div>
         </div>
         
-        {/* Test Inputs (shown only in test mode) */}
-        {testMode && (
-          <div className="space-y-4 mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-md font-medium text-gray-700">Test Your Prompt</h3>
-            <p className="text-sm text-gray-500">
-              Fill in the input fields to test how your prompt works before publishing it.
-            </p>
-            
-            <div className="space-y-4">
-              {inputFields.map((field) => (
-                <div key={field.id} className="space-y-1">
-                  <label
-                    htmlFor={`test-${field.id}`}
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    {field.label}{field.required && <span className="text-red-500">*</span>}
-                  </label>
-                  
-                  {field.label.toLowerCase().includes('code') || 
-                   field.placeholder.toLowerCase().includes('code') ? (
-                    <textarea
-                      id={`test-${field.id}`}
-                      name={field.id}
-                      placeholder={field.placeholder}
-                      value={testInputs[field.id] || ''}
-                      onChange={handleTestInputChange}
-                      required={field.required}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      id={`test-${field.id}`}
-                      name={field.id}
-                      placeholder={field.placeholder}
-                      value={testInputs[field.id] || ''}
-                      onChange={handleTestInputChange}
-                      required={field.required}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    />
-                  )}
-                </div>
-              ))}
+        {/* Test Output */}
+        {testOutput && (
+          <div className="space-y-2 p-4 border border-gray-200 rounded-md bg-gray-50">
+            <h4 className="text-sm font-medium text-gray-700">Output Preview</h4>
+            <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner max-h-80 overflow-y-auto">
+              {testOutput}
             </div>
-            
-            {/* Test Output */}
-            {testOutput && (
-              <div className="mt-6 space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Output Preview</h4>
-                <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-                  <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner max-h-80 overflow-y-auto">
-                    {testOutput}
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-500">
-                    This output will be saved as an example for users to preview.
-                  </p>
-                  {showSaveButton && (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setTestMode(false);
-                        // Keep the test output for Create mode
-                        toast.success('Ready to publish! Review and click Create Prompt.');
-                      }}
-                    >
-                      Use This Example & Publish
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
+            <p className="text-xs text-gray-500 mt-2">
+              This output will be saved as an example for users to preview when browsing prompts.
+            </p>
           </div>
         )}
+        
+        {/* Submit */}
+        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/')}
+          >
+            Cancel
+          </Button>
+          
+          <Button 
+            type="submit"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <span className="flex items-center">
+                <LoadingIndicator size="sm" className="mr-2" />
+                Saving...
+              </span>
+            ) : (
+              'Create Prompt'
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   );
