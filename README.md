@@ -75,40 +75,26 @@ Sonar Prompt Marketplace is a platform where users can:
 - Implement N8N webhook example integration
 - Add search and filtering capability for prompts
 - Improve UI feedback during execution
-## Recent Fixes
+## Recent Improvements
 
-### Hydration Errors
-We've fixed the hydration errors by:
-1. Adding `suppressHydrationWarning` to the body element in RootLayout
-2. Implementing proper mounting detection in ClientLayout to prevent rendering until hydration is complete
-3. Adding defensive checks around store functions to ensure they exist before calling them
+### UI Enhancements
+1. **Example Display** - Moved example outputs from in-card to a modal overlay for better space utilization
+2. **Card Layout** - Fixed styling to ensure consistent card heights and proper positioning of elements
+3. **Credit System** - Implemented full credit system with visual indicators for low balance
+4. **Search and Filtering** - Added search functionality with model type and credit cost filtering
 
-### getPrompt Function Error
-We've resolved the "getPrompt is not a function" error by:
-1. Adding null/undefined checks before accessing store functions
-2. Properly initializing the store in component hooks
-3. Updating the store configuration to handle SSR properly
-4. Adding better error reporting when store functions are unavailable
+### New Features
+1. **Favorites System** - Users can now favorite prompts and access them via a dedicated page
+2. **Better Error Handling** - Added robust error checking throughout the application
+3. **Credit Warnings** - Visual feedback when credits are low or insufficient for a prompt
+4. **UI Polish** - Active state indicators for navigation, better spacing, and responsive design
+5. **Modal Examples** - View example outputs in a full-screen modal for better readability
 
-### removePrompt Function Error
-We've fixed the prompt removal functionality by:
-1. Checking if the function exists before calling it
-2. Adding defensive checks to prevent errors
-3. Providing error feedback to users when operations fail
-
-### UI Improvements
-1. Fixed card layout to maintain consistent height
-2. Added proper flexbox structure to ensure elements stay at the bottom
-3. Improved spacing and alignment
-4. Added truncation for long text to prevent overflow
-5. Added whitespace-nowrap to credit display to keep it on one line
-
-### Store Initialization Issues
-We've enhanced the Zustand store configuration by:
-1. Adding proper storage configuration with SSR checks
-2. Implementing a reset function to restore initial templates
-3. Improving the merge strategy for combining local storage data with initial templates
-4. Adding null/undefined checks throughout the store to prevent errors
+### Bug Fixes
+1. Fixed hydration errors in the application
+2. Fixed "getPrompt is not a function" and "removePrompt is not a function" errors
+3. Ensured proper client-side initialization for components
+4. Fixed deployment issues on Vercel
 
 ## Known Issues and Workarounds
 
