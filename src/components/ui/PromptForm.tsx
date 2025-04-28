@@ -81,14 +81,15 @@ const PromptForm: React.FC<PromptFormProps> = ({
       if (hasImageCapability && !hasTextCapability) {
         try {
           // For image-only prompts, create a basic prompt from the first input
-          const subjectField = Object.values(formattedInputs)[0] || "";
-          const simplePrompt = `Professional image of ${subjectField}`;
+          const promptText = Object.values(formattedInputs)[0] || "";
+          // Keep it very simple - just the basic topic
+          const imagePrompt = `Image of ${promptText}`;
           
-          console.log('Generating image with prompt:', simplePrompt);
+          console.log('Generating image with prompt:', imagePrompt);
           
           // Call the OpenAI DALL-E API
           const imgUrl = await generateImage(
-            simplePrompt,
+            imagePrompt,
             'dall-e-3'
           );
           
@@ -118,15 +119,15 @@ const PromptForm: React.FC<PromptFormProps> = ({
           // If this prompt also has image capability, generate an image
           if (hasImageCapability && prompt.imageModel) {
             try {
-              // Create a simple prompt from the first input field
-              const subjectField = Object.values(formattedInputs)[0] || "";
-              const simplePrompt = `Professional image of ${subjectField}`;
+              // Ultra simple prompt to avoid errors
+              const promptText = Object.values(formattedInputs)[0] || "";
+              const imagePrompt = `Image of ${promptText}`;
               
-              console.log('Generating image with prompt:', simplePrompt);
+              console.log('Generating image with prompt:', imagePrompt);
               
               // Call the OpenAI DALL-E API
               const imgUrl = await generateImage(
-                simplePrompt,
+                imagePrompt,
                 'dall-e-3'
               );
               
@@ -189,15 +190,15 @@ const PromptForm: React.FC<PromptFormProps> = ({
         return;
       }
       
-      // Create a simple prompt from the first input field
-      const subjectField = Object.values(inputValues)[0] || "";
-      const simplePrompt = `Professional image of ${subjectField}`;
+      // Use the simplest possible prompt
+      const promptText = Object.values(inputValues)[0] || "";
+      const imagePrompt = `Image of ${promptText}`;
       
-      console.log('Regenerating image with prompt:', simplePrompt);
+      console.log('Regenerating image with prompt:', imagePrompt);
       
       // Generate a new image using DALL-E
       const imgUrl = await generateImage(
-        simplePrompt,
+        imagePrompt,
         'dall-e-3'
       );
       

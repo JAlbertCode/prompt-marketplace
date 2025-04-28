@@ -22,17 +22,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize and truncate prompt
-    const sanitizedPrompt = body.prompt
-      .replace(/[^a-zA-Z0-9\s.,!?-]/g, '') // Remove special characters
-      .substring(0, 250); // Strict character limit
+    // Keep prompt simple and shorter than 1000 characters
+    const cleanPrompt = body.prompt.substring(0, 250);
 
-    console.log(`Calling OpenAI API for image generation with model: ${body.model || 'dall-e-3'}`);
-    console.log(`Sanitized prompt: ${sanitizedPrompt}`);
+    console.log(`Calling OpenAI API for image generation with model: dall-e-3`);
+    console.log(`Prompt: "${cleanPrompt}"`);
     
-    // Prepare a minimal payload that is known to work with DALL-E
+    // Prepare request exactly according to OpenAI documentation
+    // https://platform.openai.com/docs/guides/images
     const requestPayload = {
-      prompt: sanitizedPrompt,
+      prompt: cleanPrompt,
       model: "dall-e-3",
       n: 1,
       size: "1024x1024",
@@ -53,7 +52,6 @@ export async function POST(req: NextRequest) {
     });
     
     if (!response.ok) {
-      // Try to get the error message from the response
       let errorMessage = `OpenAI API Error: ${response.status}`;
       try {
         const errorData = await response.json();
@@ -62,7 +60,6 @@ export async function POST(req: NextRequest) {
           errorMessage = errorData.error.message;
         }
       } catch (e) {
-        // If we can't parse the error, just use the status code
         console.error('Error parsing OpenAI error response:', e);
       }
       
