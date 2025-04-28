@@ -166,9 +166,19 @@ const PromptCard: React.FC<PromptCardProps> = ({
         
         <div className="mt-auto">
           <div className="flex flex-wrap gap-2 mb-2">
+            {prompt.capabilities && prompt.capabilities.includes('text') && (
+              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                Text Generation
+              </span>
+            )}
             {prompt.capabilities && prompt.capabilities.includes('image') && (
               <span className="text-xs px-2 py-1 bg-pink-100 text-pink-800 rounded-full">
                 Image Generation
+              </span>
+            )}
+            {prompt.capabilities && prompt.capabilities.includes('code') && (
+              <span className="text-xs px-2 py-1 bg-amber-100 text-amber-800 rounded-full">
+                Code Generation
               </span>
             )}
             <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate max-w-[120px]">

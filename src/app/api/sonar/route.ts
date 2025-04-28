@@ -15,14 +15,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward the request to the Sonar API
-    console.log('Sending request to Perplexity API with model:', body.model);
+    // Force the model to 'sonar' to avoid deprecated model errors
+    const requestBody = { ...body, model: 'sonar' };
+    console.log('Sending request to Perplexity API with model: sonar');
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(requestBody),
     });
 
     // Check if the response is OK

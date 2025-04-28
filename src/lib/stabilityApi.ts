@@ -27,47 +27,31 @@ export async function generateImage(
   } = {}
 ): Promise<string> {
   try {
-    // In a real application, this would make an actual API call to Stability AI
-    // For the MVP, we'll mock the response with a placeholder image
-    
-    // Simulated API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Construct mock image URL based on prompt (makes it somewhat deterministic)
-    const hash = btoa(prompt).substring(0, 10);
-    const width = options.width || 1024;
-    const height = options.height || 1024;
-    
-    // For MVP, return a placeholder image
-    return `https://picsum.photos/seed/${hash}/${width}/${height}`;
-    
-    // Real implementation would do something like:
-    /*
-    const response = await fetch(`${STABILITY_API_BASE_URL}/generation/${model}/text-to-image`, {
+    // Call our backend API endpoint
+    const response = await fetch('/api/stability', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         prompt,
+        model,
         negative_prompt: options.negativePrompt,
         width: options.width || 1024,
         height: options.height || 1024,
         steps: options.steps || 30,
         cfg_scale: options.cfgScale || 7,
-        seed: options.seed,
-      }),
+        seed: options.seed
+      })
     });
     
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to generate image');
+      throw new Error(error.error || 'Failed to generate image');
     }
     
     const data = await response.json();
     return data.images[0].url;
-    */
   } catch (error) {
     console.error('Error generating image:', error);
     throw error;

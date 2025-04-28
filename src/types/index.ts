@@ -25,17 +25,20 @@ export interface InputField {
 }
 
 export type SonarModel = 
+  | 'sonar'
   | 'sonar-small-online'
   | 'sonar-medium-online'
   | 'sonar-medium-chat'
   | 'sonar-large-online'
   | 'sonar-small-chat'
-  | 'llama-3.1-sonar-small-128k-online'
-  | 'sonar';
+  | 'llama-3.1-sonar-small-128k-online';
 
 export type ImageModel =
   | 'dall-e-3'
   | 'dall-e-2'
+  | 'stable-diffusion-xl'
+  | 'stability-xl-turbo'
+  | 'stability-xl-ultra'
   | 'sdxl'
   | 'sd3';
 
@@ -125,4 +128,24 @@ export interface WebhookInfoResponse {
       inputs: Record<string, string>;
     };
   };
+}
+
+export interface StabilityApiRequest {
+  prompt: string;
+  model?: string;
+  negative_prompt?: string;
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg_scale?: number;
+  seed?: number;
+}
+
+export interface StabilityApiResponse {
+  id: string;
+  images: {
+    url: string;
+  }[];
+  created: number;
+  model: string;
 }

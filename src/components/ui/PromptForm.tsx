@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Prompt, InputField } from '@/types';
 import { executePrompt } from '@/lib/sonarApi';
-import { generateImage, mapModelToApiModel } from '@/lib/imageApi';
+import { generateImage as generateStabilityImage } from '@/lib/stabilityApi';
 import { formatUserInputs } from '@/lib/promptHelpers';
 import { downloadTextFile, generateFilename } from '@/lib/downloadHelpers';
 import { useCreditStore } from '@/store/useCreditStore';
@@ -26,6 +26,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreditWarning, setShowCreditWarning] = useState(false);
+  const [showOutput, setShowOutput] = useState(false);
   
   // Determine if this prompt has image capabilities
   const hasImageCapability = prompt.capabilities?.includes('image');
@@ -73,45 +74,76 @@ const PromptForm: React.FC<PromptFormProps> = ({
       // Format user inputs for the API
       const formattedInputs = formatUserInputs(prompt.inputFields, inputValues);
       
-      // First, call the Sonar API for text generation
-      let textResult = "";
-      try {
-        textResult = await executePrompt(
-          prompt.systemPrompt,
-          formattedInputs,
-          prompt.model
-        );
-        
-        // Set the text output
-        setOutput(textResult);
-      } catch (txtErr) {
-        console.error('Error generating text:', txtErr);
-        toast.error('Failed to generate text');
-        throw txtErr;
-      }
+      // Determine if this is a text prompt, image prompt, or both
+      const isTextPrompt = prompt.capabilities?.includes('text');
+      const isImagePrompt = prompt.capabilities?.includes('image');
       
-      // If the prompt has image capability, also generate an image
-      if (hasImageCapability && prompt.imageModel) {
+      let success = false;
+      
+      // Handle image-only prompts separately
+      if (isImagePrompt && !isTextPrompt) {
         try {
-          // Use the text output as the prompt for image generation
-          const imagePrompt = textResult;
+          // For image-only prompts, directly use the input values
+          const imagePrompt = Object.entries(formattedInputs)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n\n');
           
-          // Map the internal model to DALL-E model
-          const apiModel = mapModelToApiModel(prompt.imageModel);
-          
-          // Call the image generation API
-          const imgUrl = await generateImage(
+          // Call the Stability AI image generation API
+          const imgUrl = await generateStabilityImage(
             imagePrompt,
-            apiModel
+            'stable-diffusion-xl'
           );
           
           // Set the image URL
           setImageUrl(imgUrl);
+          success = true;
         } catch (imgErr) {
           console.error('Error generating image:', imgErr);
-          toast.error('Failed to generate image, but text was generated successfully');
-          // Don't rethrow - we want to keep the text result even if image fails
+          toast.error('Failed to generate image');
+          throw imgErr;
         }
+      } 
+      // Handle text-based prompts (with or without image)
+      else if (isTextPrompt) {
+        try {
+          // First, call the Sonar API for text generation
+          const textResult = await executePrompt(
+            prompt.systemPrompt,
+            formattedInputs,
+            prompt.model
+          );
+          
+          // Set the text output
+          setOutput(textResult);
+          success = true;
+          
+          // If this prompt also has image capability, generate an image from the text
+          if (isImagePrompt && prompt.imageModel) {
+            try {
+              // Call the Stability AI image generation API with the text result
+              const imgUrl = await generateStabilityImage(
+                textResult,
+                'stable-diffusion-xl'
+              );
+              
+              // Set the image URL
+              setImageUrl(imgUrl);
+            } catch (imgErr) {
+              console.error('Error generating image:', imgErr);
+              toast.error('Failed to generate image, but text was generated successfully');
+              // Don't rethrow - we already have text result
+            }
+          }
+        } catch (txtErr) {
+          console.error('Error generating text:', txtErr);
+          toast.error('Failed to generate text');
+          throw txtErr;
+        }
+      }
+      
+      // Check if we succeeded
+      if (!success) {
+        throw new Error('No generation capabilities available');
       }
       
       // Deduct credits
@@ -119,6 +151,9 @@ const PromptForm: React.FC<PromptFormProps> = ({
       
       // Show success notification
       toast.success(`Prompt executed! -${prompt.creditCost} credits`);
+      
+      // Toggle to show output
+      setShowOutput(true);
     } catch (err) {
       console.error('Error executing prompt:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -137,7 +172,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
   };
   
   const handleRegenerateImage = async () => {
-    if (!output || !hasImageCapability || !prompt.imageModel) return;
+    // Check if we have an image capability and model
+    if (!hasImageCapability || !prompt.imageModel) return;
     
     try {
       setIsLoading(true);
@@ -151,13 +187,17 @@ const PromptForm: React.FC<PromptFormProps> = ({
         return;
       }
       
-      // Map the internal model to DALL-E model
-      const apiModel = mapModelToApiModel(prompt.imageModel);
+      // Determine what to use as the prompt
+      const imagePrompt = output || (
+        Object.entries(formatUserInputs(prompt.inputFields, inputValues))
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n\n')
+      );
       
-      // Generate a new image with the same text
-      const imgUrl = await generateImage(
-        output,
-        apiModel
+      // Generate a new image
+      const imgUrl = await generateStabilityImage(
+        imagePrompt,
+        'stable-diffusion-xl'
       );
       
       // Update the image URL
@@ -252,7 +292,20 @@ const PromptForm: React.FC<PromptFormProps> = ({
           <div className="bg-white p-4 rounded-md shadow-md flex flex-col items-center">
             <LoadingIndicator size="lg" />
             <span className="mt-3 text-sm font-medium text-gray-700">
-              {hasImageCapability ? 'Generating text and image...' : 'Generating response...'}
+              {(() => {
+                const isTextPrompt = prompt.capabilities?.includes('text');
+                const isImagePrompt = prompt.capabilities?.includes('image');
+                
+                if (isTextPrompt && isImagePrompt) {
+                  return 'Generating text and image...';
+                } else if (isTextPrompt) {
+                  return 'Generating text...';
+                } else if (isImagePrompt) {
+                  return 'Generating image...';
+                } else {
+                  return 'Processing...';
+                }
+              })()}
             </span>
           </div>
         </div>
@@ -269,7 +322,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       </div>
       
       <div className="p-4">
-        {!output ? (
+        {!showOutput ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             {prompt.inputFields.map((field) => (
               <div key={field.id} className="space-y-1">
@@ -334,23 +387,25 @@ const PromptForm: React.FC<PromptFormProps> = ({
           </form>
         ) : (
           <div className="space-y-4">
-            {/* Show text output */}
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Text Output
-              </h3>
-              
-              <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner min-h-[200px] max-h-[400px] overflow-y-auto">
-                {output}
+            {/* Show text output if available */}
+            {output && (
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Text Output
+                </h3>
+                
+                <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner min-h-[200px] max-h-[400px] overflow-y-auto">
+                  {output}
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Show image output if available */}
-            {hasImageCapability && (
+            {hasImageCapability && imageUrl && (
               <ImageDisplay
                 imageUrl={imageUrl}
                 alt={`Generated image for ${prompt.title}`}
-                prompt={output}
+                prompt={output || 'Generated image'}
                 isLoading={isLoading}
                 onRegenerate={handleRegenerateImage}
                 promptId={prompt.id}
@@ -358,7 +413,14 @@ const PromptForm: React.FC<PromptFormProps> = ({
               />
             )}
             
-            <div className="flex justify-between items-center pt-2">
+            <div className="flex items-center justify-between pt-2 space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowOutput(false)}
+              >
+                Try Again
+              </Button>
+              
               <Button
                 variant="outline"
                 onClick={onReturn}
@@ -366,11 +428,13 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 Back
               </Button>
               
-              <Button
-                onClick={handleDownload}
-              >
-                Download Output
-              </Button>
+              {output && (
+                <Button
+                  onClick={handleDownload}
+                >
+                  Download Output
+                </Button>
+              )}
             </div>
           </div>
         )}

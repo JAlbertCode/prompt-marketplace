@@ -14,7 +14,7 @@ import { SonarMessage, SonarModel } from '@/types';
 export async function executePrompt(
   systemPrompt: string,
   userInputs: Record<string, string>,
-  model: SonarModel = 'sonar-medium-chat'
+  model: SonarModel = 'sonar'
 ): Promise<string> {
   try {
     // Format user inputs into a string
@@ -78,15 +78,16 @@ export function estimateTokenCount(text: string): number {
  * Map internal model names to API model names
  */
 export function mapModelToApiModel(model: SonarModel): string {
-  const modelMap: Record<SonarModel, string> = {
-    'sonar-small-online': 'sonar',
-    'sonar-medium-online': 'sonar',
-    'sonar-medium-chat': 'sonar',
-    'sonar-large-online': 'sonar',
-    'sonar-small-chat': 'sonar',
-    'llama-3.1-sonar-small-128k-online': 'sonar',
-    'sonar': 'sonar'
-  };
-  
-  return modelMap[model] || 'sonar';
+  // As of April 2025, 'sonar' is the standard model name
+  // All other model names map to 'sonar' for compatibility with older prompts
+  return 'sonar';
 }
+
+/**
+ * Generates a webhook URL for a prompt
+ * @param promptId The ID of the prompt
+ * @returns A webhook URL string
+ */
+export const generateWebhookUrl = (promptId: string): string => {
+  return `https://api.sonar-prompts.com/run/${promptId}`;
+};

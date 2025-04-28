@@ -1,3 +1,19 @@
+## Recent Updates
+
+### API Model Update - April 2025
+
+- **Updated Sonar API model names**: Fixed compatibility issues with Perplexity API by using the current model name 'sonar' instead of deprecated models
+- **Improved API error handling**: Better error messages and prevention of 400 errors by using valid model names
+- **Enhanced stability**: All API calls now use standardized model names to avoid compatibility issues
+
+### Image Generation Enhancement - Critical Fix (April 2025)
+
+- **Fixed critical bug**: Completely separated text and image generation paths to fix 400 errors
+- **Enhanced pure image mode**: Added support for image-only prompts that bypass text generation entirely
+- **Improved error handling**: Better isolation between text and image components to prevent cascading failures
+- **UI refinements**: More intuitive prompt flow with clearer status indicators
+- **More consistent interface**: Added Try Again button for easier iteration
+
 # Sonar Prompt Marketplace
 
 A web application for browsing, running, and creating AI prompts powered by the Perplexity Sonar API and OpenAI DALL-E image generation.
@@ -110,14 +126,15 @@ PromptFlow now supports image generation using OpenAI's DALL-E models. This allo
 
 1. **Create Visual Content**: Generate images from text descriptions
 2. **Combine with Text Prompts**: Use both text and image generation in the same prompt
-3. **Control Image Settings**: Specify size, quality, and style parameters
-4. **Share Generated Images**: Easily share or download generated images
+3. **Pure Image Generation**: Create image-only prompts without requiring text generation
+4. **Control Image Settings**: Specify size, quality, and style parameters
+5. **Share Generated Images**: Easily share or download generated images
 
 ### Image Generation Models
 
-- **DALL-E 2**: Faster, more affordable image generation
-- **DALL-E 3**: Higher quality, more detailed image generation with better prompt adherence
-- **DALL-E 3 HD**: Premium quality with enhanced details and resolution
+- **Stable Diffusion XL**: High-quality image generation with excellent detail
+- **Stability XL Turbo**: Faster generation with good quality
+- **Stability XL Ultra**: Premium quality with enhanced details and artistic styles
 
 ### Image Generation Use Cases
 
@@ -130,10 +147,27 @@ PromptFlow includes templates for various image generation scenarios:
 
 ### Technical Implementation
 
-- Secure proxy API endpoint to OpenAI's DALL-E API
-- Integration with the credit system to manage image generation costs
+- Secure proxy API endpoints to Perplexity Sonar API for text generation
+- Integration with Stability AI for image generation (using placeholders in development)
 - Support for various image parameters including size, quality, and style
-- Fallback mechanisms for development and testing
+- Independent text and image generation capabilities with clear UI indicators
+- Fallback mechanisms for development mode without requiring API keys
+
+### Prompt Capabilities
+
+Prompts in PromptFlow can have one or more capabilities:
+
+- **Text Generation**: Traditional text prompts using Perplexity Sonar API
+- **Image Generation**: Generate images using DALL-E models
+- **Code Generation**: Specialized prompts optimized for code output
+
+These capabilities can be combined or used independently. For example, a prompt can:
+- Generate only text
+- Generate only images
+- Generate text and then use that text to create an image
+- Generate code with appropriate formatting
+
+The UI clearly indicates which capabilities each prompt offers through intuitive badge icons.
 
 ## Current Implementation Status
 
@@ -149,6 +183,7 @@ PromptFlow includes templates for various image generation scenarios:
 - Enhanced Hero section with clear value proposition
 - Sharing functionality for generated responses
 - Image generation capability with DALL-E integration
+- Webhook integration for external automation
 
 ### In Progress
 - Improved card layout to prevent content overflow
@@ -158,8 +193,32 @@ PromptFlow includes templates for various image generation scenarios:
 
 ### Up Next
 - Auto top-up functionality for credit management
-- Webhook integration for external automation
 - Expanded image generation options
+
+## Webhook Integration
+
+PromptFlow now includes webhook functionality, allowing for external automation and integration with other systems:
+
+### Webhook Features
+
+- **Programmatic Access**: Each prompt has a unique webhook URL for remote execution
+- **API Documentation**: Interactive documentation for how to use the webhook API
+- **Testing Interface**: Built-in webhook tester for validating API calls
+- **Integration Examples**: Documentation for using webhooks with automation tools like N8N and Make.com
+
+### Technical Implementation
+
+- Webhook URLs follow the format: `https://api.sonar-prompts.com/run/{promptId}`
+- API accepts POST requests with JSON payloads containing prompt inputs
+- Response includes the generated output, credit cost, and remaining credits
+- Security measures ensure only authorized users can execute prompts via webhooks
+
+### Use Cases
+
+- **Workflow Automation**: Integrate AI prompts into existing business workflows
+- **Batch Processing**: Process multiple inputs through the same prompt
+- **Scheduled Execution**: Run prompts on a schedule for recurring tasks
+- **Event-Triggered AI**: Automatically run prompts in response to external events
 
 ## Development
 
