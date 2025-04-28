@@ -21,30 +21,31 @@ const initialPrompts: Prompt[] = [
     description: 'Generate a full blog post on any topic with proper structure',
     systemPrompt: 'You are a professional blog writer. Create a well-structured blog post with an introduction, main sections with subheadings, and a conclusion. The blog post should be informative, engaging, and between 800-1000 words.',
     inputFields: [
-    {
-    id: 'topic',
-    label: 'Topic',
-    placeholder: 'Enter the blog topic',
-    required: true
-    },
-    {
-    id: 'tone',
-    label: 'Tone',
-    placeholder: 'Professional, casual, humorous, etc.',
-    required: false
-    },
-    {
-    id: 'targetAudience',
-    label: 'Target Audience',
-    placeholder: 'Who is this blog post for?',
-    required: false
-    }
+      {
+        id: 'topic',
+        label: 'Topic',
+        placeholder: 'Enter the blog topic',
+        required: true
+      },
+      {
+        id: 'tone',
+        label: 'Tone',
+        placeholder: 'Professional, casual, humorous, etc.',
+        required: false
+      },
+      {
+        id: 'targetAudience',
+        label: 'Target Audience',
+        placeholder: 'Who is this blog post for?',
+        required: false
+      }
     ],
     model: 'sonar-medium-chat',
     creditCost: 50,
     createdAt: Date.now(),
     isPrivate: false,
-      exampleOutput: "# The Future of Renewable Energy\n\n## Introduction\nAs the global community grapples with the challenges of climate change, renewable energy has emerged as a critical solution. This blog explores the latest trends, innovations, and future prospects of renewable energy technologies.\n\n## Current Landscape\nRenewable energy sources now account for over 26% of global electricity generation, with solar and wind leading the growth...\n\n[Example output continues]"
+    capabilities: ['text'],
+    exampleOutput: "# The Future of Renewable Energy\n\n## Introduction\nAs the global community grapples with the challenges of climate change, renewable energy has emerged as a critical solution. This blog explores the latest trends, innovations, and future prospects of renewable energy technologies.\n\n## Current Landscape\nRenewable energy sources now account for over 26% of global electricity generation, with solar and wind leading the growth...\n\n[Example output continues]"
   },
   {
     id: '2',
@@ -56,7 +57,8 @@ const initialPrompts: Prompt[] = [
         id: 'code',
         label: 'Code Snippet',
         placeholder: 'Paste your code here',
-        required: true
+        required: true,
+        type: 'textarea'
       },
       {
         id: 'language',
@@ -74,6 +76,7 @@ const initialPrompts: Prompt[] = [
     model: 'sonar-medium-chat',
     creditCost: 30,
     createdAt: Date.now(),
+    capabilities: ['text'],
     exampleOutput: "# Analysis of React useEffect Hook Code\n\nThe code snippet you've shared demonstrates a common pattern for data fetching in React using the useEffect hook. Let me break it down:\n\n```jsx\nuseEffect(() => {\n  const fetchData = async () => {\n    setLoading(true);\n    try {\n      const response = await api.get('/users');\n      setUsers(response.data);\n    } catch (error) {\n      setError(error.message);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  fetchData();\n}, []);\n```\n\n## Key Components:\n\n1. The useEffect hook is called with two arguments:\n   - A callback function (the effect)\n   - A dependency array (empty in this case)\n\n2. Inside the effect, there's an async function declaration..."
   },
   {
@@ -110,115 +113,133 @@ const initialPrompts: Prompt[] = [
     model: 'sonar-small-online',
     creditCost: 25,
     createdAt: Date.now(),
+    capabilities: ['text'],
     exampleOutput: "# Ultra Premium Noise-Cancelling Headphones XC-5000\n\nImmerse yourself in pure audio perfection with the revolutionary XC-5000 wireless headphones. Engineered for the discerning audiophile, these premium headphones combine cutting-edge noise cancellation technology with unparalleled sound quality.\n\n## Key Features That Set XC-5000 Apart:\n\n- **Advanced Adaptive Noise Cancellation** that intelligently adjusts to your environment, creating a personal oasis of sound in even the noisiest settings\n- **Studio-Quality Audio** with custom-tuned 40mm drivers delivering rich bass, crystal-clear highs, and perfectly balanced mid-tones\n- **All-Day Comfort** with memory foam ear cushions and adjustable lightweight design for extended listening sessions\n\nPerfect for frequent travelers, professionals working in distracting environments, or anyone who demands the ultimate sound experience without compromise.\n\nInvest in your sound journey today and experience music the way it was meant to be heard."
   },
   {
-    id: '4',
-    title: 'Email Response Generator',
-    description: 'Craft professional email responses for any situation',
-    systemPrompt: 'You are an expert communication specialist. Create a well-crafted email response that is professional, clear, and appropriate for the context. Consider the tone needed for the recipient and situation.',
+    id: '7',
+    title: 'Marketing Image Creator',
+    description: 'Generate professional marketing images with DALL-E 3',
+    systemPrompt: 'You are an expert marketing designer. Create a detailed and visually compelling image description based on the user\'s requirements. Focus on creating marketing-ready visuals that would be appropriate for advertisements, social media posts, or promotional materials.',
     inputFields: [
       {
-        id: 'originalEmail',
-        label: 'Original Email',
-        placeholder: 'Paste the email you received',
+        id: 'product',
+        label: 'Product or Service',
+        placeholder: 'Describe the product or service to feature',
         required: true
       },
       {
-        id: 'relationship',
-        label: 'Relationship',
-        placeholder: 'Colleague, Client, Manager, etc.',
+        id: 'style',
+        label: 'Visual Style',
+        placeholder: 'Professional, friendly, minimalist, etc.',
         required: true
       },
       {
-        id: 'tone',
-        label: 'Desired Tone',
-        placeholder: 'Formal, Friendly, Apologetic, etc.',
+        id: 'audience',
+        label: 'Target Audience',
+        placeholder: 'Who is this marketing aimed at?',
+        required: false
+      },
+      {
+        id: 'additionalDetails',
+        label: 'Additional Details',
+        placeholder: 'Any specific elements to include',
+        required: false,
+        type: 'textarea'
+      }
+    ],
+    model: 'sonar-small-online',
+    imageModel: 'dall-e-3',
+    creditCost: 150,
+    createdAt: Date.now(),
+    capabilities: ['text', 'image'],
+    exampleImageUrl: 'https://picsum.photos/seed/marketing1/1024/1024',
+    exampleOutput: "A professional marketing image for a premium smart water bottle with temperature control. The image features the sleek, stainless steel water bottle as the centerpiece, with a soft blue glow emanating from its digital temperature display. The bottle is positioned on a minimalist white surface with subtle water droplets around it, conveying freshness. In the background, there's a gradient from light blue to teal, suggesting coolness and technology. The lighting is bright and clean with soft shadows, giving the product a premium feel. The composition leaves space for text overlay on the right side, perfect for adding a product tagline or call to action."
+  },
+  {
+    id: '8',
+    title: 'Product Visualization',
+    description: 'Create realistic product images from descriptions',
+    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed image description that would result in a photorealistic product visualization based on the user\'s description. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic.',
+    inputFields: [
+      {
+        id: 'productDescription',
+        label: 'Product Description',
+        placeholder: 'Describe the product in detail',
+        required: true,
+        type: 'textarea'
+      },
+      {
+        id: 'environment',
+        label: 'Environment',
+        placeholder: 'Studio, lifestyle, outdoor, etc.',
         required: true
       },
       {
-        id: 'keyPoints',
-        label: 'Key Points to Include',
-        placeholder: 'List the main points to address',
+        id: 'angle',
+        label: 'Camera Angle',
+        placeholder: 'Front view, 3/4 view, top-down, etc.',
+        required: false
+      },
+      {
+        id: 'lighting',
+        label: 'Lighting Style',
+        placeholder: 'Soft, dramatic, natural, etc.',
         required: false
       }
     ],
     model: 'sonar-medium-chat',
-    creditCost: 20,
+    imageModel: 'dall-e-3',
+    creditCost: 200,
     createdAt: Date.now(),
-    exampleOutput: "Subject: Re: Follow-up on Project Timeline Adjustments\n\nDear John,\n\nThank you for your email regarding the timeline adjustments for the Baker project. I appreciate you bringing these concerns to my attention.\n\nAfter reviewing the schedule, I agree that the current deadline presents some challenges given the expanded scope. I've spoken with the development team, and we can accommodate a two-week extension without impacting our other commitments. This would move our delivery date to May 15th, which should provide sufficient time to incorporate the additional features you've requested while maintaining our quality standards.\n\nI've attached a revised timeline document reflecting these changes for your review. Could we schedule a brief call this Thursday or Friday to discuss any questions you might have?\n\nThank you for your understanding and continued partnership.\n\nBest regards,\nSarah"
+    capabilities: ['text', 'image'],
+    exampleImageUrl: 'https://picsum.photos/seed/product1/1024/1024',
+    exampleOutput: "A photorealistic image of a premium wireless gaming headset, shown from a slight 3/4 angle to display both the sleek ear cup design and the adjustable microphone. The headset features a matte black finish with subtle red LED accents along the ear cups and microphone tip. The product is displayed on a reflective black surface in a studio environment with professional lighting - a main key light from the front right creating a subtle highlight across the curves of the headset, and a rim light from behind creating a defining edge. The background features a gradient from dark gray to black, keeping the focus entirely on the product. The materials appear high-end with memory foam ear cushions visible, and the overall image has a slight depth of field with the front of the headset in perfect focus while the rear elements have a slight, appealing blur."
   },
   {
-    id: '5',
-    title: 'Research Summary',
-    description: 'Summarize complex research into digestible content',
-    systemPrompt: 'You are a research analyst specializing in making complex topics accessible. Create a clear, concise summary of the research provided, highlighting key findings, methodology, and implications. Your summary should be understandable to an educated non-specialist.',
+    id: '9',
+    title: 'Brand Mood Board Creator',
+    description: 'Generate visual mood boards for brand identity',
+    systemPrompt: 'You are a brand identity specialist. Create a detailed description for a visual mood board that captures the essence of the brand described by the user. Focus on creating a cohesive visual language including color schemes, typography suggestions, imagery style, and overall aesthetic that aligns with the brand values and target audience.',
     inputFields: [
       {
-        id: 'researchTopic',
-        label: 'Research Topic',
-        placeholder: 'Enter the research topic or paste abstract',
+        id: 'brandName',
+        label: 'Brand Name',
+        placeholder: 'Name of the brand',
         required: true
       },
       {
-        id: 'keyFindings',
-        label: 'Key Findings',
-        placeholder: 'Enter any specific findings if available',
-        required: false
-      },
-      {
-        id: 'audienceLevel',
-        label: 'Audience Knowledge Level',
-        placeholder: 'Beginner, Intermediate, Advanced',
+        id: 'industry',
+        label: 'Industry',
+        placeholder: 'What industry is the brand in?',
         required: true
       },
       {
-        id: 'focusArea',
-        label: 'Focus Area',
-        placeholder: 'E.g., practical applications, methodology, etc.',
+        id: 'values',
+        label: 'Brand Values',
+        placeholder: 'Key values the brand represents',
+        required: true
+      },
+      {
+        id: 'audience',
+        label: 'Target Audience',
+        placeholder: 'Who is the brand trying to reach?',
+        required: true
+      },
+      {
+        id: 'aestheticPreference',
+        label: 'Aesthetic Preference',
+        placeholder: 'Modern, vintage, minimal, bold, etc.',
         required: false
       }
     ],
-    model: 'sonar-large-online',
-    creditCost: 40,
+    model: 'sonar-medium-chat',
+    imageModel: 'dall-e-3',
+    creditCost: 180,
     createdAt: Date.now(),
-    exampleOutput: "# Simplified Summary: Quantum Computing Applications in Drug Discovery\n\n## Key Findings\n\nRecent research demonstrates that quantum computing offers significant advantages for drug discovery processes, potentially reducing the time to identify viable drug candidates from years to months. The quantum simulation methods described in this study were able to accurately model complex protein-drug interactions with up to 70% greater accuracy than classical computing methods.\n\n## Methodology Highlights\n\nResearchers utilized a hybrid quantum-classical approach where:\n\n1. Quantum processors handled the computationally intensive molecular simulations\n2. Classical systems managed data pre-processing and result analysis\n3. A novel quantum algorithm (QFold-23) provided exponential speedup for protein folding predictions\n\n## Practical Implications\n\nThis breakthrough has immediate applications for pharmaceutical companies by:\n\n- Reducing the cost of drug discovery by an estimated 30-40%\n- Enabling more accurate screening of potential compounds before laboratory testing\n- Making previously computationally prohibitive simulations feasible\n\nWhile still in early stages, this technology shows remarkable promise for revolutionizing pharmaceutical research if quantum hardware development continues at its current pace."
-  },
-  {
-    id: '6',
-    title: 'Social Media Post Generator',
-    description: 'Create engaging posts for various social platforms',
-    systemPrompt: 'You are a social media marketing expert. Create engaging, platform-appropriate social media content that will drive engagement and reflect the brand voice. Optimize the content length and style for the specified platform.',
-    inputFields: [
-      {
-        id: 'platform',
-        label: 'Platform',
-        placeholder: 'Instagram, Twitter, LinkedIn, etc.',
-        required: true
-      },
-      {
-        id: 'topic',
-        label: 'Topic/Announcement',
-        placeholder: 'What do you want to post about?',
-        required: true
-      },
-      {
-        id: 'brandVoice',
-        label: 'Brand Voice',
-        placeholder: 'Professional, Casual, Humorous, etc.',
-        required: true
-      },
-      {
-        id: 'callToAction',
-        label: 'Call to Action',
-        placeholder: 'What do you want readers to do?',
-        required: false
-      }
-    ],
-    model: 'sonar-small-online',
-    creditCost: 15,
-    createdAt: Date.now(),
-    exampleOutput: "## LinkedIn Post\n\n🚀 **Exciting News: We've Just Launched Our New Sustainable Product Line!**\n\nProud to announce that after 18 months of research and development, EcoInnovate is introducing our fully biodegradable packaging solution that reduces plastic waste by 95% without compromising product protection.\n\nOur team has worked tirelessly to create packaging that isn't just better for the planet, but also:\n\n✅ Maintains the same shelf life as traditional packaging\n✅ Costs only 5% more than conventional alternatives\n✅ Biodegrades completely within 180 days\n\nAs someone passionate about sustainable business practices, I'm particularly excited about this launch because it represents our commitment to environmental responsibility while still delivering the quality our customers expect.\n\nInterested in learning how this could work for your products? Download our white paper (link in comments) or book a consultation through the link in our bio.\n\n#SustainableBusiness #PackagingInnovation #ZeroWaste #CircularEconomy"
+    capabilities: ['text', 'image'],
+    exampleImageUrl: 'https://picsum.photos/seed/moodboard1/1024/1024',
+    exampleOutput: "A visual mood board for 'EcoLuxe', a sustainable luxury home goods brand. The mood board is arranged in a clean grid layout featuring a sophisticated color palette of deep emerald green, matte gold, crisp white, and warm taupe. The board includes close-up textures of natural materials: FSC-certified walnut wood grain, organic cotton weave, recycled brass with a brushed finish, and handmade ceramic with subtle imperfections. Typography examples show a primary serif font for headings that conveys timeless luxury, paired with a clean sans-serif for body text suggesting modern sustainability. Product photography samples feature minimalist compositions with soft natural lighting, showing sustainable luxury items in curated home environments with abundant plants and natural light. The overall aesthetic balances high-end design with environmental consciousness, appealing to affluent, eco-minded consumers who don't want to sacrifice quality or style for sustainability."
   }
 ];
 
@@ -299,8 +320,8 @@ export const usePromptStore = create<PromptState>()(
           return { ...currentState };
         }
         
-        // Identify default templates by fixed IDs (1-6)
-        const defaultTemplateIds = new Set(['1', '2', '3', '4', '5', '6']);
+        // Identify default templates by fixed IDs
+        const defaultTemplateIds = new Set(['1', '2', '3', '7', '8', '9']);
         
         // Get existing non-default template IDs to preserve user-created prompts
         const userPrompts = persistedState.prompts.filter((p: Prompt) => !defaultTemplateIds.has(p.id));

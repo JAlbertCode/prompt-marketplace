@@ -8,8 +8,11 @@ export interface Prompt {
   creditCost: number;
   createdAt: number;
   exampleOutput?: string;
+  exampleImageUrl?: string;
   isPrivate?: boolean;
   ownerId?: string;
+  capabilities?: ('text' | 'image' | 'code')[];
+  imageModel?: ImageModel;
 }
 
 export interface InputField {
@@ -17,6 +20,8 @@ export interface InputField {
   label: string;
   placeholder: string;
   required?: boolean;
+  type?: 'text' | 'textarea' | 'select' | 'image';
+  options?: string[]; // For select type
 }
 
 export type SonarModel = 
@@ -27,6 +32,12 @@ export type SonarModel =
   | 'sonar-small-chat'
   | 'llama-3.1-sonar-small-128k-online'
   | 'sonar';
+
+export type ImageModel =
+  | 'dall-e-3'
+  | 'dall-e-2'
+  | 'sdxl'
+  | 'sd3';
 
 export interface PromptResult {
   text?: string;
@@ -65,6 +76,23 @@ export interface SonarApiResponse {
   };
 }
 
+export interface OpenAIImageRequest {
+  prompt: string;
+  model?: 'dall-e-2' | 'dall-e-3';
+  size?: string;
+  quality?: string;
+  style?: string;
+  n?: number;
+}
+
+export interface OpenAIImageResponse {
+  created: number;
+  data: {
+    url: string;
+    revised_prompt?: string;
+  }[];
+}
+
 export interface WebhookRequest {
   promptId: string;
   inputs: Record<string, string>;
@@ -72,10 +100,12 @@ export interface WebhookRequest {
   systemPrompt?: string;
   model?: SonarModel;
   creditCost?: number;
+  capabilities?: ('text' | 'image' | 'code')[];
 }
 
 export interface WebhookResponse {
   result: string;
+  imageUrl?: string;
   promptId: string;
   creditCost: number;
   remainingCredits: number;

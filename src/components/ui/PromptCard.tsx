@@ -10,7 +10,7 @@ import CreditCostBreakdown from '@/components/ui/CreditCostBreakdown';
 import ExampleModal from '@/components/ui/ExampleModal';
 import { toast } from 'react-hot-toast';
 import { getBaselineCost } from '@/lib/creditHelpers';
-import { LuLock, LuKey, LuStar, LuTrash2, LuEye, LuShare2 } from 'react-icons/lu';
+import { LuLock, LuKey, LuStar, LuTrash2, LuEye } from 'react-icons/lu';
 
 interface PromptCardProps {
   prompt: Prompt;
@@ -115,7 +115,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
       `}
     >
       <div className="p-4 flex flex-col h-full">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-semibold text-gray-800 truncate">
             {prompt.title}
             {prompt.isPrivate && (
@@ -131,14 +131,14 @@ const PromptCard: React.FC<PromptCardProps> = ({
               aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
               title={favorite ? 'Remove from favorites' : 'Add to favorites'}
             >
-              <LuStar fill={favorite ? 'currentColor' : 'none'} />
+              <LuStar className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={handleRemoveClick}
               className="text-sm text-red-500 hover:text-red-700"
               aria-label="Remove prompt"
             >
-              <LuTrash2 />
+              <LuTrash2 className="h-4 w-4" />
             </button>
             <div 
               className="relative whitespace-nowrap"
@@ -160,22 +160,26 @@ const PromptCard: React.FC<PromptCardProps> = ({
           </div>
         </div>
         
-        <p className="text-gray-600 text-sm mb-4 overflow-hidden">
+        <p className="text-gray-600 text-sm mb-4 h-12 overflow-hidden">
           {prompt.description}
         </p>
         
-        <div className="flex-grow">
-        </div>
-        
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center">
+        <div className="mt-auto">
+          <div className="flex flex-wrap gap-2 mb-2">
+            {prompt.capabilities && prompt.capabilities.includes('image') && (
+              <span className="text-xs px-2 py-1 bg-pink-100 text-pink-800 rounded-full">
+                Image Generation
+              </span>
+            )}
             <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate max-w-[120px]">
               {prompt.model}
             </div>
-            
+          </div>
+          
+          <div className="flex justify-between items-center">
             <button
               onClick={handleUnlockPrompt}
-              className={`ml-2 text-xs px-2 py-1 rounded-full flex items-center ${
+              className={`text-xs px-2 py-1 rounded-full flex items-center ${
                 isUnlocked 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
@@ -185,26 +189,26 @@ const PromptCard: React.FC<PromptCardProps> = ({
               {isUnlocked ? <LuKey size={12} /> : <LuLock size={12} />}
               <span className="ml-1">{isUnlocked ? 'Unlocked' : 'Unlock'}</span>
             </button>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <button 
-              onClick={toggleShowExample}
-              className={`text-xs ${prompt.exampleOutput ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'} flex items-center`}
-              title={prompt.exampleOutput ? "View example output" : "No example output available"}
-              disabled={!prompt.exampleOutput}
-            >
-              <LuEye size={14} />
-              <span className="ml-1">Example</span>
-            </button>
             
-            <Button 
-              variant="primary"
-              size="sm"
-              onClick={handleRunClick}
-            >
-              Run Prompt
-            </Button>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={toggleShowExample}
+                className={`text-xs ${prompt.exampleOutput ? 'text-blue-500 hover:text-blue-700' : 'text-gray-400 hover:text-gray-500'} flex items-center`}
+                title={prompt.exampleOutput ? "View example output" : "No example output available"}
+                disabled={!prompt.exampleOutput}
+              >
+                <LuEye size={14} />
+                <span className="ml-1">Example</span>
+              </button>
+              
+              <Button 
+                variant="primary"
+                size="sm"
+                onClick={handleRunClick}
+              >
+                Run Prompt
+              </Button>
+            </div>
           </div>
         </div>
       </div>

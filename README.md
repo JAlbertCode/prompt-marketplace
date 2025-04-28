@@ -1,16 +1,17 @@
 # Sonar Prompt Marketplace
 
-A web application for browsing, running, and creating AI prompts powered by the Perplexity Sonar API.
+A web application for browsing, running, and creating AI prompts powered by the Perplexity Sonar API and OpenAI DALL-E image generation.
 
 ## Project Overview
 
-Sonar Prompt Marketplace is a platform where users can:
+PromptFlow Marketplace is a platform where users can:
 
-- Browse a curated list of optimized prompts
+- Browse a curated list of optimized prompts for text and image generation
 - Run prompts with custom inputs and view results in real-time
-- Create and publish their own prompts
-- Manage credits for prompt execution
-- Access webhook URLs for external automation (optional feature)
+- Create and publish their own prompts with optional creator fees
+- Use credit system to manage prompt execution costs
+- Share generated outputs directly on the platform
+- Unlock prompts to access system prompts for learning
 
 ## Tech Stack
 
@@ -18,13 +19,15 @@ Sonar Prompt Marketplace is a platform where users can:
 - **Styling**: TailwindCSS
 - **State Management**: Zustand
 - **Notifications**: react-hot-toast
-- **API Integration**: Perplexity Sonar API
+- **API Integration**:
+  - Perplexity Sonar API for text generation
+  - OpenAI DALL-E API for image generation
 
 ## Credit System
 
 ### Overview
 
-The credit system in Sonar Prompt Marketplace forms the economic backbone of the platform. It provides a standardized mechanism for pricing prompt executions, compensating prompt creators, and ensuring the platform's sustainability.
+The credit system in PromptFlow forms the economic backbone of the platform. It provides a standardized mechanism for pricing prompt executions, compensating prompt creators, and ensuring the platform's sustainability.
 
 ### How Credits Work
 
@@ -39,11 +42,14 @@ The credit system in Sonar Prompt Marketplace forms the economic backbone of the
 
 The baseline cost for each prompt is determined by the model it uses:
 
-| Model            | Baseline Credits | Reasoning                              |
-|------------------|-----------------|----------------------------------------|
-| sonar-small-online | 15             | Basic model with minimal compute needs |
-| sonar-medium-chat  | 25             | Moderate compute requirements          |
-| sonar-large-online | 40             | High compute requirements              |
+| Model Type | Model | Baseline Credits | Reasoning |
+|------------|------------------|-----------------|----------------------------------------|
+| **Text** | sonar-small-online | 15 | Basic model with minimal compute needs |
+| **Text** | sonar-medium-chat | 25 | Moderate compute requirements |
+| **Text** | sonar-large-online | 40 | High compute requirements |
+| **Image** | dall-e-2 | 50 | Basic image generation |
+| **Image** | dall-e-3 (standard) | 100 | High-quality image generation |
+| **Image** | dall-e-3 (HD) | 200 | Premium image generation |
 
 These baseline costs are calculated by:
 1. Determining the average cost per API call to the model
@@ -64,7 +70,7 @@ Prompt creators can set an additional premium on top of the baseline cost:
 
 The credit system allows the platform to:
 
-1. **Cover API Costs**: Baseline credits ensure that the actual costs of Sonar API calls are covered
+1. **Cover API Costs**: Baseline credits ensure that the actual costs of API calls are covered
 2. **Generate Revenue**: A portion of the premium can be retained by the platform
 3. **Scale Economically**: Higher-value/higher-cost prompts naturally generate more revenue
 
@@ -98,326 +104,62 @@ The credit system provides users with:
 3. **Subscription Models**: Options for unlimited access to certain prompt categories
 4. **Usage Analytics**: Tools for creators to see how their prompts are performing
 
+## Image Generation Features
+
+PromptFlow now supports image generation using OpenAI's DALL-E models. This allows users to:
+
+1. **Create Visual Content**: Generate images from text descriptions
+2. **Combine with Text Prompts**: Use both text and image generation in the same prompt
+3. **Control Image Settings**: Specify size, quality, and style parameters
+4. **Share Generated Images**: Easily share or download generated images
+
+### Image Generation Models
+
+- **DALL-E 2**: Faster, more affordable image generation
+- **DALL-E 3**: Higher quality, more detailed image generation with better prompt adherence
+- **DALL-E 3 HD**: Premium quality with enhanced details and resolution
+
+### Image Generation Use Cases
+
+PromptFlow includes templates for various image generation scenarios:
+
+- **Marketing Materials**: Create professional advertising visuals
+- **Product Visualization**: Generate realistic product images from descriptions
+- **Brand Identity**: Create mood boards and visual design assets
+- **Custom Illustrations**: Generate unique artwork for various purposes
+
+### Technical Implementation
+
+- Secure proxy API endpoint to OpenAI's DALL-E API
+- Integration with the credit system to manage image generation costs
+- Support for various image parameters including size, quality, and style
+- Fallback mechanisms for development and testing
+
 ## Current Implementation Status
 
 ### Completed
 - Project structure and initial setup
 - Type definitions for prompts and API interactions
-- State management using Zustand stores (prompts and credits)
+- State management using Zustand stores (prompts, credits, favorites, unlocked prompts)
 - UI components for the marketplace
 - Basic routing and page templates
-- Fixed hydration errors in the root layout
-- Fixed prompt loading issues in the run page
-- Implemented proper client-side initialization for components
 - Credit system implementation with model-based baseline costs
 - Search and filtering functionality
 - Favorites system with dedicated page
-- Improved modal display for example outputs with React Portal
+- Enhanced Hero section with clear value proposition
+- Sharing functionality for generated responses
+- Image generation capability with DALL-E integration
 
 ### In Progress
-- API integration with Sonar - Currently experiencing CORS issues
-- Proxy API route for Sonar API calls
-- Improving client/server component architecture
+- Improved card layout to prevent content overflow
+- Complete image generation and display
+- Enhanced prompt run page for both text and image outputs
+- API integration refinements
 
-## Recent Improvements
-
-### UI Enhancements
-1. **Example Display** - Completely reimplemented example modal using React Portal for stable rendering
-2. **Card Layout** - Fixed styling to ensure consistent card heights and proper positioning of elements
-3. **Credit System** - Implemented full credit system with visual indicators for low balance
-4. **Search and Filtering** - Added search functionality with model type and credit cost filtering
-
-### New Features
-1. **Favorites System** - Users can now favorite prompts and access them via a dedicated page
-2. **Better Error Handling** - Added robust error checking throughout the application
-3. **Credit Warnings** - Visual feedback when credits are low or insufficient for a prompt
-4. **UI Polish** - Active state indicators for navigation, better spacing, and responsive design
-5. **Modal Animations** - Smooth animations for modal opening/closing with improved accessibility
-
-### Bug Fixes
-1. Fixed hydration errors in the application
-2. Fixed "getPrompt is not a function" and "removePrompt is not a function" errors
-3. Ensured proper client-side initialization for components
-4. Fixed deployment issues on Vercel
-5. Fixed modal flickering and display issues with React Portal implementation
-
-## Work In Progress and Handoff Notes
-
-### Current Implementation Status
-- ✅ Fixed the React.use() error in the [promptId] page by keeping the original params access method
-- ✅ Updated the API endpoint from 'sonar.perplexity.ai/ask' to 'api.perplexity.ai/chat/completions'
-- ✅ Added proper error handling for API responses
-- ✅ Added max_tokens parameter to ensure complete responses
-- ✅ Fixed model naming to use the 'sonar' model type supported by Perplexity API
-- ✅ Added reset prompt store function to restore initial prompt templates
-- ✅ Added example outputs to all prompts with toggle to preview
-- ✅ Started implementation of prompt testing functionality
-- ✅ Fixed hydration errors by adding suppressHydrationWarning to body and implementing proper client-side initialization
-- ✅ Fixed the "getPrompt is not a function" error by checking for function existence before usage
-- ✅ Added better error handling for when store functions are unavailable
-- ✅ Fixed modal flickering issues with React Portal implementation
-- ✅ Added accessibility improvements to modals (keyboard handling, focus management)
-- ✅ Implemented smooth animations for modal transitions
-- ✅ Implemented model-based credit cost system with automatic baseline enforcement
-- ✅ Added favorites system for saving and accessing favorite prompts
-- ✅ Added search and filtering for finding specific prompts
-
-## Latest Implementations
-
-### Private Prompts
-Users can now create private prompts that are only visible to them but still accessible via webhooks:
-- Added `isPrivate` toggle in prompt creation form
-- Private prompts are marked with a badge in the UI
-- Filter to view only your private prompts
-- Both public and private prompts are accessible via webhook API
-
-### Webhook Testing Tool
-Added an integrated webhook testing tool to make it easier to test prompt execution via API:
-- Simple form to test webhook execution directly from the UI
-- No need for external tools like Postman or N8N for basic testing
-- Shows full API response with result and credit information
-- Accessible from the prompt run page
-
-### Enhanced Webhook API
-- Support for both public and private prompts
-- Improved error handling and validation
-- Better documentation and usage examples
-- Mock credit tracking for testing purposes
-
-## Current Status and Next Steps
-
-### Recently Completed
-1. **Private Prompts Feature**
-   - Added ability to create private prompts that are only visible to the creator
-   - Implemented filtering for public/private prompts
-   - Added visual indicators for private prompts
-   - Ensured private prompts are accessible via webhooks
-
-2. **Webhook Testing Tools**
-   - Integrated webhook testing directly in the UI
-   - Added comprehensive webhook documentation
-   - Improved webhook API with better error handling
-   - Built N8N integration examples
-
-3. **UX Improvements**
-   - Completely redesigned prompt creation interface
-   - Integrated testing flow within prompt creation
-   - Added better feedback mechanisms throughout the app
-   - Improved prompt card design with status indicators
-
-### Immediate Next Steps
-1. **AI-Assisted Prompt Creation**
-   - Integrate a conversational interface for creating and refining prompts
-   - Allow users to describe what they want in natural language
-   - Implement AI suggestions for system prompts and input fields
-   - Add real-time feedback on prompt quality
-
-2. **Team Collaboration Features**
-   - Add ability to share private prompts with team members
-   - Implement prompt collections for organizing related prompts
-   - Create shared credit pools for teams
-   - Add commenting and versioning for collaborative prompt development
-
-3. **Advanced Webhook Features**
-   - Add support for custom headers in webhook requests
-   - Implement webhook execution logs and history
-   - Create webhook templates for popular automation platforms
-   - Add more comprehensive error handling and retry logic
-
-### UX Enhancement Vision
-The next major iteration of the platform should focus on making prompt creation as intuitive as possible through AI assistance. Similar to how users would talk to ChatGPT to refine prompts, we should build a native experience where:
-
-1. Users can iteratively refine their system prompts through conversation
-2. The platform suggests improvements to prompts based on testing results
-3. Input fields are intelligently generated from conversations
-4. Users can see and modify AI-suggested changes in real-time
-
-This approach allows non-technical users to create effective prompts without deep knowledge of prompt engineering, while still maintaining the technical features needed by advanced users.
-
-### Technical Debt & Optimization
-1. Complete the implementation of proper credit tracking in a database
-2. Add comprehensive testing for core functionality
-3. Optimize loading times and code splitting
-4. Resolve any remaining edge cases or bugs
-
-### Memory Considerations
-- If you encounter memory limitations, focus on fixing one issue at a time
-- Consider testing locally with a smaller dataset if needed
-
-### Future Work (After Core Functionality)
-- Implement N8N webhook example integration
-- Expand search and filtering capabilities
-- Improve UI feedback during execution
-- Implement credit purchase system
-- Develop creator payout mechanism
-
-## Webhook API Documentation
-
-The Sonar Prompt Marketplace includes a webhook API for programmatic access to prompts. This allows you to execute prompts from external systems, automation tools, and services like N8N and Make.com.
-
-### API Endpoints
-
-#### GET /api/webhook/[promptId]
-
-Retrieve information about a prompt including its input fields and webhook usage examples.
-
-**Response:**
-```json
-{
-  "id": "prompt_id",
-  "name": "Prompt Name",
-  "description": "Prompt description",
-  "inputFields": [
-    {
-      "id": "query",
-      "label": "Query",
-      "placeholder": "Enter your query here",
-      "required": true
-    }
-  ],
-  "webhookInfo": {
-    "url": "https://example.com/api/webhook",
-    "method": "POST",
-    "examplePayload": {
-      "promptId": "prompt_id",
-      "inputs": {
-        "query": "Example query text"
-      }
-    }
-  }
-}
-```
-
-#### POST /api/webhook
-
-Execute a prompt using the webhook API.
-
-**Request:**
-```json
-{
-  "promptId": "prompt_id",
-  "inputs": {
-    "query": "Your input text",
-    "additional_field": "Another input field"
-  },
-  "userId": "optional_user_id"
-}
-```
-
-**Response:**
-```json
-{
-  "result": "The output from the Sonar API",
-  "promptId": "prompt_id",
-  "creditCost": 25,
-  "remainingCredits": 975,
-  "timestamp": 1682451234567
-}
-```
-
-### Integration with N8N
-
-1. Add an HTTP Request node in your N8N workflow
-2. Set the Method to POST
-3. Set the URL to your webhook URL (e.g., `https://sonar-prompt-marketplace.vercel.app/api/webhook`)
-4. Configure the JSON payload with your promptId and inputs
-5. Connect the response to subsequent nodes in your workflow
-
-### Security Requirements (Future Implementation)
-
-The current webhook API implementation is designed for testing purposes only and includes the following security considerations for future implementation:
-
-1. **Authentication**
-   - Each user should have a unique API key for webhook authentication
-   - API keys should be validated server-side before executing prompts
-   - Invalid or missing API keys should be rejected with appropriate error messages
-
-2. **Credit Protection**
-   - All credit calculations and validations must happen server-side
-   - Credit balances should be stored in a secure database, not client-side storage
-   - Credit deductions should be atomic operations with proper error handling
-
-3. **Rate Limiting**
-   - Implement per-user rate limits to prevent abuse
-   - Add IP-based rate limiting for anonymous requests
-   - Include proper headers for rate limit information
-
-4. **Logging and Monitoring**
-   - Log all webhook usage for audit purposes
-   - Implement monitoring for unusual patterns or potential abuse
-   - Create alerts for critical security events
-
-5. **Secure Deployment**
-   - Use HTTPS for all API endpoints
-   - Implement proper CORS policies
-   - Keep API keys and other credentials out of client-side code
-
-These security measures will be implemented before the webhook API is made available for production use.
-
-## Known Issues and Workarounds
-
-### Next.js Parameter Warning
-
-You may see the following warning in the console:
-
-```
-A param property was accessed directly with `params.promptId`. `params` is now a Promise...
-```
-
-This warning appears because we're accessing route parameters directly in a Client Component. We've kept this implementation because using `React.use()` as suggested caused errors with our Client Component setup. This is a deprecation warning but does not affect functionality.
-
-### Perplexity API Model Mapping
-
-Perplexity API requires using specific model identifiers. We've implemented a mapping system that converts all our model types to the basic 'sonar' model for compatibility:
-
-```typescript
-const modelMap = {
-  'sonar-small-online': 'sonar',
-  'sonar-medium-chat': 'sonar',
-  'sonar-large-online': 'sonar',
-  // other models mapped to 'sonar'
-};
-```
-
-Do not change this mapping or the application will encounter 400 Bad Request errors.
-
-## How It Works
-
-### Credit System
-
-- Each user starts with 1000 credits
-- Credits are deducted when prompts are run, based on the prompt's cost
-- Credit balance is stored in localStorage and persists between sessions
-- Low credit warnings appear when balance falls below 200 credits
-- Prompt costs are automatically set to at least the baseline cost for the selected model
-
-### Sonar API Integration
-
-- The application uses a server-side API route to proxy requests to Perplexity API through the `/chat/completions` endpoint
-- System prompts remain hidden from users during execution
-- Responses from the API are displayed and can be downloaded
-- Error handling is implemented for API failures
-
-### Prompt Creation
-
-- Users can create custom prompts with defined input fields
-- System prompts and input definitions are stored locally
-- Prompts can have different credit costs and use different Sonar models
-- The system enforces minimum credit costs based on the selected model
-
-### Favorites System
-
-- Users can mark prompts as favorites for quick access
-- Favorites are stored in localStorage and persist between sessions
-- A dedicated favorites page shows all saved prompts
-- The header displays the number of favorites for easy access
-
-### Search and Filtering
-
-- Users can search prompts by title and description
-- Filtering by model type to find prompts using specific models
-- Credit cost filtering to find prompts within a budget range
-- Results update in real-time as filters are applied
+### Up Next
+- Auto top-up functionality for credit management
+- Webhook integration for external automation
+- Expanded image generation options
 
 ## Development
 
@@ -425,17 +167,15 @@ Do not change this mapping or the application will encounter 400 Bad Request err
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Create a `.env.local` file with required API keys (copy from `.env.local.example`)
+3. Create a `.env.local` file with required API keys:
+   ```
+   SONAR_API_KEY=your_sonar_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   ```
 4. Start the development server: `npm run dev`
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-### Environment Variables
-
-```
-SONAR_API_KEY=your_api_key_here
-```
-
-## Directory Structure
+### Directory Structure
 
 ```
 /
@@ -446,20 +186,23 @@ SONAR_API_KEY=your_api_key_here
 │   │   ├── run/       # Prompt execution pages
 │   │   ├── submit/    # Prompt creation page
 │   │   ├── favorites/ # Favorites page
-│   │   └── api/       # API routes for proxying Sonar requests
+│   │   ├── shared/    # Shared response display
+│   │   └── api/       # API routes for proxying requests
 │   ├── components/    # Reusable UI components
-│   │   ├── layout/    # Layout components (Header, Footer, ClientLayout)
+│   │   ├── layout/    # Layout components (Header, Footer, Hero)
 │   │   ├── shared/    # Shared UI components (Button, LoadingIndicator)
-│   │   └── ui/        # Specialized UI components (PromptCard, PromptForm, etc.)
+│   │   └── ui/        # Specialized UI components (PromptCard, etc.)
 │   ├── lib/           # Utilities and helper functions
-│   │   ├── sonarApi.ts         # Sonar API integration
-│   │   ├── promptHelpers.ts    # Helpers for prompt management
-│   │   ├── creditHelpers.ts    # Functions for credit management
-│   │   └── downloadHelpers.ts  # Functions for downloading outputs
+│   │   ├── sonarApi.ts        # Sonar API integration
+│   │   ├── imageApi.ts        # DALL-E API integration
+│   │   ├── creditHelpers.ts   # Credit management utilities
+│   │   ├── shareHelpers.ts    # Sharing functionality
+│   │   └── sessionHelpers.ts  # Session management
 │   ├── store/         # Zustand store configurations
-│   │   ├── usePromptStore.ts   # Store for prompts data
-│   │   ├── useCreditStore.ts   # Store for credit management
-│   │   └── useFavoriteStore.ts # Store for favorites management
+│   │   ├── usePromptStore.ts      # Store for prompts data
+│   │   ├── useCreditStore.ts      # Store for credit management
+│   │   ├── useFavoriteStore.ts    # Store for favorites management
+│   │   └── useUnlockedPromptStore.ts # Store for unlocked prompts
 │   └── types/         # TypeScript type definitions
 └── ... configuration files
 ```

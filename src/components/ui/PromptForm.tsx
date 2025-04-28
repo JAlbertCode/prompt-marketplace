@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { Prompt, InputField } from '@/types';
 import { executePrompt } from '@/lib/sonarApi';
+import { generateImage, mapModelToApiModel } from '@/lib/imageApi';
 import { formatUserInputs } from '@/lib/promptHelpers';
 import { downloadTextFile, generateFilename } from '@/lib/downloadHelpers';
 import { useCreditStore } from '@/store/useCreditStore';
 import Button from '@/components/shared/Button';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
+import ImageDisplay from '@/components/ui/ImageDisplay';
 
 interface PromptFormProps {
   prompt: Prompt;
@@ -20,16 +22,20 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const { credits, deductCredits } = useCreditStore();
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [output, setOutput] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreditWarning, setShowCreditWarning] = useState(false);
+  
+  // Determine if this prompt has image capabilities
+  const hasImageCapability = prompt.capabilities?.includes('image');
   
   useEffect(() => {
     // Check if credits are insufficient and show warning
     setShowCreditWarning(credits < prompt.creditCost);
   }, [credits, prompt.creditCost]);
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setInputValues(prev => ({
       ...prev,
@@ -42,6 +48,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
     
     // Reset states
     setOutput(null);
+    setImageUrl(null);
     setError(null);
     
     // Check if user has enough credits
@@ -66,18 +73,39 @@ const PromptForm: React.FC<PromptFormProps> = ({
       // Format user inputs for the API
       const formattedInputs = formatUserInputs(prompt.inputFields, inputValues);
       
-      // Call the Sonar API
-      const result = await executePrompt(
+      // Call the Sonar API for text generation
+      const textResult = await executePrompt(
         prompt.systemPrompt,
         formattedInputs,
         prompt.model
       );
       
+      // Set the text output
+      setOutput(textResult);
+      
+      // If the prompt has image capability, also generate an image
+      if (hasImageCapability && prompt.imageModel) {
+        try {
+          // Use the text output as the prompt for image generation
+          // or use a specific input field if one is designated for images
+          const imagePrompt = textResult;
+          
+          // Call the image generation API
+          const imgUrl = await generateImage(
+            imagePrompt,
+            mapModelToApiModel(prompt.imageModel)
+          );
+          
+          // Set the image URL
+          setImageUrl(imgUrl);
+        } catch (imgErr) {
+          console.error('Error generating image:', imgErr);
+          toast.error('Failed to generate image, but text was generated successfully');
+        }
+      }
+      
       // Deduct credits
       deductCredits(prompt.creditCost);
-      
-      // Set the output
-      setOutput(result);
       
       // Show success notification
       toast.success(`Prompt executed! -${prompt.creditCost} credits`);
@@ -98,19 +126,133 @@ const PromptForm: React.FC<PromptFormProps> = ({
     toast.success('Output downloaded successfully');
   };
   
+  const handleRegenerateImage = async () => {
+    if (!output || !hasImageCapability || !prompt.imageModel) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Check if user has enough credits for regeneration
+      // Usually regenerating just the image would cost less
+      const regenerationCost = prompt.creditCost / 2;
+      
+      if (credits < regenerationCost) {
+        toast.error(`Not enough credits to regenerate image. Needs ${regenerationCost} credits.`);
+        return;
+      }
+      
+      // Generate a new image with the same text
+      const imgUrl = await generateImage(
+        output,
+        mapModelToApiModel(prompt.imageModel)
+      );
+      
+      // Update the image URL
+      setImageUrl(imgUrl);
+      
+      // Deduct credits for regeneration
+      deductCredits(regenerationCost);
+      
+      toast.success(`Image regenerated! -${regenerationCost} credits`);
+    } catch (err) {
+      console.error('Error regenerating image:', err);
+      toast.error('Failed to regenerate image');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const renderInputField = (field: InputField) => {
+    // Handle different field types
+    switch (field.type) {
+      case 'textarea':
+        return (
+          <textarea
+            id={field.id}
+            name={field.id}
+            placeholder={field.placeholder}
+            value={inputValues[field.id] || ''}
+            onChange={handleInputChange}
+            required={field.required}
+            rows={5}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+          />
+        );
+        
+      case 'select':
+        return (
+          <select
+            id={field.id}
+            name={field.id}
+            value={inputValues[field.id] || ''}
+            onChange={handleInputChange}
+            required={field.required}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+          >
+            <option value="">Select an option</option>
+            {field.options?.map(option => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+        
+      default:
+        // Default to text input
+        // Also use textarea for code fields
+        if (field.label.toLowerCase().includes('code') || 
+            field.placeholder.toLowerCase().includes('code')) {
+          return (
+            <textarea
+              id={field.id}
+              name={field.id}
+              placeholder={field.placeholder}
+              value={inputValues[field.id] || ''}
+              onChange={handleInputChange}
+              required={field.required}
+              rows={5}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+            />
+          );
+        }
+        
+        return (
+          <input
+            type="text"
+            id={field.id}
+            name={field.id}
+            placeholder={field.placeholder}
+            value={inputValues[field.id] || ''}
+            onChange={handleInputChange}
+            required={field.required}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+          />
+        );
+    }
+  };
+  
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 relative">
       {isLoading && (
         <div className="absolute inset-0 bg-gray-50/80 flex items-center justify-center z-10">
           <div className="bg-white p-4 rounded-md shadow-md flex flex-col items-center">
             <LoadingIndicator size="lg" />
-            <span className="mt-3 text-sm font-medium text-gray-700">Generating response...</span>
+            <span className="mt-3 text-sm font-medium text-gray-700">
+              {hasImageCapability ? 'Generating text and image...' : 'Generating response...'}
+            </span>
           </div>
         </div>
       )}
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">{prompt.title}</h2>
         <p className="text-sm text-gray-600 mt-1">{prompt.description}</p>
+        
+        {hasImageCapability && (
+          <div className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+            Image Generation
+          </div>
+        )}
       </div>
       
       <div className="p-4">
@@ -125,30 +267,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                   {field.label}{field.required && <span className="text-red-500">*</span>}
                 </label>
                 
-                {field.label.toLowerCase().includes('code') || 
-                 field.placeholder.toLowerCase().includes('code') ? (
-                  <textarea
-                    id={field.id}
-                    name={field.id}
-                    placeholder={field.placeholder}
-                    value={inputValues[field.id] || ''}
-                    onChange={handleInputChange}
-                    required={field.required}
-                    rows={5}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    id={field.id}
-                    name={field.id}
-                    placeholder={field.placeholder}
-                    value={inputValues[field.id] || ''}
-                    onChange={handleInputChange}
-                    required={field.required}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  />
-                )}
+                {renderInputField(field)}
               </div>
             ))}
             
@@ -202,15 +321,29 @@ const PromptForm: React.FC<PromptFormProps> = ({
           </form>
         ) : (
           <div className="space-y-4">
+            {/* Show text output */}
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Output
+                Text Output
               </h3>
               
               <div className="bg-white border border-gray-300 rounded-md p-3 text-sm text-gray-800 whitespace-pre-wrap shadow-inner min-h-[200px] max-h-[400px] overflow-y-auto">
                 {output}
               </div>
             </div>
+            
+            {/* Show image output if available */}
+            {hasImageCapability && (
+              <ImageDisplay
+                imageUrl={imageUrl}
+                alt={`Generated image for ${prompt.title}`}
+                prompt={output}
+                isLoading={isLoading}
+                onRegenerate={handleRegenerateImage}
+                promptId={prompt.id}
+                promptTitle={prompt.title}
+              />
+            )}
             
             <div className="flex justify-between items-center pt-2">
               <Button
