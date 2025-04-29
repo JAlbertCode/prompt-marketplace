@@ -22,62 +22,63 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // For the MVP, we'll return a placeholder image in development
-    // In production, we would call the OpenAI API
-    if (process.env.NODE_ENV === 'development') {
-      // Generate a hash from the prompt to make it somewhat deterministic
-      const hash = Buffer.from(body.prompt).toString('base64').substring(0, 10);
-      
-      // Get size from body or default to 1024x1024
-      const size = body.size || '1024x1024';
-      const dimensions = size.split('x').map(Number);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Return a placeholder image from picsum.photos
-      return NextResponse.json({
-        created: Date.now(),
-        data: [
-          {
-            url: `https://picsum.photos/seed/${hash}/${dimensions[0]}/${dimensions[1]}`,
-            revised_prompt: body.prompt
-          }
-        ]
-      });
+    // Keep prompt simple and shorter than 1000 characters
+    const cleanPrompt = body.prompt.substring(0, 250);
+
+    console.log(`Calling OpenAI API for image generation with model: dall-e-3`);
+    console.log(`Prompt: "${cleanPrompt}"`);
+    
+    // Prepare request exactly according to OpenAI documentation
+    // https://platform.openai.com/docs/guides/images
+    const requestPayload = {
+      "prompt": cleanPrompt,
+      "model": "dall-e-3",
+      "n": 1,
+      "size": "1024x1024",
+      "quality": "standard",
+      "style": "vivid",
+      "response_format": "url"
     }
     
-    // In production, call the OpenAI API
+    
+    console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+    
+    // Call the OpenAI API
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        prompt: body.prompt,
-        model: body.model || 'dall-e-3',
-        n: body.n || 1,
-        size: body.size || '1024x1024',
-        quality: body.quality || 'standard',
-        style: body.style || 'vivid',
-        response_format: 'url'
-      })
+      body: JSON.stringify(requestPayload)
     });
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`OpenAI API returned error ${response.status}:`, errorText);
+      let errorMessage = `OpenAI API Error: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        console.error('OpenAI API error details:', errorData);
+        if (errorData.error && errorData.error.message) {
+          errorMessage = errorData.error.message;
+        }
+      } catch (e) {
+        console.error('Error parsing OpenAI error response:', e);
+      }
+      
+      console.error('OpenAI API error:', errorMessage);
+      
       return NextResponse.json(
-        { error: `OpenAI API Error: ${response.status}` },
+        { error: errorMessage },
         { status: response.status }
       );
     }
     
     const data = await response.json();
+    console.log('Successfully generated image with OpenAI');
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error in OpenAI image API route:', error);
+    
     return NextResponse.json(
       { error: 'Error processing request' },
       { status: 500 }

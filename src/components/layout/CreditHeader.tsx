@@ -1,42 +1,39 @@
+'use client';
+
 import React from 'react';
 import { useCreditStore } from '@/store/useCreditStore';
-import { toast } from 'react-hot-toast';
 
 const CreditHeader: React.FC = () => {
-  const { credits, resetCredits } = useCreditStore();
-  
-  const handleResetCredits = () => {
-    resetCredits();
-    toast.success('Credits reset to 1000!');
-  };
-  
-  // Determine color based on credit balance
-  const getCreditColor = () => {
-    if (credits < 100) return 'text-red-600 bg-red-100';
-    if (credits < 300) return 'text-yellow-600 bg-yellow-100';
-    return 'text-green-600 bg-green-100';
-  };
+  const { credits, warningLevel } = useCreditStore();
   
   return (
-    <div className="py-2 px-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center mb-4">
-      <div className="flex items-center space-x-1">
-        <span className="text-gray-600 text-sm">Your Balance:</span>
-        <span className={`font-semibold text-sm rounded-full px-2 py-0.5 ${getCreditColor()}`}>
-          💎 {credits} Credits
-        </span>
-        {credits < 200 && (
-          <span className="text-red-600 text-xs animate-pulse">
-            Low balance!
-          </span>
+    <div className="bg-white shadow-sm border-b border-gray-200 py-2 px-4 mb-6 rounded-md">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700">Available Credits</h3>
+            <div className={`text-xl font-bold ${
+              warningLevel === 'critical' ? 'text-red-600' :
+              warningLevel === 'low' ? 'text-amber-600' :
+              'text-green-600'
+            }`}>
+              {credits.toLocaleString()}
+            </div>
+          </div>
+        </div>
+        
+        {warningLevel !== 'none' && (
+          <div className={`px-3 py-1 rounded-md text-sm ${
+            warningLevel === 'critical' 
+              ? 'bg-red-100 text-red-800 border border-red-200' 
+              : 'bg-amber-100 text-amber-800 border border-amber-200'
+          }`}>
+            {warningLevel === 'critical' 
+              ? 'Critical: Low Credits' 
+              : 'Warning: Credits Running Low'}
+          </div>
         )}
       </div>
-      
-      <button
-        onClick={handleResetCredits}
-        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-      >
-        Reset Credits
-      </button>
     </div>
   );
 };

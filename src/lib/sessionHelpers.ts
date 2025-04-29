@@ -1,71 +1,100 @@
 /**
- * Utilities for managing secure user sessions
- * Used to prevent credit refresh exploits
+ * Utilities for managing sessions
  */
 
-import { v4 as uuidv4 } from 'uuid';
+// Session storage key
+const SESSION_ID_KEY = 'prompt-marketplace-session-id';
+const SESSION_EXPIRY_KEY = 'prompt-marketplace-session-expiry';
 
-// Session identifier key in localStorage
-const SESSION_ID_KEY = 'promptflow-session-id';
-const SESSION_TIMESTAMP_KEY = 'promptflow-session-timestamp';
+// Session expiry time (1 day)
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Get or create a unique session ID
- * This helps prevent users from simply refreshing to reset credits
+ * Generate a random session ID
+ * @returns A random session ID
  */
-export const getOrCreateSessionId = (): string => {
-  if (typeof window === 'undefined') return '';
-  
-  // Try to get existing session ID
+function generateSessionId(): string {
+  return Math.random().toString(36).substring(2, 15) + 
+         Math.random().toString(36).substring(2, 15);
+}
+
+/**
+ * Get the current session ID or create a new one
+ * @returns The session ID
+ */
+export function getOrCreateSessionId(): string {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return generateSessionId();
+  }
+
+  // Try to get existing session ID from localStorage
   let sessionId = localStorage.getItem(SESSION_ID_KEY);
   
-  if (!sessionId) {
-    // Create new session ID if none exists
-    sessionId = uuidv4();
-    localStorage.setItem(SESSION_ID_KEY, sessionId);
+  // If no session ID exists, or session has expired, create a new one
+  if (!sessionId || !isValidSession()) {
+    sessionId = generateSessionId();
     
-    // Set session creation timestamp
-    localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString());
+    // Save new session ID and expiry time
+    localStorage.setItem(SESSION_ID_KEY, sessionId);
+    localStorage.setItem(
+      SESSION_EXPIRY_KEY, 
+      (Date.now() + SESSION_EXPIRY_MS).toString()
+    );
   }
   
   return sessionId;
-};
+}
 
 /**
  * Check if the current session is valid
- * Helps prevent tampering with localStorage
+ * @returns True if the session is valid, false otherwise
  */
-export const isValidSession = (): boolean => {
-  if (typeof window === 'undefined') return false;
+export function isValidSession(): boolean {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return false;
+  }
   
-  const sessionId = localStorage.getItem(SESSION_ID_KEY);
-  const timestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY);
+  // Get expiry time from localStorage
+  const expiryTime = localStorage.getItem(SESSION_EXPIRY_KEY);
   
-  // Session is invalid if either value is missing
-  if (!sessionId || !timestamp) return false;
+  // If no expiry time exists, the session is invalid
+  if (!expiryTime) {
+    return false;
+  }
   
-  // Additional validation could be added here
-  // For example, checking if the timestamp is within a reasonable range
-  
-  return true;
-};
+  // Check if the session has expired
+  const expiry = parseInt(expiryTime, 10);
+  return Date.now() < expiry;
+}
 
 /**
- * Reset the session (used for testing or when needed)
+ * Extend the current session
  */
-export const resetSession = (): void => {
-  if (typeof window === 'undefined') return;
+export function extendSession(): void {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return;
+  }
   
+  // Update the expiry time
+  localStorage.setItem(
+    SESSION_EXPIRY_KEY, 
+    (Date.now() + SESSION_EXPIRY_MS).toString()
+  );
+}
+
+/**
+ * Clear the current session
+ */
+export function clearSession(): void {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return;
+  }
+  
+  // Remove session data from localStorage
   localStorage.removeItem(SESSION_ID_KEY);
-  localStorage.removeItem(SESSION_TIMESTAMP_KEY);
-};
-
-/**
- * Get the session timestamp
- */
-export const getSessionTimestamp = (): number => {
-  if (typeof window === 'undefined') return 0;
-  
-  const timestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY);
-  return timestamp ? parseInt(timestamp, 10) : 0;
-};
+  localStorage.removeItem(SESSION_EXPIRY_KEY);
+}

@@ -1,334 +1,169 @@
-## Recent Updates
+# PromptFlow
 
-### UI and UX Improvements - April 2025
+A modular prompt marketplace where users can create, run, and chain AI prompts.
 
-- **Improved card layout**: Fixed text truncation issues with proper ellipsis and tooltips
-- **Enhanced privacy**: Removed prompt display from generated images to protect intellectual property
-- **Optimized image-only workflow**: Better support for image generation without text output
-- **Credit cost display**: Limited cost breakdown visibility to prompt creators only
-- **Better UI indicators**: More readable capability badges with proper truncation
+## Features
 
-### API Model Update - April 2025
+- Browse single prompts and multi-step prompt flows
+- Run prompts by filling in input fields and seeing results immediately
+- Create and publish individual prompts
+- Build advanced flows by chaining multiple prompts together
+- Transform images with AI using GPT-4o (new!)
+- Spend credits per prompt execution
+- Export flows to external automation platforms
 
-- **Updated Sonar API model names**: Fixed compatibility issues with Perplexity API by using the current model name 'sonar' instead of deprecated models
-- **Improved API error handling**: Better error messages and prevention of 400 errors by using valid model names
-- **Enhanced stability**: All API calls now use standardized model names to avoid compatibility issues
+## Core Concepts
 
-### Image Generation Enhancement - Critical Fix (April 2025)
+### Single Prompts
+Individual prompts tied to specific AI models (text or image generation) with defined input/output structure.
 
-- **Fixed critical bug**: Completely separated text and image generation paths to fix 400 errors
-- **Enhanced pure image mode**: Added support for image-only prompts that bypass text generation entirely
-- **Improved error handling**: Better isolation between text and image components to prevent cascading failures
-- **UI refinements**: More intuitive prompt flow with clearer status indicators
-- **More consistent interface**: Added Try Again button for easier iteration
+### Image Transformations
+Specialized prompts that allow users to upload their own photos and transform them into different artistic styles, characters, or scenes using GPT-4o's advanced image generation capabilities. Examples include:
 
-# Sonar Prompt Marketplace
+- Transforming photos into Lego characters
+- Converting images to Studio Ghibli animation style
+- Creating pixel art from photographs
+- Turning photos into oil paintings or comic book art
 
-A web application for browsing, running, and creating AI prompts powered by the Perplexity Sonar API and OpenAI DALL-E image generation.
+### Prompt Flows
+Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences.
 
-## Project Overview
+#### Content Creation Flow Example
+The Content Creation Flow demonstrates how to chain multiple prompts together for a complete workflow:
 
-PromptFlow Marketplace is a platform where users can:
+1. **Step 1: Generate Blog Post**
+   - Uses the "Blog Post Generator" prompt
+   - Creates a complete blog post based on your topic, tone, and audience
 
-- Browse a curated list of optimized prompts for text and image generation
-- Run prompts with custom inputs and view results in real-time
-- Create and publish their own prompts with optional creator fees
-- Use credit system to manage prompt execution costs
-- Share generated outputs directly on the platform
-- Unlock prompts to access system prompts for learning
+2. **Step 2: Create Image Description for DALL-E**
+   - Uses the "Marketing Image Description Creator" prompt
+   - Takes the blog post output and creates a detailed image description
+   - This description is then used to generate an image with DALL-E 3
+
+This flow showcases how to:
+- Pass outputs from one step to inputs of the next step
+- Combine text generation (Sonar API) with image generation (DALL-E API)
+- Create a complete content package (text + matching image) in one workflow
+
+### Credit System
+- Each prompt execution costs credits
+- Each step in a flow burns credits separately
+- Users can earn or spend credits by running or unlocking prompts/flows
+
+### Marketplace
+- Browse both single prompts and flows
+- Filter by type (Single/Flow), price (Free/Paid), and popularity
+- Creators can sell prompt flows with one-time unlock fees
 
 ## Tech Stack
 
-- **Frontend Framework**: Next.js with TypeScript
+- **Frontend**: Next.js + TypeScript
 - **Styling**: TailwindCSS
 - **State Management**: Zustand
 - **Notifications**: react-hot-toast
-- **API Integration**:
-  - Perplexity Sonar API for text generation
-  - OpenAI DALL-E API for image generation
+- **API**: Perplexity Sonar API
+- **Persistence**: localStorage (MVP)
 
-## Credit System
-
-### Overview
-
-The credit system in PromptFlow forms the economic backbone of the platform. It provides a standardized mechanism for pricing prompt executions, compensating prompt creators, and ensuring the platform's sustainability.
-
-### How Credits Work
-
-- **Credits as Currency**: Credits function as the internal currency of the platform
-- **Pay-per-Use Model**: Users spend credits each time they run a prompt
-- **Baseline Costs**: Every prompt has a minimum cost based on the model it uses
-- **Creator Premium**: Prompt creators can charge additional credits beyond the baseline
-
-### Credit Cost Structure
-
-#### Baseline Costs
-
-The baseline cost for each prompt is determined by the model it uses:
-
-| Model Type | Model | Baseline Credits | Reasoning |
-|------------|------------------|-----------------|----------------------------------------|
-| **Text** | sonar-small-online | 15 | Basic model with minimal compute needs |
-| **Text** | sonar-medium-chat | 25 | Moderate compute requirements |
-| **Text** | sonar-large-online | 40 | High compute requirements |
-| **Image** | dall-e-2 | 50 | Basic image generation |
-| **Image** | dall-e-3 (standard) | 100 | High-quality image generation |
-| **Image** | dall-e-3 (HD) | 200 | Premium image generation |
-
-These baseline costs are calculated by:
-1. Determining the average cost per API call to the model
-2. Converting that cost to an appropriate number of credits
-3. Ensuring margin to cover platform operations
-
-#### Creator Premium
-
-Prompt creators can set an additional premium on top of the baseline cost:
-
-- **Minimum**: Baseline cost (we must cover our API costs)
-- **Maximum**: No hard limit, but market forces naturally limit what users will pay
-- **Recommended**: Baseline + 5-50 credits depending on the value provided
-
-### Economic Model
-
-#### For the Platform
-
-The credit system allows the platform to:
-
-1. **Cover API Costs**: Baseline credits ensure that the actual costs of API calls are covered
-2. **Generate Revenue**: A portion of the premium can be retained by the platform
-3. **Scale Economically**: Higher-value/higher-cost prompts naturally generate more revenue
-
-#### For Creators
-
-The credit system incentivizes creators to:
-
-1. **Create Quality Prompts**: Better prompts can command higher premiums
-2. **Optimize for Efficiency**: Using smaller models when possible reduces baseline costs
-3. **Build a Reputation**: Popular prompt creators can gradually increase their premiums
-
-#### For Users
-
-The credit system provides users with:
-
-1. **Transparency**: Clear cost before running any prompt
-2. **Value Assessment**: Users can decide if a prompt is worth its credit cost
-3. **Budget Control**: Credit balance provides natural usage limits
-
-### Implementation Details
-
-- Credit validation ensures costs are never below model baseline
-- Visual indicators show when credits are low (< 200)
-- Clear warnings when credits are insufficient for a prompt run
-- System automatically enforces minimum costs during prompt creation
-
-### Future Enhancements
-
-1. **Credit Purchases**: Ability to buy credits with real currency
-2. **Creator Payouts**: Mechanisms to compensate popular prompt creators
-3. **Subscription Models**: Options for unlimited access to certain prompt categories
-4. **Usage Analytics**: Tools for creators to see how their prompts are performing
-
-## Image Generation Features
-
-PromptFlow now supports image generation using OpenAI's DALL-E models. This allows users to:
-
-1. **Create Visual Content**: Generate images from text descriptions
-2. **Combine with Text Prompts**: Use both text and image generation in the same prompt
-3. **Pure Image Generation**: Create image-only prompts without requiring text generation
-4. **Control Image Settings**: Specify size, quality, and style parameters
-5. **Share Generated Images**: Easily share or download generated images
-
-### Image Generation Models
-
-- **Stable Diffusion XL**: High-quality image generation with excellent detail
-- **Stability XL Turbo**: Faster generation with good quality
-- **Stability XL Ultra**: Premium quality with enhanced details and artistic styles
-
-### Image Generation Use Cases
-
-PromptFlow includes templates for various image generation scenarios:
-
-- **Marketing Materials**: Create professional advertising visuals
-- **Product Visualization**: Generate realistic product images from descriptions
-- **Brand Identity**: Create mood boards and visual design assets
-- **Custom Illustrations**: Generate unique artwork for various purposes
-
-### Technical Implementation
-
-- Secure proxy API endpoints to Perplexity Sonar API for text generation
-- Integration with Stability AI for image generation (using placeholders in development)
-- Support for various image parameters including size, quality, and style
-- Independent text and image generation capabilities with clear UI indicators
-- Fallback mechanisms for development mode without requiring API keys
-
-### Prompt Capabilities
-
-Prompts in PromptFlow can have one or more capabilities:
-
-- **Text Generation**: Traditional text prompts using Perplexity Sonar API
-- **Image Generation**: Generate images using DALL-E models
-- **Code Generation**: Specialized prompts optimized for code output
-
-These capabilities can be combined or used independently. For example, a prompt can:
-- Generate only text
-- Generate only images
-- Generate text and then use that text to create an image
-- Generate code with appropriate formatting
-
-The UI clearly indicates which capabilities each prompt offers through intuitive badge icons.
-
-## Current Implementation Status
-
-### Completed
-- Project structure and initial setup
-- Type definitions for prompts and API interactions
-- State management using Zustand stores (prompts, credits, favorites, unlocked prompts)
-- UI components for the marketplace
-- Basic routing and page templates
-- Credit system implementation with model-based baseline costs
-- Search and filtering functionality
-- Favorites system with dedicated page
-- Enhanced Hero section with clear value proposition
-- Sharing functionality for generated responses
-- Image generation capability with DALL-E integration
-- Webhook integration for external automation
-- Improved card layout to prevent content overflow
-- Enhanced prompt run page for both text and image outputs
-- Privacy improvements for image generation
-
-### In Progress
-- Multi-model support in prompt creation
-- API integration refinements
-- Test prompt cost control system
-
-### Up Next
-- Auto top-up functionality for credit management
-- Expanded image generation options
-
-## Test Prompt Cost Control
-
-To prevent potential abuse of the test functionality during prompt creation and prevent excessive API costs, we're implementing a robust cost control system:
-
-### Planned Controls
-
-- **Daily Testing Limits**: Restrict free test runs to 5 per day per user
-- **Reduced-Quality Test Mode**: Use cheaper, lower-quality models for testing purposes
-- **Cost Confirmation**: Require explicit confirmation for tests exceeding a credit threshold
-- **Test Credit System**: Separate testing credits from regular credits
-- **Watermarked Outputs**: Apply visible watermarks to test outputs
-
-### Technical Implementation
-
-- Test usage tracking in user profiles
-- Rate limiting for test API endpoints
-- Scaled-down model selection for test runs
-- Clear UI indicators for test mode
-
-### Benefits
-
-This system balances the need for creators to test their prompts with protecting the platform from potential abuse, ensuring:
-
-- Creators can validate their prompts work correctly
-- The platform remains financially sustainable
-- Users are encouraged to publish quality prompts
-- API costs remain predictable and manageable
-
-## Multi-Model Support
-
-With the increasing complexity of AI tasks, we're enhancing PromptFlow to support multiple models in a single prompt workflow:
-
-### Key Features
-
-- **Model Combination**: Mix and match different models for specialized tasks
-- **Capability-Based Selection**: Automatically choose the best model for each capability
-- **Cost Optimization**: Use simpler models for basic tasks, premium models for complex ones
-- **Enhanced Creator Tools**: More granular control over which models handle different parts of a prompt
-
-### Implementation Plan
-
-- Expanded prompt creation interface with model selection per capability
-- Enhanced routing system to direct requests to appropriate models
-- Clearer cost breakdown for multi-model prompts
-- Advanced orchestration for sequential and parallel model execution
-
-### Use Cases
-
-- Text generation + specialized code generation
-- Initial content creation followed by image visualization
-- Multi-stage reasoning with different specialized models for each step
-- Dynamic model selection based on input complexity
-
-## Webhook Integration
-
-PromptFlow now includes webhook functionality, allowing for external automation and integration with other systems:
-
-### Webhook Features
-
-- **Programmatic Access**: Each prompt has a unique webhook URL for remote execution
-- **API Documentation**: Interactive documentation for how to use the webhook API
-- **Testing Interface**: Built-in webhook tester for validating API calls
-- **Integration Examples**: Documentation for using webhooks with automation tools like N8N and Make.com
-
-### Technical Implementation
-
-- Webhook URLs follow the format: `https://api.sonar-prompts.com/run/{promptId}`
-- API accepts POST requests with JSON payloads containing prompt inputs
-- Response includes the generated output, credit cost, and remaining credits
-- Security measures ensure only authorized users can execute prompts via webhooks
-
-### Use Cases
-
-- **Workflow Automation**: Integrate AI prompts into existing business workflows
-- **Batch Processing**: Process multiple inputs through the same prompt
-- **Scheduled Execution**: Run prompts on a schedule for recurring tasks
-- **Event-Triggered AI**: Automatically run prompts in response to external events
-
-## Development
-
-### Getting Started
+## Getting Started
 
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Create a `.env.local` file with required API keys:
-   ```
-   SONAR_API_KEY=your_sonar_api_key
-   OPENAI_API_KEY=your_openai_api_key
-   ```
-4. Start the development server: `npm run dev`
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. Run the development server: `npm run dev`
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-### Directory Structure
+## Project Structure
 
 ```
 /
-├── public/            # Static assets
 ├── src/
-│   ├── app/           # Next.js app router pages
-│   │   ├── page.tsx   # Home page (prompt listing)
-│   │   ├── run/       # Prompt execution pages
-│   │   ├── submit/    # Prompt creation page
-│   │   ├── favorites/ # Favorites page
-│   │   ├── shared/    # Shared response display
-│   │   └── api/       # API routes for proxying requests
-│   ├── components/    # Reusable UI components
-│   │   ├── layout/    # Layout components (Header, Footer, Hero)
-│   │   ├── shared/    # Shared UI components (Button, LoadingIndicator)
-│   │   └── ui/        # Specialized UI components (PromptCard, etc.)
-│   ├── lib/           # Utilities and helper functions
-│   │   ├── sonarApi.ts        # Sonar API integration
-│   │   ├── imageApi.ts        # DALL-E API integration
-│   │   ├── creditHelpers.ts   # Credit management utilities
-│   │   ├── shareHelpers.ts    # Sharing functionality
-│   │   └── sessionHelpers.ts  # Session management
-│   ├── store/         # Zustand store configurations
-│   │   ├── usePromptStore.ts      # Store for prompts data
-│   │   ├── useCreditStore.ts      # Store for credit management
-│   │   ├── useFavoriteStore.ts    # Store for favorites management
-│   │   └── useUnlockedPromptStore.ts # Store for unlocked prompts
-│   └── types/         # TypeScript type definitions
-└── ... configuration files
+│   ├── app/                    # App routes
+│   │   ├── page.tsx            # Marketplace home page
+│   │   ├── create/             # Create prompts and flows
+│   │   ├── run/                # Execute prompts and flows
+│   │   └── transform/          # Image transformation
+│   ├── components/             # UI components
+│   │   ├── layout/             # Layout components
+│   │   ├── marketplace/        # Marketplace components
+│   │   ├── creator/            # Prompt and flow creation
+│   │   ├── runner/             # Prompt and flow execution
+│   │   ├── transformer/        # Image transformation components
+│   │   └── ui/                 # Common UI elements
+│   ├── lib/                    # Utilities and logic
+│   │   ├── store/              # Zustand stores
+│   │   ├── api/                # API integrations
+│   │   └── utils/              # Helper utilities
+│   ├── types/                  # TypeScript definitions
+│   └── styles/                 # Global styles
 ```
 
-## License
+## Development Status
 
-MIT
+### Implemented
+- Basic data models for prompts and flows
+- Storage for prompts, flows, and unlocked items
+- Creator UI for building prompts and flows
+- Marketplace UI for browsing and filtering
+- Flow execution system with step visualization
+- Image transformation with GPT-4o integration
+- Photo upload and style customization
+- Multiple artistic styles and character transformations
+- Improved select input options in PromptBuilder
+- Proper prompt identification in flows
+- Fixed image generation in flows
+- Favorite prompt functionality from flows
+
+### In Progress
+- Editing published prompts
+- Search functionality for prompt selection in flow builder
+- Comprehensive image output handling
+- Webhook URL functionality for flows
+
+### Known Issues
+1. No way to edit prompts after publication
+2. Flow builder needs search functionality for adding prompts
+3. Flow export implementation is incomplete
+4. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
+5. ~~Image generation not displaying properly~~ (Fixed April 2025)
+6. ~~Duplicate credit displays~~ (Fixed April 2025)
+
+## Latest Updates
+
+### Image Transformation Features (April 2025)
+- Added photo upload and transformation using GPT-4o
+- Created specialized transformation prompts for various styles and characters
+- Implemented user-friendly interface for image transformations
+- Added style presets and customization options
+- Integrated with existing credit system
+
+### UI and Navigation Improvements (April 2025)
+- Fixed navigation in the prompt execution flow for easier return to the marketplace
+- Improved image generation to properly display generated images
+- Removed duplicate credit displays across the application
+- Updated hero section to better account for prompt flows
+- Added breadcrumb navigation for better user orientation
+- Enhanced image generation prompts for better quality results
+
+### Flow Execution UI Improvements
+- Input fields are now organized by prompt/step for clarity
+- Added prompt step preview on the flow execution page
+- Each step now shows which specific prompt is being used
+- Fixed card text truncation with line clamping
+- Positioned flow buttons and credits consistently at the bottom of cards
+- Improved flow step visualization with vertical timeline view
+
+### Select Options Enhancement
+- Added proper UI for managing select field options in the PromptBuilder
+- Fields now display a dedicated options editor when the type is set to 'select'
+- Multiple options can be added, edited, and removed
+
+### Credit System Fixes
+- Credits are now properly deducted when running flows
+- Added credit warnings when insufficient credits are available
+- Improved credit information display throughout the application
+
+## Contributing
+
+To continue development:
+1. Address the known issues listed above
+2. Complete the flow execution components
+3. Finalize the export functionality

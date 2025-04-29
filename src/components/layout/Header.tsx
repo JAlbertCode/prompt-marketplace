@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
+import { toast } from 'react-hot-toast';
 
 const Header: React.FC = () => {
-  const { credits } = useCreditStore();
+  const { credits, addCredits } = useCreditStore();
   const { favorites } = useFavoriteStore();
   const pathname = usePathname();
   const isLowCredits = credits < 200;
@@ -15,6 +16,12 @@ const Header: React.FC = () => {
   // Check if a navigation link is active
   const isActive = (path: string) => {
     return pathname === path;
+  };
+  
+  // Add 1000 credits for testing
+  const handleAddTestCredits = () => {
+    addCredits(1000, 'Test credit addition');
+    toast.success('Added 1000 test credits!');
   };
   
   return (
@@ -79,6 +86,13 @@ const Header: React.FC = () => {
               )}
               <span>{credits} Credits</span>
             </div>
+            
+            <button
+              onClick={handleAddTestCredits}
+              className="ml-2 text-xs px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              Test: Add Credits
+            </button>
           </nav>
         </div>
       </div>

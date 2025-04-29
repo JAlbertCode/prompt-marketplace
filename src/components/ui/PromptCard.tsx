@@ -40,7 +40,11 @@ const PromptCard: React.FC<PromptCardProps> = ({
   }, []);
   
   const handleRunClick = () => {
-    router.push(`/run/${prompt.id}`);
+    if (prompt.capabilities?.includes('transformation')) {
+      router.push(`/transform/${prompt.id}`);
+    } else {
+      router.push(`/run/${prompt.id}`);
+    }
   };
 
   const handleRemoveClick = (e: React.MouseEvent) => {
@@ -145,12 +149,12 @@ const PromptCard: React.FC<PromptCardProps> = ({
           </div>
         </div>
         
-        <p className="text-gray-600 text-sm mb-4 h-12 line-clamp-2 overflow-hidden" title={prompt.description}>
+        <p className="text-gray-600 text-sm mb-4 line-clamp-3 overflow-hidden" title={prompt.description}>
           {prompt.description}
         </p>
         
         <div className="mt-auto">
-          <div className="flex flex-wrap gap-2 mb-2">
+          <div className="flex flex-wrap gap-2 mb-3">
             {prompt.capabilities && prompt.capabilities.includes('text') && (
               <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
                 Text Generation
@@ -166,7 +170,12 @@ const PromptCard: React.FC<PromptCardProps> = ({
                 Code Generation
               </span>
             )}
-            <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 truncate" style={{maxWidth: '80px'}} title={prompt.model}>
+            {prompt.capabilities && prompt.capabilities.includes('transformation') && (
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                Image Transformation
+              </span>
+            )}
+            <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 overflow-hidden text-ellipsis" style={{maxWidth: '130px'}} title={prompt.model}>
               {prompt.model}
             </div>
           </div>
@@ -201,7 +210,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
                 size="sm"
                 onClick={handleRunClick}
               >
-                Run Prompt
+                {prompt.capabilities?.includes('transformation') ? 'Transform' : 'Run Prompt'}
               </Button>
             </div>
           </div>

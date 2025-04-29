@@ -1,0 +1,364 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Prompt, SonarModel, ImageModel, InputField } from '@/types';
+import ModelSelector from './ModelSelector';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'react-hot-toast';
+
+interface PromptBuilderProps {
+  initialPrompt?: Partial<Prompt>;
+  onSave: (prompt: Omit<Prompt, 'id' | 'createdAt'>) => void;
+  onCancel?: () => void;
+}
+
+const PromptBuilder: React.FC<PromptBuilderProps> = ({
+  initialPrompt,
+  onSave,
+  onCancel
+}) => {
+  const [title, setTitle] = useState(initialPrompt?.title || '');
+  const [description, setDescription] = useState(initialPrompt?.description || '');
+  const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
+  const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 50);
+  const [model, setModel] = useState<SonarModel>(initialPrompt?.model || 'sonar-medium-chat');
+  const [imageModel, setImageModel] = useState<ImageModel | undefined>(initialPrompt?.imageModel);
+  const [inputFields, setInputFields] = useState<InputField[]>(initialPrompt?.inputFields || []);
+  const [isPrivate, setIsPrivate] = useState(initialPrompt?.isPrivate || false);
+  const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(
+    initialPrompt?.capabilities || ['text']
+  );
+  const [outputType, setOutputType] = useState<'text' | 'image'>(
+    initialPrompt?.outputType || (initialPrompt?.imageModel ? 'image' : 'text')
+  );
+
+  // Add default input field if none exist
+  useEffect(() => {
+    if (inputFields.length === 0) {
+      addInputField();
+    }
+  }, []);
+
+  const addInputField = () => {
+    const newField: InputField = {
+      id: uuidv4(),
+      label: '',
+      placeholder: '',
+      required: true,
+      type: 'text'
+    };
+
+    setInputFields([...inputFields, newField]);
+  };
+
+  const removeInputField = (id: string) => {
+    if (inputFields.length <= 1) {
+      toast.error('At least one input field is required');
+      return;
+    }
+    setInputFields(inputFields.filter(field => field.id !== id));
+  };
+
+  const updateInputField = (id: string, updates: Partial<InputField>) => {
+    setInputFields(
+      inputFields.map(field => 
+        field.id === id ? { ...field, ...updates } : field
+      )
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate all required fields
+    if (!title.trim()) {
+      toast.error('Title is required');
+      return;
+    }
+    
+    if (!systemPrompt.trim()) {
+      toast.error('System prompt is required');
+      return;
+    }
+    
+    if (inputFields.some(field => !field.label.trim())) {
+      toast.error('All input fields must have a label');
+      return;
+    }
+    
+    // If image capability but no image model selected
+    if (capabilities.includes('image') && outputType === 'image' && !imageModel) {
+      toast.error('Please select an image model');
+      return;
+    }
+    
+    const newPrompt: Omit<Prompt, 'id' | 'createdAt'> = {
+      title,
+      description,
+      systemPrompt,
+      inputFields,
+      model,
+      creditCost,
+      isPrivate,
+      capabilities,
+      outputType
+    };
+    
+    // Add image model if needed
+    if (capabilities.includes('image') && imageModel) {
+      newPrompt.imageModel = imageModel;
+    }
+    
+    onSave(newPrompt);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">Basic Information</h2>
+        
+        <div className="mb-4">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            Title <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Give your prompt a descriptive title"
+            required
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Briefly describe what your prompt does"
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
+            System Prompt <span className="text-red-500">*</span>
+          </label>
+          <div className="bg-yellow-50 border border-yellow-100 p-2 rounded-md mb-2 text-xs text-yellow-800">
+            This will be hidden from users running your prompt. It provides instructions to the AI.
+          </div>
+          <textarea
+            id="systemPrompt"
+            value={systemPrompt}
+            onChange={(e) => setSystemPrompt(e.target.value)}
+            rows={5}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+            placeholder="You are an expert at..."
+            required
+          />
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">Model & Capabilities</h2>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Text Model <span className="text-red-500">*</span>
+          </label>
+          <ModelSelector 
+            currentModel={model} 
+            onChange={setModel} 
+          />
+        </div>
+        
+        <div className="mb-4">
+          <label htmlFor="creditCost" className="block text-sm font-medium text-gray-700 mb-1">
+            Credit Cost <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number"
+            id="creditCost"
+            value={creditCost}
+            onChange={(e) => setCreditCost(Math.max(1, parseInt(e.target.value) || 0))}
+            min="1"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            required
+          />
+          <p className="mt-1 text-sm text-gray-500">
+            How many credits users will spend to run this prompt
+          </p>
+        </div>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Input Fields</h2>
+          <button
+            type="button"
+            onClick={addInputField}
+            className="px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm"
+          >
+            Add Field
+          </button>
+        </div>
+        
+        <div className="space-y-4">
+          {inputFields.map((field, index) => (
+            <div key={field.id} className="border border-gray-200 rounded-md p-4">
+            <div className="flex justify-between items-center mb-3">
+            <h3 className="font-medium">Field {index + 1}</h3>
+            <button
+            type="button"
+            onClick={() => removeInputField(field.id)}
+            className="text-red-600 hover:text-red-800 text-sm"
+            >
+            Remove
+            </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+            <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
+            Label <span className="text-red-500">*</span>
+            </label>
+            <input
+            type="text"
+            id={`field-${field.id}-label`}
+            value={field.label}
+            onChange={(e) => updateInputField(field.id, { label: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="e.g., Topic"
+            required
+            />
+            </div>
+            
+            <div>
+            <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
+            Placeholder
+            </label>
+            <input
+            type="text"
+            id={`field-${field.id}-placeholder`}
+            value={field.placeholder}
+            onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="e.g., Enter a topic..."
+            />
+            </div>
+            
+            <div>
+            <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
+            Type
+            </label>
+            <select
+            id={`field-${field.id}-type`}
+            value={field.type || 'text'}
+            onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+            <option value="text">Text</option>
+            <option value="textarea">Text Area</option>
+            <option value="select">Select</option>
+            </select>
+            </div>
+            
+            <div className="flex items-center">
+            <input
+            type="checkbox"
+            id={`field-${field.id}-required`}
+            checked={field.required}
+            onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
+            Required field
+            </label>
+            </div>
+            </div>
+
+              {/* Select options editor */}
+              {field.type === 'select' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Options
+                  </label>
+                  <div className="space-y-2">
+                    {(field.options || []).map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center">
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...(field.options || [])];
+                            newOptions[optionIndex] = e.target.value;
+                            updateInputField(field.id, { options: newOptions });
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          placeholder={`Option ${optionIndex + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOptions = [...(field.options || [])];
+                            newOptions.splice(optionIndex, 1);
+                            updateInputField(field.id, { options: newOptions });
+                          }}
+                          className="ml-2 text-red-600 hover:text-red-800"
+                        >
+                          <span className="sr-only">Remove option</span>
+                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newOptions = [...(field.options || []), ''];
+                        updateInputField(field.id, { options: newOptions });
+                      }}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring-blue-300 active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150"
+                    >
+                      <svg className="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                      </svg>
+                      Add Option
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="flex justify-end space-x-4">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Save Prompt
+        </button>
+      </div>
+    </form>
+  );
+};
+
+export default PromptBuilder;
