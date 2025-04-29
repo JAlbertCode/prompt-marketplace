@@ -9,7 +9,7 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 - Create and publish individual prompts
 - Build advanced flows by chaining multiple prompts together
 - Spend credits per prompt execution
-- Export flows to external automation platforms (optional)
+- Export flows to external automation platforms
 
 ## Core Concepts
 
@@ -51,6 +51,9 @@ Chains of prompts where outputs from one step feed into the next, creating power
 /
 ├── src/
 │   ├── app/                    # App routes
+│   │   ├── page.tsx            # Marketplace home page
+│   │   ├── create/             # Create prompts and flows
+│   │   └── run/                # Execute prompts and flows
 │   ├── components/             # UI components
 │   │   ├── layout/             # Layout components
 │   │   ├── marketplace/        # Marketplace components
@@ -67,4 +70,30 @@ Chains of prompts where outputs from one step feed into the next, creating power
 
 ## Development Status
 
-MVP in progress - see Issues for current tasks.
+### Implemented
+- Basic data models for prompts and flows
+- Storage for prompts, flows, and unlocked items
+- Creator UI for building prompts and flows
+- Marketplace UI for browsing and filtering
+
+### In Progress
+- Flow execution system
+- Credit system fixes
+- Improved input handling for prompts
+- Editing published prompts
+- Fixing image-only prompts display
+
+### Known Issues
+1. Select input fields don't properly handle options
+2. Credit system not fully implemented for execution
+3. No way to edit prompts after publication
+4. Image-only prompts still display text output
+5. Flow execution shows "prompt not found" error
+6. Flow builder needs search functionality for adding prompts
+
+## Contributing
+
+To continue development:
+1. Address the known issues listed above
+2. Complete the flow execution components
+3. Finalize the export functionality

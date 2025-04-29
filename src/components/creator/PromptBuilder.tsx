@@ -212,76 +212,129 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         <div className="space-y-4">
           {inputFields.map((field, index) => (
             <div key={field.id} className="border border-gray-200 rounded-md p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-medium">Field {index + 1}</h3>
-                <button
-                  type="button"
-                  onClick={() => removeInputField(field.id)}
-                  className="text-red-600 hover:text-red-800 text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Label <span className="text-red-500">*</span>
+            <div className="flex justify-between items-center mb-3">
+            <h3 className="font-medium">Field {index + 1}</h3>
+            <button
+            type="button"
+            onClick={() => removeInputField(field.id)}
+            className="text-red-600 hover:text-red-800 text-sm"
+            >
+            Remove
+            </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+            <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
+            Label <span className="text-red-500">*</span>
+            </label>
+            <input
+            type="text"
+            id={`field-${field.id}-label`}
+            value={field.label}
+            onChange={(e) => updateInputField(field.id, { label: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="e.g., Topic"
+            required
+            />
+            </div>
+            
+            <div>
+            <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
+            Placeholder
+            </label>
+            <input
+            type="text"
+            id={`field-${field.id}-placeholder`}
+            value={field.placeholder}
+            onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="e.g., Enter a topic..."
+            />
+            </div>
+            
+            <div>
+            <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
+            Type
+            </label>
+            <select
+            id={`field-${field.id}-type`}
+            value={field.type || 'text'}
+            onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+            <option value="text">Text</option>
+            <option value="textarea">Text Area</option>
+            <option value="select">Select</option>
+            </select>
+            </div>
+            
+            <div className="flex items-center">
+            <input
+            type="checkbox"
+            id={`field-${field.id}-required`}
+            checked={field.required}
+            onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
+            Required field
+            </label>
+            </div>
+            </div>
+
+              {/* Select options editor */}
+              {field.type === 'select' && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Options
                   </label>
-                  <input
-                    type="text"
-                    id={`field-${field.id}-label`}
-                    value={field.label}
-                    onChange={(e) => updateInputField(field.id, { label: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., Topic"
-                    required
-                  />
+                  <div className="space-y-2">
+                    {(field.options || []).map((option, optionIndex) => (
+                      <div key={optionIndex} className="flex items-center">
+                        <input
+                          type="text"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...(field.options || [])];
+                            newOptions[optionIndex] = e.target.value;
+                            updateInputField(field.id, { options: newOptions });
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          placeholder={`Option ${optionIndex + 1}`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newOptions = [...(field.options || [])];
+                            newOptions.splice(optionIndex, 1);
+                            updateInputField(field.id, { options: newOptions });
+                          }}
+                          className="ml-2 text-red-600 hover:text-red-800"
+                        >
+                          <span className="sr-only">Remove option</span>
+                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newOptions = [...(field.options || []), ''];
+                        updateInputField(field.id, { options: newOptions });
+                      }}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:ring-blue-300 active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150"
+                    >
+                      <svg className="-ml-1 mr-2 h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                      </svg>
+                      Add Option
+                    </button>
+                  </div>
                 </div>
-                
-                <div>
-                  <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Placeholder
-                  </label>
-                  <input
-                    type="text"
-                    id={`field-${field.id}-placeholder`}
-                    value={field.placeholder}
-                    onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., Enter a topic..."
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
-                    Type
-                  </label>
-                  <select
-                    id={`field-${field.id}-type`}
-                    value={field.type || 'text'}
-                    onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="text">Text</option>
-                    <option value="textarea">Text Area</option>
-                    <option value="select">Select</option>
-                  </select>
-                </div>
-                
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`field-${field.id}-required`}
-                    checked={field.required}
-                    onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
-                    Required field
-                  </label>
-                </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
