@@ -75,21 +75,40 @@ Chains of prompts where outputs from one step feed into the next, creating power
 - Storage for prompts, flows, and unlocked items
 - Creator UI for building prompts and flows
 - Marketplace UI for browsing and filtering
+- Flow execution system with step visualization
+- Improved select input options in PromptBuilder
+- Proper prompt identification in flows
+- Fixed image generation in flows
+- Favorite prompt functionality from flows
 
 ### In Progress
-- Flow execution system
-- Credit system fixes
-- Improved input handling for prompts
 - Editing published prompts
-- Fixing image-only prompts display
+- Search functionality for prompt selection in flow builder
+- Comprehensive image output handling
+- Webhook URL functionality for flows
 
 ### Known Issues
-1. Select input fields don't properly handle options
-2. Credit system not fully implemented for execution
-3. No way to edit prompts after publication
-4. Image-only prompts still display text output
-5. Flow execution shows "prompt not found" error
-6. Flow builder needs search functionality for adding prompts
+1. No way to edit prompts after publication
+2. Flow builder needs search functionality for adding prompts
+3. Flow export implementation is incomplete
+
+## Latest Updates
+
+### Improved Flow Visualization
+- Each flow step now clearly shows which prompt is being used
+- Added the ability to view and favorite prompts from within a flow
+- Fixed image generation in flow steps
+- Created a better UI for flow execution with step-by-step visualization
+
+### Select Options Enhancement
+- Added proper UI for managing select field options in the PromptBuilder
+- Fields now display a dedicated options editor when the type is set to 'select'
+- Multiple options can be added, edited, and removed
+
+### Credit System Fixes
+- Credits are now properly deducted when running flows
+- Added credit warnings when insufficient credits are available
+- Improved credit information display throughout the application
 
 ## Contributing
 

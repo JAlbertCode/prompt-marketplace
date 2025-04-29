@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { PromptFlow, Prompt, FlowStep } from '@/types';
 import { useCreditStore } from '@/store/useCreditStore';
 import { usePromptStore } from '@/store/usePromptStore';
+import { useFavoriteStore } from '@/store/useFavoriteStore';
 import { executePrompt } from '@/lib/sonarApi';
 import { generateImage } from '@/lib/imageApi';
 import { downloadTextFile, generateFilename } from '@/lib/downloadHelpers';
@@ -23,17 +25,22 @@ interface FlowResult {
   stepId: string;
   stepTitle: string;
   promptId: string;
+  promptTitle: string;
+  model: string;
   output: string;
   imageUrl?: string;
   isActive: boolean;
   isComplete: boolean;
   isError: boolean;
   errorMessage?: string;
+  hasImageCapability?: boolean;
 }
 
 const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
+  const router = useRouter();
   const { credits, deductCredits } = useCreditStore();
   const promptStore = usePromptStore();
+  const favoriteStore = useFavoriteStore();
   
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [isRunning, setIsRunning] = useState(false);
@@ -104,6 +111,17 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
     }));
   };
   
+  const handleViewPrompt = (promptId: string) => {
+    // Navigate to the prompt run page
+    router.push(`/run/${promptId}?type=prompt`);
+  };
+  
+  const handleFavoritePrompt = (promptId: string) => {
+    // Add prompt to favorites
+    favoriteStore.toggleFavorite(promptId);
+    toast.success('Prompt added to favorites');
+  };
+  
   const runFlow = async () => {
     // Check if all required fields are filled
     const missingFields = flowInputFields
@@ -131,10 +149,13 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           stepId: step.id,
           stepTitle: step.title || (prompt ? prompt.title : 'Unknown Step'),
           promptId: step.promptId,
+          promptTitle: prompt ? prompt.title : 'Unknown Prompt',
+          model: prompt ? prompt.model : 'unknown',
           output: '',
           isActive: false,
           isComplete: false,
-          isError: false
+          isError: false,
+          hasImageCapability: prompt?.capabilities?.includes('image') || false
         };
       });
       
@@ -184,9 +205,10 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           
           // Determine prompt capabilities
           const hasImageCapability = prompt.capabilities?.includes('image');
-          const hasTextCapability = prompt.capabilities?.includes('text');
+          const hasTextCapability = prompt.capabilities?.includes('text') || 
+                                   (!prompt.capabilities?.includes('image'));
           
-          // Generate text output
+          // Generate text output if the prompt isn't image-only
           if (hasTextCapability) {
             output = await executePrompt(
               prompt.systemPrompt,
@@ -195,14 +217,23 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
             );
           }
           
-          // Generate image if needed
+          // Generate image if this prompt has image capability
           if (hasImageCapability && prompt.imageModel) {
-            // Simple image prompt for MVP
-            const promptText = Object.values(formattedInputs)[0] || '';
-            imageUrl = await generateImage(
-              `Image of ${promptText}`,
-              prompt.imageModel
-            );
+            try {
+              // Get the first input value to use for the image prompt
+              const firstInputValue = Object.values(formattedInputs)[0] || '';
+              const imagePromptText = `Image of ${firstInputValue}`;
+              
+              // Generate the image
+              imageUrl = await generateImage(
+                imagePromptText,
+                prompt.imageModel
+              );
+            } catch (imageError) {
+              console.error('Image generation error:', imageError);
+              // We don't fail the whole step if just the image fails
+              // but we do log the error
+            }
           }
           
           // Update the result for this step
@@ -391,22 +422,36 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           <div className="space-y-6">
             {/* Flow Execution View */}
             <StepVisualizer 
-              steps={flow.steps.map((step, i) => ({
-                id: step.id,
-                title: step.title || promptsMap[step.promptId]?.title || `Step ${i + 1}`,
-                isActive: i === currentStepIndex,
-                isComplete: results[i]?.isComplete || false,
-                isError: results[i]?.isError || false
-              }))}
+              steps={flow.steps.map((step, i) => {
+                const prompt = promptsMap[step.promptId];
+                return {
+                  id: step.id,
+                  title: step.title || (prompt ? prompt.title : `Step ${i + 1}`),
+                  promptId: step.promptId,
+                  promptTitle: prompt ? prompt.title : 'Unknown Prompt',
+                  model: prompt ? prompt.model : 'unknown',
+                  isActive: i === currentStepIndex,
+                  isComplete: results[i]?.isComplete || false,
+                  isError: results[i]?.isError || false
+                };
+              })}
+              onViewPrompt={handleViewPrompt}
+              onFavoritePrompt={handleFavoritePrompt}
             />
             
             <div className="space-y-4">
               {results.map((result, i) => (
                 <ResultDisplay 
                   key={result.stepId}
-                  result={result}
+                  result={{
+                    ...result,
+                    promptTitle: promptsMap[result.promptId]?.title || 'Unknown Prompt',
+                    model: promptsMap[result.promptId]?.model || 'unknown',
+                    hasImageCapability: promptsMap[result.promptId]?.capabilities?.includes('image') || false
+                  }}
                   stepNumber={i + 1}
                   onDownload={() => handleDownload(result)}
+                  onViewPrompt={handleViewPrompt}
                 />
               ))}
             </div>
