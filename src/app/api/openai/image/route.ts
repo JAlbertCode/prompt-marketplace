@@ -31,13 +31,15 @@ export async function POST(req: NextRequest) {
     // Prepare request exactly according to OpenAI documentation
     // https://platform.openai.com/docs/guides/images
     const requestPayload = {
-      prompt: cleanPrompt,
-      model: "dall-e-3",
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-      style: "vivid"
-    };
+      "prompt": cleanPrompt,
+      "model": "dall-e-3",
+      "n": 1,
+      "size": "1024x1024",
+      "quality": "standard",
+      "style": "vivid",
+      "response_format": "url"
+    }
+    
     
     console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
     
