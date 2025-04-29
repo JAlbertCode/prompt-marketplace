@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useCreditStore } from '@/store/useCreditStore';
 import { useUnlockedFlowStore } from '@/store/useUnlockedFlowStore';
-import { ItemType } from '@/types';
+import { ItemType, Prompt } from '@/types';
 
 interface MarketplaceItemProps {
   id: string;
@@ -16,6 +16,7 @@ interface MarketplaceItemProps {
   isLocked?: boolean;
   unlockPrice?: number;
   isDraft?: boolean;
+  capabilities?: ('text' | 'image' | 'code' | 'transformation')[];
 }
 
 interface MarketplaceCardProps {
@@ -99,10 +100,14 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
             </button>
           ) : (
             <Link
-              href={`/run/${item.id}?type=${item.type}`}
+              href={item.capabilities?.includes('transformation') 
+                ? `/transform/${item.id}` 
+                : `/run/${item.id}?type=${item.type}`}
               className="px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700"
             >
-              {item.type === 'prompt' ? 'Run' : 'Execute Flow'}
+              {item.capabilities?.includes('transformation') 
+                ? 'Transform' 
+                : item.type === 'prompt' ? 'Run' : 'Execute Flow'}
             </Link>
           )}
         </div>

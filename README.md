@@ -8,6 +8,7 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 - Run prompts by filling in input fields and seeing results immediately
 - Create and publish individual prompts
 - Build advanced flows by chaining multiple prompts together
+- Transform images with AI using GPT-4o (new!)
 - Spend credits per prompt execution
 - Export flows to external automation platforms
 
@@ -15,6 +16,14 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 
 ### Single Prompts
 Individual prompts tied to specific AI models (text or image generation) with defined input/output structure.
+
+### Image Transformations
+Specialized prompts that allow users to upload their own photos and transform them into different artistic styles, characters, or scenes using GPT-4o's advanced image generation capabilities. Examples include:
+
+- Transforming photos into Lego characters
+- Converting images to Studio Ghibli animation style
+- Creating pixel art from photographs
+- Turning photos into oil paintings or comic book art
 
 ### Prompt Flows
 Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences.
@@ -70,12 +79,14 @@ This flow showcases how to:
 │   ├── app/                    # App routes
 │   │   ├── page.tsx            # Marketplace home page
 │   │   ├── create/             # Create prompts and flows
-│   │   └── run/                # Execute prompts and flows
+│   │   ├── run/                # Execute prompts and flows
+│   │   └── transform/          # Image transformation
 │   ├── components/             # UI components
 │   │   ├── layout/             # Layout components
 │   │   ├── marketplace/        # Marketplace components
 │   │   ├── creator/            # Prompt and flow creation
 │   │   ├── runner/             # Prompt and flow execution
+│   │   ├── transformer/        # Image transformation components
 │   │   └── ui/                 # Common UI elements
 │   ├── lib/                    # Utilities and logic
 │   │   ├── store/              # Zustand stores
@@ -93,6 +104,9 @@ This flow showcases how to:
 - Creator UI for building prompts and flows
 - Marketplace UI for browsing and filtering
 - Flow execution system with step visualization
+- Image transformation with GPT-4o integration
+- Photo upload and style customization
+- Multiple artistic styles and character transformations
 - Improved select input options in PromptBuilder
 - Proper prompt identification in flows
 - Fixed image generation in flows
@@ -113,6 +127,13 @@ This flow showcases how to:
 6. ~~Duplicate credit displays~~ (Fixed April 2025)
 
 ## Latest Updates
+
+### Image Transformation Features (April 2025)
+- Added photo upload and transformation using GPT-4o
+- Created specialized transformation prompts for various styles and characters
+- Implemented user-friendly interface for image transformations
+- Added style presets and customization options
+- Integrated with existing credit system
 
 ### UI and Navigation Improvements (April 2025)
 - Fixed navigation in the prompt execution flow for easier return to the marketplace

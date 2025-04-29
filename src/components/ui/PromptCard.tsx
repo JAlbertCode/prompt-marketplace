@@ -40,7 +40,11 @@ const PromptCard: React.FC<PromptCardProps> = ({
   }, []);
   
   const handleRunClick = () => {
-    router.push(`/run/${prompt.id}`);
+    if (prompt.capabilities?.includes('transformation')) {
+      router.push(`/transform/${prompt.id}`);
+    } else {
+      router.push(`/run/${prompt.id}`);
+    }
   };
 
   const handleRemoveClick = (e: React.MouseEvent) => {
@@ -166,6 +170,11 @@ const PromptCard: React.FC<PromptCardProps> = ({
                 Code Generation
               </span>
             )}
+            {prompt.capabilities && prompt.capabilities.includes('transformation') && (
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded-full">
+                Image Transformation
+              </span>
+            )}
             <div className="text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600 overflow-hidden text-ellipsis" style={{maxWidth: '130px'}} title={prompt.model}>
               {prompt.model}
             </div>
@@ -201,7 +210,7 @@ const PromptCard: React.FC<PromptCardProps> = ({
                 size="sm"
                 onClick={handleRunClick}
               >
-                Run Prompt
+                {prompt.capabilities?.includes('transformation') ? 'Transform' : 'Run Prompt'}
               </Button>
             </div>
           </div>
