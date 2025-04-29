@@ -57,7 +57,7 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
       
       <div className="p-5 flex-1 flex flex-col">
         <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2" title={item.title}>
             {item.title}
           </h3>
           <div className="flex items-center">
@@ -71,7 +71,7 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
           </div>
         </div>
         
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+        <p className="text-sm text-gray-600 mb-6 line-clamp-3" title={item.description}>
           {item.description || `A ${item.type === 'prompt' ? 'prompt' : 'flow'} without a description.`}
         </p>
         

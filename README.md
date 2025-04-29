@@ -19,6 +19,23 @@ Individual prompts tied to specific AI models (text or image generation) with de
 ### Prompt Flows
 Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences.
 
+#### Content Creation Flow Example
+The Content Creation Flow demonstrates how to chain multiple prompts together for a complete workflow:
+
+1. **Step 1: Generate Blog Post**
+   - Uses the "Blog Post Generator" prompt
+   - Creates a complete blog post based on your topic, tone, and audience
+
+2. **Step 2: Create Image Description for DALL-E**
+   - Uses the "Marketing Image Description Creator" prompt
+   - Takes the blog post output and creates a detailed image description
+   - This description is then used to generate an image with DALL-E 3
+
+This flow showcases how to:
+- Pass outputs from one step to inputs of the next step
+- Combine text generation (Sonar API) with image generation (DALL-E API)
+- Create a complete content package (text + matching image) in one workflow
+
 ### Credit System
 - Each prompt execution costs credits
 - Each step in a flow burns credits separately
