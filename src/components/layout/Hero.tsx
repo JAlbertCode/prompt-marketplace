@@ -10,12 +10,12 @@ export default function Hero() {
     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16 px-4 sm:px-6 lg:px-8 rounded-xl">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-          PromptFlow Marketplace
+          Sonar Prompt Marketplace
         </h1>
         
         <p className="text-xl sm:text-2xl mb-8 text-blue-100">
-          Discover, run, and publish AI prompts with the Perplexity Sonar API. 
-          Monetize your prompts or automate workflows with just a few clicks.
+          Discover, run, and publish AI prompts and flows with the Perplexity Sonar API. 
+          Create single prompts or connect them in powerful automation flows.
         </p>
         
         <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 mb-10">
@@ -39,7 +39,7 @@ export default function Hero() {
               <h3 className="font-semibold text-lg">Run Instantly</h3>
             </div>
             <p className="text-blue-100">
-              Execute prompts with your own inputs and see results immediately. Pay only for what you use.
+              Execute prompts or complete flows with your inputs and see results immediately, including image generation.
             </p>
           </div>
           
@@ -48,10 +48,10 @@ export default function Hero() {
               <div className="p-2 bg-blue-500 rounded-full mr-3">
                 <LuPlus className="text-xl" />
               </div>
-              <h3 className="font-semibold text-lg">Create & Publish</h3>
+              <h3 className="font-semibold text-lg">Create & Connect</h3>
             </div>
             <p className="text-blue-100">
-              Share your expertise by creating prompts. Set your own fees and earn when others use them.
+              Build individual prompts or connect multiple prompts into powerful automation flows for complex tasks.
             </p>
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function Hero() {
             onClick={() => router.push('/submit')}
             className="px-8 py-3 bg-blue-800 text-white font-medium rounded-lg hover:bg-blue-900 border border-blue-400/30 flex items-center transition-colors"
           >
-            Create Your Own
+            Create Prompt
             <LuPlus className="ml-2" />
           </button>
         </div>

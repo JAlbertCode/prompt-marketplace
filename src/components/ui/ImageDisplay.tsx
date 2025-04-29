@@ -85,6 +85,7 @@ export default function ImageDisplay({
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center" style={{ minHeight: '400px' }}>
         <p className="text-gray-500">No image generated yet</p>
+        <p className="text-sm text-gray-400 mt-2">The image will appear here after generation</p>
       </div>
     );
   }

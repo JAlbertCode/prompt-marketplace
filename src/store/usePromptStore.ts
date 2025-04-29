@@ -118,9 +118,9 @@ const initialPrompts: Prompt[] = [
   },
   {
     id: '7',
-    title: 'Marketing Image Creator',
-    description: 'Generate professional marketing images with DALL-E 3',
-    systemPrompt: 'You are an expert marketing designer. Create a detailed and visually compelling image description based on the user\'s requirements. Focus on creating marketing-ready visuals that would be appropriate for advertisements, social media posts, or promotional materials. Include specific details about composition, lighting, colors, and style to ensure the generated image is professional and eye-catching.',
+    title: 'Marketing Image Description Creator',
+    description: 'Generate a detailed image description for DALL-E to create professional marketing visuals',
+    systemPrompt: 'You are an expert marketing designer. Create a VERY DETAILED and visual description that will be used to generate a marketing image with DALL-E 3. Your output will be fed directly to an image generation AI, so be extremely specific about composition, lighting, colors, style, mood, and subject matter. Do NOT use bullet points or formatting - write a cohesive paragraph that describes exactly what the image should look like. The more specific detail, the better the resulting image will be.',
     inputFields: [
       {
         id: 'product',
@@ -154,7 +154,7 @@ const initialPrompts: Prompt[] = [
     createdAt: Date.now(),
     capabilities: ['text', 'image'],
     exampleImageUrl: 'https://picsum.photos/seed/marketing1/1024/1024',
-    exampleOutput: "A professional marketing image for a premium smart water bottle with temperature control. The image features the sleek, stainless steel water bottle as the centerpiece, with a soft blue glow emanating from its digital temperature display. The bottle is positioned on a minimalist white surface with subtle water droplets around it, conveying freshness. In the background, there's a gradient from light blue to teal, suggesting coolness and technology. The lighting is bright and clean with soft shadows, giving the product a premium feel. The composition leaves space for text overlay on the right side, perfect for adding a product tagline or call to action."
+    exampleOutput: "A photorealistic marketing image featuring a premium smart water bottle with temperature control functionality. The sleek, stainless steel bottle is positioned prominently in the center of the frame on a minimalist white surface with subtle blue lighting. The bottle has a modern digital temperature display that emits a soft blue glow. Small water droplets are visible on the exterior of the bottle, suggesting coolness and freshness. The background features a smooth gradient from light blue to teal, creating a clean, high-tech atmosphere without distracting from the product. The lighting is bright and even with soft shadows that give the bottle a premium, professional appearance. There is negative space on the right side of the image where marketing text could be overlaid. The overall mood is refreshing, modern, and premium, targeted at health-conscious professionals."
   },
   {
     id: '8',

@@ -106,11 +106,11 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Text output - only show if the step isn't purely image generation */}
-              {result.output && (!result.hasImageCapability || (result.hasImageCapability && !result.imageUrl)) && (
+              {/* Text output */}
+              {result.output && (
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
-                    Text Output
+                    {result.hasImageCapability ? 'Image Description (for DALL-E)' : 'Text Output'}
                   </h4>
                   <div className="bg-gray-50 border border-gray-200 rounded p-3 text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
                     {result.output}
@@ -122,7 +122,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
               {result.imageUrl && (
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
-                    Image Output
+                    DALL-E Generated Image
                   </h4>
                   <div className="border border-gray-200 rounded-md overflow-hidden bg-gray-50">
                     <div className="relative aspect-video bg-gray-100 flex items-center justify-center">
@@ -138,7 +138,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
                       />
                     </div>
                     <div className="p-2 text-xs text-gray-500">
-                      Click to enlarge image
+                      {result.hasImageCapability && result.output ? 
+                        "Image created from the description above using DALL-E 3" : 
+                        "Click to view full image"}
                     </div>
                   </div>
                 </div>

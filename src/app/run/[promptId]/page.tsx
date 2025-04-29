@@ -80,7 +80,13 @@ export default function RunPage({ params }: { params: Params }) {
   }, [promptId, itemType, promptStore, flowStore, unlockedFlowStore]);
   
   const handleReturn = () => {
-    router.push('/');
+    // Check if we can go back in history
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      // Fallback to home page
+      router.push('/');
+    }
   };
   
   if (loading) {
@@ -131,7 +137,12 @@ export default function RunPage({ params }: { params: Params }) {
   
   return (
     <div className="max-w-3xl mx-auto">
-      <CreditHeader />
+      <nav className="flex mb-4 text-sm text-gray-500">
+        <button onClick={() => router.push('/')} className="hover:text-blue-600 hover:underline">Home</button>
+        <span className="mx-2">›</span>
+        <span className="text-gray-700 font-medium">{itemType === 'prompt' ? prompt?.title || 'Run Prompt' : flow?.name || 'Execute Flow'}</span>
+      </nav>
+      
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900">
           {itemType === 'prompt' ? 'Run Prompt' : 'Execute Flow'}

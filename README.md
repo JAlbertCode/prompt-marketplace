@@ -91,8 +91,19 @@ Chains of prompts where outputs from one step feed into the next, creating power
 1. No way to edit prompts after publication
 2. Flow builder needs search functionality for adding prompts
 3. Flow export implementation is incomplete
+4. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
+5. ~~Image generation not displaying properly~~ (Fixed April 2025)
+6. ~~Duplicate credit displays~~ (Fixed April 2025)
 
 ## Latest Updates
+
+### UI and Navigation Improvements (April 2025)
+- Fixed navigation in the prompt execution flow for easier return to the marketplace
+- Improved image generation to properly display generated images
+- Removed duplicate credit displays across the application
+- Updated hero section to better account for prompt flows
+- Added breadcrumb navigation for better user orientation
+- Enhanced image generation prompts for better quality results
 
 ### Flow Execution UI Improvements
 - Input fields are now organized by prompt/step for clarity

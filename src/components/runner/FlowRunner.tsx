@@ -220,9 +220,20 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           // Generate image if this prompt has image capability
           if (hasImageCapability && prompt.imageModel) {
             try {
-              // Get the first input value to use for the image prompt
-              const firstInputValue = Object.values(formattedInputs)[0] || '';
-              const imagePromptText = `Image of ${firstInputValue}`;
+              // Create a better image prompt - use the text output if available
+              let imagePromptText = '';
+              
+              if (output) {
+                // If we have text output, use that as the image prompt
+                imagePromptText = `Create an image that represents: ${output.substring(0, 500)}`;
+              } else {
+                // Fallback to combining all inputs
+                const inputValues = Object.values(formattedInputs).filter(Boolean);
+                const combinedInputs = inputValues.join('. ');
+                imagePromptText = `Create a detailed image of: ${combinedInputs}`;
+              }
+              
+              console.log(`Generating image with prompt: ${imagePromptText.substring(0, 100)}...`);
               
               // Generate the image
               imageUrl = await generateImage(

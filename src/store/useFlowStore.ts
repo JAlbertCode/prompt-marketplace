@@ -25,7 +25,7 @@ const initialFlows: PromptFlow[] = [
   {
     id: 'flow-1',
     title: 'Content Creation Flow',
-    description: 'Generate blog content and marketing images in one flow',
+    description: 'Generate a blog post and create a matching DALL-E image in two steps',
     steps: [
       {
         id: 'step-1',
@@ -52,9 +52,9 @@ const initialFlows: PromptFlow[] = [
       },
       {
         id: 'step-2',
-        promptId: '7', // Marketing Image Creator
+        promptId: '7', // Marketing Image Description Creator
         order: 1,
-        title: 'Create Featured Image',
+        title: 'Create Image Description for DALL-E',
         inputMappings: [
         {
         targetInputId: 'product',
@@ -78,7 +78,7 @@ const initialFlows: PromptFlow[] = [
     totalCreditCost: 200, // 50 + 150
     createdAt: Date.now(),
     unlockPrice: 0, // Free flow
-    exampleOutput: "This flow generates both a full blog post and a matching featured image based on your topic, tone, and target audience. The image will be styled according to your preference while maintaining consistency with the blog content."
+    exampleOutput: "This flow works in two steps: First, it generates a complete blog post based on your topic, tone, and target audience. Then, it creates a detailed image description based on the blog content, which is used to generate a matching image with DALL-E 3. The DALL-E image will be styled according to your preferences while maintaining consistency with the blog content."
   }
 ];
 

@@ -80,10 +80,11 @@ const PromptForm: React.FC<PromptFormProps> = ({
       // Handle image-only prompts separately
       if (hasImageCapability && !hasTextCapability) {
         try {
-          // For image-only prompts, create a basic prompt from the first input
-          const promptText = Object.values(formattedInputs)[0] || "";
-          // Keep it very simple - just the basic topic
-          const imagePrompt = `Image of ${promptText}`;
+          // For image-only prompts, create a more detailed prompt
+          // Combine all input fields to create a rich prompt
+          const promptValues = Object.values(formattedInputs).filter(val => val);
+          const promptText = promptValues.join('. ');
+          const imagePrompt = `Create a detailed image of: ${promptText}`;
           
           console.log('Generating image with prompt:', imagePrompt);
           
@@ -119,9 +120,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
           // If this prompt also has image capability, generate an image
           if (hasImageCapability && prompt.imageModel) {
             try {
-              // Ultra simple prompt to avoid errors
-              const promptText = Object.values(formattedInputs)[0] || "";
-              const imagePrompt = `Image of ${promptText}`;
+              // Create a more meaningful image prompt based on the actual text output
+              const imagePrompt = `Create an image that represents: ${textResult.substring(0, 150)}`;
               
               console.log('Generating image with prompt:', imagePrompt);
               
@@ -360,9 +360,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
             
             <div className="flex justify-between items-center pt-2">
               <div>
-                <span className={`text-sm ${credits < prompt.creditCost ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+                <span className="text-sm text-gray-500">
                   Cost: <span className="font-semibold">{prompt.creditCost} credits</span>
-                  {credits < prompt.creditCost ? ` (You have: ${credits})` : ''}
                 </span>
               </div>
               
