@@ -95,6 +95,7 @@ Chains of prompts where outputs from one step feed into the next, creating power
 ## Latest Updates
 
 ### Flow Execution UI Improvements
+- Input fields are now organized by prompt/step for clarity
 - Added prompt step preview on the flow execution page
 - Each step now shows which specific prompt is being used
 - Fixed card text truncation with line clamping

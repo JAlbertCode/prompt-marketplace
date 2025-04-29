@@ -389,19 +389,48 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
               </div>
             </div>
             
-            <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-4">
-              {flowInputFields.map((field) => (
-                <div key={field.id} className="space-y-1">
-                  <label 
-                    htmlFor={field.id}
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    {field.label}{field.required && <span className="text-red-500">*</span>}
-                  </label>
-                  
-                  {renderInputField(field)}
-                </div>
-              ))}
+            <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-6">
+              {/* Group input fields by prompt/step */}
+              {flow.steps.map((step, stepIndex) => {
+                const prompt = promptsMap[step.promptId];
+                if (!prompt) return null;
+                
+                // Find all input fields that are associated with this step
+                const stepInputFields = flowInputFields.filter(field => field.stepIndex === stepIndex);
+                
+                if (stepInputFields.length === 0) return null;
+                
+                return (
+                  <div key={step.id} className="p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center mb-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
+                        {stepIndex + 1}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm">{step.title || prompt.title}</h4>
+                        <div className="text-xs text-gray-500">
+                          Input fields for this step
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {stepInputFields.map((field) => (
+                        <div key={field.id} className="space-y-1">
+                          <label 
+                            htmlFor={field.id}
+                            className="block text-sm font-medium text-gray-700"
+                          >
+                            {field.label}{field.required && <span className="text-red-500">*</span>}
+                          </label>
+                          
+                          {renderInputField(field)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
               
               {showCreditWarning && (
                 <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded flex items-center">
