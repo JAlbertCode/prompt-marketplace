@@ -94,11 +94,12 @@ Chains of prompts where outputs from one step feed into the next, creating power
 
 ## Latest Updates
 
-### Improved Flow Visualization
-- Each flow step now clearly shows which prompt is being used
-- Added the ability to view and favorite prompts from within a flow
-- Fixed image generation in flow steps
-- Created a better UI for flow execution with step-by-step visualization
+### Flow Execution UI Improvements
+- Added prompt step preview on the flow execution page
+- Each step now shows which specific prompt is being used
+- Fixed card text truncation with line clamping
+- Positioned flow buttons and credits consistently at the bottom of cards
+- Improved flow step visualization with vertical timeline view
 
 ### Select Options Enhancement
 - Added proper UI for managing select field options in the PromptBuilder

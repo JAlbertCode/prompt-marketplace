@@ -361,6 +361,34 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-4">Flow Inputs</h3>
             
+            {/* Flow step overview */}
+            <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-medium text-gray-500 uppercase mb-3">This flow will run these prompts:</h4>
+              <div className="space-y-3">
+                {flow.steps.map((step, index) => {
+                  const prompt = promptsMap[step.promptId];
+                  return (
+                    <div key={step.id} className="flex items-center">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{step.title || (prompt ? prompt.title : `Step ${index + 1}`)}</div>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          <span>Using prompt:</span>
+                          <span className="ml-1 font-medium text-indigo-600">{prompt ? prompt.title : 'Unknown'}</span>
+                          <span className="ml-2 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{prompt ? prompt.model : 'unknown'}</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {prompt ? `${prompt.creditCost} credits` : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
             <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-4">
               {flowInputFields.map((field) => (
                 <div key={field.id} className="space-y-1">

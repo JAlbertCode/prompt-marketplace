@@ -47,7 +47,7 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
   return (
     <div className={`bg-white rounded-lg shadow-md overflow-hidden border ${
       isDraft ? 'border-yellow-300' : item.isLocked ? 'border-gray-300' : 'border-indigo-200'
-    }`}>
+    } flex flex-col h-full`}>
       {/* Draft badge */}
       {isDraft && (
         <div className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 flex items-center justify-center">
@@ -55,9 +55,9 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
         </div>
       )}
       
-      <div className="p-5">
+      <div className="p-5 flex-1 flex flex-col">
         <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
             {item.title}
           </h3>
           <div className="flex items-center">
@@ -71,11 +71,11 @@ const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
           </div>
         </div>
         
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
           {item.description || `A ${item.type === 'prompt' ? 'prompt' : 'flow'} without a description.`}
         </p>
         
-        <div className="flex justify-between items-center">
+        <div className="mt-auto flex justify-between items-center">
           <div className="text-sm text-gray-700">
             <span className="font-semibold">{item.creditCost}</span> credits
             {item.isLocked && (

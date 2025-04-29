@@ -33,21 +33,21 @@ const initialFlows: PromptFlow[] = [
         order: 0,
         title: 'Generate Blog Post',
         inputMappings: [
-          {
-            targetInputId: 'topic',
-            sourceType: 'user',
-            userInputId: 'flowTopic'
-          },
-          {
-            targetInputId: 'tone',
-            sourceType: 'user',
-            userInputId: 'flowTone'
-          },
-          {
-            targetInputId: 'targetAudience',
-            sourceType: 'user',
-            userInputId: 'flowAudience'
-          }
+        {
+        targetInputId: 'topic',
+        sourceType: 'user',
+        userInputId: 'flowTopic'
+        },
+        {
+        targetInputId: 'tone',
+        sourceType: 'user',
+        userInputId: 'flowTone'
+        },
+        {
+        targetInputId: 'targetAudience',
+        sourceType: 'user',
+        userInputId: 'flowAudience'
+        }
         ]
       },
       {
@@ -56,22 +56,22 @@ const initialFlows: PromptFlow[] = [
         order: 1,
         title: 'Create Featured Image',
         inputMappings: [
-          {
-            targetInputId: 'product',
-            sourceType: 'previousStep',
-            sourceStepId: 'step-1',
-            sourceOutputPath: 'title'
-          },
-          {
-            targetInputId: 'style',
-            sourceType: 'user',
-            userInputId: 'imageStyle'
-          },
-          {
-            targetInputId: 'audience',
-            sourceType: 'user',
-            userInputId: 'flowAudience'
-          }
+        {
+        targetInputId: 'product',
+        sourceType: 'previousStep',
+        sourceStepId: 'step-1',
+        sourceOutputPath: 'title'
+        },
+        {
+        targetInputId: 'style',
+        sourceType: 'user',
+        userInputId: 'imageStyle'
+        },
+        {
+        targetInputId: 'audience',
+        sourceType: 'user',
+        userInputId: 'flowAudience'
+        }
         ]
       }
     ],
