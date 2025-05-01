@@ -2,7 +2,6 @@
 
 import React from 'react';
 import PromptCreator from '@/components/ui/PromptCreator';
-import CreditHeader from '@/components/layout/CreditHeader';
 
 export default function SubmitPage() {
   return (

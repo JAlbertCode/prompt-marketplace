@@ -10,7 +10,6 @@ import PromptForm from '@/components/ui/PromptForm';
 import FlowRunner from '@/components/runner/FlowRunner';
 import WebhookDisplay from '@/components/ui/WebhookDisplay';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
-import CreditHeader from '@/components/layout/CreditHeader';
 
 interface Params {
   promptId: string;

@@ -8,7 +8,7 @@ import { GPTModel } from '@/types';
 const OPENAI_API_BASE_URL = 'https://api.openai.com/v1';
 
 /**
- * Transform an image using GPT-4o
+ * Transform an image using GPT-4o or GPT-Image-1
  * @param imageBase64 The base64-encoded image to transform
  * @param promptText The text prompt describing the transformation
  * @param model The model to use (default: gpt-4o)
@@ -29,21 +29,61 @@ export async function transformImage(
       throw new Error('Prompt text is too short or empty');
     }
     
-    // Make sure we're using a supported model
-    const supportedModels: GPTModel[] = ['gpt-4o', 'gpt-4-turbo', 'gpt-4o-mini', 'gpt-4-vision-preview'];
-    const modelToUse = supportedModels.includes(model) ? model : 'gpt-4o';
+    // Determine which endpoint to use based on the model
+    let endpoint = '/api/openai/transform';
     
-    console.log(`Sending transformation request with model: ${modelToUse}`);
+    // Use the dedicated transform2 endpoint for gpt-image-1
+    if (model === 'gpt-image-1') {
+      endpoint = '/api/openai/transform2';
+      console.log('Using gpt-image-1 for direct image-to-image transformation');
+    } else {
+      // Make sure we're using a supported model for the regular transform endpoint
+      const supportedModels: GPTModel[] = ['gpt-4o', 'gpt-4-turbo', 'gpt-4o-mini', 'gpt-4-vision-preview'];
+      model = supportedModels.includes(model) ? model : 'gpt-4o';
+    }
+    
+    console.log(`Sending transformation request with model: ${model}`);
     console.log(`Prompt: ${promptText}`);
     
-    // Call our proxy API endpoint
-    const response = await fetch('/api/openai/transform', {
+    // For gpt-image-1, we need to use FormData for the file upload
+    if (model === 'gpt-image-1') {
+      // Create a file from the base64 string
+      const byteCharacters = atob(imageBase64);
+      const byteArrays = [];
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArrays.push(byteCharacters.charCodeAt(i));
+      }
+      const byteArray = new Uint8Array(byteArrays);
+      const imageFile = new File([byteArray], 'image.jpg', { type: 'image/jpeg' });
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      formData.append('style', promptText);
+      
+      // Call the transform2 endpoint with form data
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to transform image with gpt-image-1');
+      }
+      
+      const data = await response.json();
+      return data.imageUrl;
+    }
+    
+    // For other models, use the regular JSON-based API
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: modelToUse,
+        model,
         image: imageBase64,
         prompt: promptText,
       }),
@@ -81,7 +121,7 @@ export function calculateTransformationCreditCost(
     case 'gpt-4o':
       return 200;
     case 'gpt-image-1':
-      return 250;
+      return 180; // Lower cost for direct transformation
     case 'gpt-4-turbo':
       return 150;
     case 'gpt-4o-mini':

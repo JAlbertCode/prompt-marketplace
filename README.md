@@ -8,25 +8,24 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 - Run prompts by filling in input fields and seeing results immediately
 - Create and publish individual prompts
 - Build advanced flows by chaining multiple prompts together
-- Transform images with AI using GPT-4o (new!)
 - Spend credits per prompt execution
 - Export flows to external automation platforms
 
 ## Core Concepts
 
 ### Single Prompts
-Individual prompts tied to specific AI models (text or image generation) with defined input/output structure.
+Individual prompts tied to specific AI models with defined input/output structure.
 
-### Image Transformations
-Specialized prompts that allow users to upload their own photos and transform them into different artistic styles, characters, or scenes using GPT-4o's advanced image generation capabilities. Examples include:
+#### Supported Models
+- **Text Generation**: GPT-4, GPT-4o, Sonar (small, medium, large) via API
 
-- Transforming photos into Lego characters
-- Converting images to Studio Ghibli animation style
-- Creating pixel art from photographs
-- Turning photos into oil paintings or comic book art
+#### Updated Prompts List
+- **Image Prompt Writer**: Create detailed text prompts for image generation tools
+- **Product Description Generator**: Create professional product descriptions
+- **Brand Style Guide Creator**: Generate comprehensive brand guidelines
 
 ### Prompt Flows
-Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences.
+Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences. This is the proper way to connect multiple models (like text generation followed by image generation).
 
 #### Content Creation Flow Example
 The Content Creation Flow demonstrates how to chain multiple prompts together for a complete workflow:
@@ -79,14 +78,12 @@ This flow showcases how to:
 │   ├── app/                    # App routes
 │   │   ├── page.tsx            # Marketplace home page
 │   │   ├── create/             # Create prompts and flows
-│   │   ├── run/                # Execute prompts and flows
-│   │   └── transform/          # Image transformation
+│   │   └── run/                # Execute prompts and flows
 │   ├── components/             # UI components
 │   │   ├── layout/             # Layout components
 │   │   ├── marketplace/        # Marketplace components
 │   │   ├── creator/            # Prompt and flow creation
 │   │   ├── runner/             # Prompt and flow execution
-│   │   ├── transformer/        # Image transformation components
 │   │   └── ui/                 # Common UI elements
 │   ├── lib/                    # Utilities and logic
 │   │   ├── store/              # Zustand stores
@@ -104,9 +101,6 @@ This flow showcases how to:
 - Creator UI for building prompts and flows
 - Marketplace UI for browsing and filtering
 - Flow execution system with step visualization
-- Image transformation with GPT-4o integration
-- Photo upload and style customization
-- Multiple artistic styles and character transformations
 - Improved select input options in PromptBuilder
 - Proper prompt identification in flows
 - Fixed image generation in flows
@@ -125,15 +119,26 @@ This flow showcases how to:
 4. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
 5. ~~Image generation not displaying properly~~ (Fixed April 2025)
 6. ~~Duplicate credit displays~~ (Fixed April 2025)
+7. ~~Non-functional image transformation prompts~~ (Fixed May 2025)
+8. Need to update Flow examples that rely on multi-model prompts
 
 ## Latest Updates
 
-### Image Transformation Features (April 2025)
-- Added photo upload and transformation using GPT-4o
-- Created specialized transformation prompts for various styles and characters
-- Implemented user-friendly interface for image transformations
-- Added style presets and customization options
-- Integrated with existing credit system
+### Prompt Consistency Update (May 2025)
+- Renamed and refined prompts to better match their single-model functionality
+- Updated "Marketing Image Description Creator" to "Image Prompt Writer"
+- Changed "Product Visualization" to "Product Description Generator"
+- Updated "Brand Mood Board Creator" to "Brand Style Guide Creator"
+- Fixed misleading descriptions that implied image generation within single prompts
+- Made all prompt descriptions clearly indicate their text-only output purpose
+
+### Image Transformation Prompts Removal (May 2025)
+- Removed non-functional image transformation prompts that didn't work with OpenAI API
+- Eliminated prompts with 'transformation' capability and 'gpt-image-1' model
+- Removed prompts: Lego Character Transformation, Studio Ghibli Art Style, Pixel Art Converter, Oil Painting Portrait, and Comic Book Hero Transformation
+- Updated remaining prompts to strictly follow the one prompt, one model principle
+- Removed dual-model prompts that had both text and image capabilities
+- Simplified types to maintain only working models with clear separation of concerns
 
 ### UI and Navigation Improvements (April 2025)
 - Fixed navigation in the prompt execution flow for easier return to the marketplace

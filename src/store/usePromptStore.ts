@@ -117,14 +117,14 @@ const initialPrompts: Prompt[] = [
   },
   {
     id: '7',
-    title: 'Marketing Image Description Creator',
-    description: 'Generate a detailed image description for DALL-E to create professional marketing visuals',
-    systemPrompt: 'You are an expert marketing designer. Create a VERY DETAILED and visual description that will be used to generate a marketing image with DALL-E 3. Your output will be fed directly to an image generation AI, so be extremely specific about composition, lighting, colors, style, mood, and subject matter. Do NOT use bullet points or formatting - write a cohesive paragraph that describes exactly what the image should look like. The more specific detail, the better the resulting image will be.',
+    title: 'Image Prompt Writer',
+    description: 'Create detailed prompts for text-to-image generation tools',
+    systemPrompt: 'You are an expert at writing prompts for AI image generation tools. Create a detailed and visual description that can be used as input for DALL-E 3 or similar text-to-image generation tools. Be extremely specific about composition, lighting, colors, style, mood, and subject matter. DO NOT use bullet points or formatting - write a cohesive paragraph that describes exactly what the image should look like. The more specific detail, the better the resulting image will be when users take your output to an image generation tool.',
     inputFields: [
       {
         id: 'product',
-        label: 'Product or Service',
-        placeholder: 'Describe the product or service to feature',
+        label: 'Subject',
+        placeholder: 'Describe what you want to appear in the image',
         required: true
       },
       {
@@ -136,30 +136,29 @@ const initialPrompts: Prompt[] = [
       {
         id: 'audience',
         label: 'Target Audience',
-        placeholder: 'Who is this marketing aimed at?',
+        placeholder: 'Who will be viewing this image?',
         required: false
       },
       {
         id: 'additionalDetails',
         label: 'Additional Details',
-        placeholder: 'Any specific elements to include',
+        placeholder: 'Any specific elements or technical details to include',
         required: false,
         type: 'textarea'
       }
     ],
     model: 'sonar-small-online',
-    imageModel: 'dall-e-3',
     creditCost: 150,
     createdAt: Date.now(),
-    capabilities: ['text', 'image'],
+    capabilities: ['text'],
     exampleImageUrl: 'https://picsum.photos/seed/marketing1/1024/1024',
     exampleOutput: "A photorealistic marketing image featuring a premium smart water bottle with temperature control functionality. The sleek, stainless steel bottle is positioned prominently in the center of the frame on a minimalist white surface with subtle blue lighting. The bottle has a modern digital temperature display that emits a soft blue glow. Small water droplets are visible on the exterior of the bottle, suggesting coolness and freshness. The background features a smooth gradient from light blue to teal, creating a clean, high-tech atmosphere without distracting from the product. The lighting is bright and even with soft shadows that give the bottle a premium, professional appearance. There is negative space on the right side of the image where marketing text could be overlaid. The overall mood is refreshing, modern, and premium, targeted at health-conscious professionals."
   },
   {
     id: '8',
-    title: 'Product Visualization',
-    description: 'Create realistic product images from descriptions',
-    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed image description that would result in a photorealistic product visualization based on the user\'s description. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic. Include specific details about studio setup, background, reflections, and shadows to achieve a professional product photography look.',
+    title: 'Product Description Generator',
+    description: 'Create detailed descriptions for product visualization',
+    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed description of how a product would be photographed professionally. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic. Include specific details about studio setup, background, reflections, and shadows to achieve a professional product photography look. This is not for image generation, but to help users understand how to present their products professionally.',
     inputFields: [
       {
         id: 'productDescription',
@@ -188,18 +187,17 @@ const initialPrompts: Prompt[] = [
       }
     ],
     model: 'sonar-medium-chat',
-    imageModel: 'dall-e-3',
     creditCost: 200,
     createdAt: Date.now(),
-    capabilities: ['text', 'image'],
+    capabilities: ['text'],
     exampleImageUrl: 'https://picsum.photos/seed/product1/1024/1024',
     exampleOutput: "A photorealistic image of a premium wireless gaming headset, shown from a slight 3/4 angle to display both the sleek ear cup design and the adjustable microphone. The headset features a matte black finish with subtle red LED accents along the ear cups and microphone tip. The product is displayed on a reflective black surface in a studio environment with professional lighting - a main key light from the front right creating a subtle highlight across the curves of the headset, and a rim light from behind creating a defining edge. The background features a gradient from dark gray to black, keeping the focus entirely on the product. The materials appear high-end with memory foam ear cushions visible, and the overall image has a slight depth of field with the front of the headset in perfect focus while the rear elements have a slight, appealing blur."
   },
   {
     id: '9',
-    title: 'Brand Mood Board Creator',
-    description: 'Generate visual mood boards for brand identity',
-    systemPrompt: 'You are a brand identity specialist. Create a detailed description for a visual mood board that captures the essence of the brand described by the user. Focus on creating a cohesive visual language including color schemes, typography suggestions, imagery style, and overall aesthetic that aligns with the brand values and target audience. The description should be detailed enough to generate a comprehensive mood board image that effectively communicates the brand\'s identity and appeal.',
+    title: 'Brand Style Guide Creator',
+    description: 'Generate written style guides for brand identity',
+    systemPrompt: 'You are a brand identity specialist. Create a detailed written style guide that captures the essence of the brand described by the user. Focus on developing a cohesive visual language including color schemes (with exact hex codes), typography suggestions, imagery style, and overall aesthetic that aligns with the brand values and target audience. Include sections on logo usage, voice and tone for communications, and dos and don\'ts for brand applications.',
     inputFields: [
       {
         id: 'brandName',
@@ -233,230 +231,11 @@ const initialPrompts: Prompt[] = [
       }
     ],
     model: 'sonar-medium-chat',
-    imageModel: 'dall-e-3',
     creditCost: 180,
     createdAt: Date.now(),
-    capabilities: ['text', 'image'],
+    capabilities: ['text'],
     exampleImageUrl: 'https://picsum.photos/seed/moodboard1/1024/1024',
     exampleOutput: "A visual mood board for 'EcoLuxe', a sustainable luxury home goods brand. The mood board is arranged in a clean grid layout featuring a sophisticated color palette of deep emerald green, matte gold, crisp white, and warm taupe. The board includes close-up textures of natural materials: FSC-certified walnut wood grain, organic cotton weave, recycled brass with a brushed finish, and handmade ceramic with subtle imperfections. Typography examples show a primary serif font for headings that conveys timeless luxury, paired with a clean sans-serif for body text suggesting modern sustainability. Product photography samples feature minimalist compositions with soft natural lighting, showing sustainable luxury items in curated home environments with abundant plants and natural light. The overall aesthetic balances high-end design with environmental consciousness, appealing to affluent, eco-minded consumers who don't want to sacrifice quality or style for sustainability."
-  },
-  {
-    id: '10',
-    title: 'Lego Character Transformation',
-    description: 'Transform your photo into a Lego minifigure character',
-    systemPrompt: 'You are a digital artist specializing in Lego-style transformations. Your task is to transform the uploaded photo into a Lego minifigure character. Maintain the person\'s essential features and style but recreate them as if they were a Lego minifigure. Use the classic Lego minifigure style with the characteristic yellow face (unless otherwise specified), simplified features, and the blocky Lego aesthetic. Make sure to keep the character recognizable while fully converting them to the Lego style.',
-    inputFields: [
-      {
-        id: 'photo',
-        label: 'Your Photo',
-        placeholder: 'Upload a clear photo of yourself or the person to transform',
-        required: true,
-        type: 'file',
-        accept: 'image/*'
-      },
-      {
-        id: 'style',
-        label: 'Lego Style',
-        placeholder: 'Classic minifigure, modern Lego movie style, etc.',
-        required: false
-      },
-      {
-        id: 'background',
-        label: 'Background Setting',
-        placeholder: 'Lego city, space, medieval castle, etc.',
-        required: false
-      }
-    ],
-    model: 'gpt-4o',
-    creditCost: 150,
-    createdAt: Date.now(),
-    capabilities: ['transformation'],
-    transformationType: 'character',
-    presetStyles: [
-      'Classic Lego Minifigure',
-      'Lego Movie Style',
-      'Lego Batman Universe',
-      'Lego Star Wars Character',
-      'Lego Marvel Superhero'
-    ],
-    allowCustomStyles: true,
-    exampleImageUrl: 'https://picsum.photos/seed/lego1/512/512'
-  },
-  {
-    id: '11',
-    title: 'Studio Ghibli Art Style',
-    description: 'Transform photos into the beautiful hand-drawn style of Studio Ghibli animations',
-    systemPrompt: 'You are a master digital artist specializing in Studio Ghibli-style transformations. Transform the uploaded image into the distinctive hand-drawn animation style of Studio Ghibli films. Focus on creating soft, painterly backgrounds with detailed nature elements, warm lighting, and characters with simple but expressive faces typical of Ghibli animations. Add the characteristic watercolor aesthetic, gentle color palette, and careful attention to small details that make Ghibli films so beloved. If the image contains nature, emphasize its beauty and magical quality as Miyazaki would.',
-    inputFields: [
-      {
-        id: 'photo',
-        label: 'Your Photo',
-        placeholder: 'Upload a photo to transform',
-        required: true,
-        type: 'file',
-        accept: 'image/*'
-      },
-      {
-        id: 'ghibliFilm',
-        label: 'Ghibli Film Reference',
-        placeholder: 'E.g., Spirited Away, My Neighbor Totoro, Princess Mononoke',
-        required: false
-      },
-      {
-        id: 'additionalElements',
-        label: 'Additional Elements',
-        placeholder: 'Any Studio Ghibli style elements you want to add',
-        required: false
-      }
-    ],
-    model: 'gpt-4o',
-    creditCost: 200,
-    createdAt: Date.now(),
-    capabilities: ['transformation'],
-    transformationType: 'style',
-    presetStyles: [
-      'Spirited Away',
-      'My Neighbor Totoro',
-      'Princess Mononoke',
-      'Howl\'s Moving Castle',
-      'Castle in the Sky'
-    ],
-    allowCustomStyles: true,
-    exampleImageUrl: 'https://picsum.photos/seed/ghibli1/512/512'
-  },
-  {
-    id: '12',
-    title: 'Pixel Art Converter',
-    description: 'Transform any image into nostalgic pixel art with customizable styles',
-    systemPrompt: 'You are a pixel art specialist. Transform the uploaded image into authentic pixel art with limited color palettes, visible pixels, and the nostalgic aesthetic of 8-bit and 16-bit video games. Maintain the core composition and subject matter while fully converting the image to pixel art style. Focus on creating clean pixel edges, appropriate dithering techniques, and limited but vibrant color palettes. Make sure the final result looks like genuine pixel art rather than just a low-resolution image.',
-    inputFields: [
-      {
-        id: 'photo',
-        label: 'Your Image',
-        placeholder: 'Upload an image to transform',
-        required: true,
-        type: 'file',
-        accept: 'image/*'
-      },
-      {
-        id: 'pixelDensity',
-        label: 'Pixel Density',
-        placeholder: 'Low (8-bit), Medium (16-bit), High (32-bit)',
-        required: false
-      },
-      {
-        id: 'colorPalette',
-        label: 'Color Palette',
-        placeholder: 'NES, SNES, Game Boy, Custom',
-        required: false
-      }
-    ],
-    model: 'gpt-4o',
-    creditCost: 120,
-    createdAt: Date.now(),
-    capabilities: ['transformation'],
-    transformationType: 'style',
-    presetStyles: [
-      'NES 8-bit',
-      'SNES 16-bit',
-      'Game Boy',
-      'Sega Genesis',
-      'Commodore 64'
-    ],
-    allowCustomStyles: true,
-    exampleImageUrl: 'https://picsum.photos/seed/pixel1/512/512'
-  },
-  {
-    id: '13',
-    title: 'Oil Painting Portrait',
-    description: 'Transform your photos into beautiful oil painting portraits in various artistic styles',
-    systemPrompt: 'You are a master digital artist specializing in oil painting transformations. Convert the uploaded photograph into a beautiful, realistic oil painting portrait that faithfully captures the subject while adding the rich textures, depth, and painterly qualities of traditional oil painting. Pay attention to brush stroke techniques, color mixing, light and shadow effects, and the subtle imperfections that give oil paintings their authentic character. The final image should look like it was painted by hand on canvas rather than digitally manipulated.',
-    inputFields: [
-      {
-        id: 'photo',
-        label: 'Your Photo',
-        placeholder: 'Upload a portrait photo to transform',
-        required: true,
-        type: 'file',
-        accept: 'image/*'
-      },
-      {
-        id: 'artisticStyle',
-        label: 'Artistic Style',
-        placeholder: 'Rembrandt, Impressionist, Modern, etc.',
-        required: false
-      },
-      {
-        id: 'colorTone',
-        label: 'Color Tone',
-        placeholder: 'Warm, cool, vibrant, muted, etc.',
-        required: false
-      }
-    ],
-    model: 'gpt-4o',
-    creditCost: 180,
-    createdAt: Date.now(),
-    capabilities: ['transformation'],
-    transformationType: 'style',
-    presetStyles: [
-      'Classical Rembrandt',
-      'Impressionist Monet',
-      'Renaissance Style',
-      'Modern Expressionist',
-      'Dutch Golden Age',
-      'Romantic Era'
-    ],
-    allowCustomStyles: true,
-    exampleImageUrl: 'https://picsum.photos/seed/oil1/512/512'
-  },
-  {
-    id: '14',
-    title: 'Comic Book Hero Transformation',
-    description: 'Transform yourself into a comic book superhero with custom powers and costume',
-    systemPrompt: 'You are a comic book artist specializing in superhero character design. Transform the uploaded photo into a dynamic comic book superhero illustration. Create a heroic, action-ready pose with dramatic lighting, bold outlines, and comic book style shading. Add a superhero costume that suits the person\'s appearance while incorporating any requested colors, powers, or themes. Include appropriate comic book visual elements like speed lines, impact stars, or dramatic backgrounds to enhance the superhero feel. The final result should look like a panel from a professional comic book featuring this person as the hero.',
-    inputFields: [
-      {
-        id: 'photo',
-        label: 'Your Photo',
-        placeholder: 'Upload a photo of yourself to transform',
-        required: true,
-        type: 'file',
-        accept: 'image/*'
-      },
-      {
-        id: 'superpower',
-        label: 'Superpower',
-        placeholder: 'Flight, super strength, energy blasts, etc.',
-        required: false
-      },
-      {
-        id: 'costumeColors',
-        label: 'Costume Colors',
-        placeholder: 'Red and blue, black and gold, etc.',
-        required: false
-      },
-      {
-        id: 'comicStyle',
-        label: 'Comic Style',
-        placeholder: 'Marvel, DC, Manga, Indie, etc.',
-        required: false
-      }
-    ],
-    model: 'gpt-4o',
-    creditCost: 170,
-    createdAt: Date.now(),
-    capabilities: ['transformation'],
-    transformationType: 'character',
-    presetStyles: [
-      'Marvel Superhero',
-      'DC Comics Style',
-      'Manga Hero',
-      'Indie Comic',
-      'Vintage Comic',
-      'X-Men Member'
-    ],
-    allowCustomStyles: true,
-    exampleImageUrl: 'https://picsum.photos/seed/comic1/512/512'
   }
 ];
 
@@ -538,7 +317,7 @@ export const usePromptStore = create<PromptState>()(
         }
         
         // Identify default templates by fixed IDs
-        const defaultTemplateIds = new Set(['1', '2', '3', '7', '8', '9', '10', '11', '12', '13', '14']);
+        const defaultTemplateIds = new Set(['1', '2', '3', '7', '8', '9']);
         
         // Get existing non-default template IDs to preserve user-created prompts
         const userPrompts = persistedState.prompts.filter((p: Prompt) => !defaultTemplateIds.has(p.id));

@@ -16,7 +16,7 @@ export interface Prompt {
   exampleImageUrl?: string;
   isPrivate?: boolean;
   ownerId?: string;
-  capabilities?: ('text' | 'image' | 'code' | 'transformation')[];
+  capabilities?: ('text' | 'image' | 'code')[];
   imageModel?: ImageModel;
   outputType?: 'text' | 'image';
   transformationType?: 'style' | 'character' | 'scene';
