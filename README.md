@@ -39,14 +39,17 @@ The Content Creation Flow demonstrates how to chain multiple prompts together fo
    - Uses the "Blog Post Generator" prompt
    - Creates a complete blog post based on your topic, tone, and audience
 
-2. **Step 2: Create Image Description for DALL-E**
-   - Uses the "Marketing Image Description Creator" prompt
+2. **Step 2: Create Image Prompt for DALL-E**
+   - Uses the "Image Prompt Writer" prompt
    - Takes the blog post output and creates a detailed image description
-   - This description is then used to generate an image with DALL-E 3
+
+3. **Step 3: Generate Matching Image**
+   - Uses the "DALL-E Image Creator" prompt
+   - Takes the detailed image description and generates a matching image
 
 This flow showcases how to:
 - Pass outputs from one step to inputs of the next step
-- Combine text generation (Sonar API) with image generation (DALL-E API)
+- Combine text generation with image generation
 - Create a complete content package (text + matching image) in one workflow
 
 ### Credit System
@@ -125,7 +128,7 @@ This flow showcases how to:
 5. ~~Image generation not displaying properly~~ (Fixed April 2025)
 6. ~~Duplicate credit displays~~ (Fixed April 2025)
 7. ~~Non-functional image transformation prompts~~ (Fixed May 2025)
-8. Need to update Flow examples that rely on multi-model prompts
+8. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
 
 ## Latest Updates
 
@@ -136,6 +139,8 @@ This flow showcases how to:
 - Each prompt follows the one prompt, one model principle
 - Created distinct input fields with appropriate options for each use case
 - Integrated properly with the credit system
+- Updated Content Creation Flow example to use current prompts
+- Added third step to the flow to showcase direct image generation
 
 ### Prompt Consistency Update (May 2025)
 - Renamed and refined prompts to better match their single-model functionality
