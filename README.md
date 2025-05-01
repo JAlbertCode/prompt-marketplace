@@ -18,11 +18,16 @@ Individual prompts tied to specific AI models with defined input/output structur
 
 #### Supported Models
 - **Text Generation**: GPT-4, GPT-4o, Sonar (small, medium, large) via API
+- **Image Generation**: DALL-E 3 via OpenAI API (direct, one model prompts)
 
 #### Updated Prompts List
 - **Image Prompt Writer**: Create detailed text prompts for image generation tools
 - **Product Description Generator**: Create professional product descriptions
 - **Brand Style Guide Creator**: Generate comprehensive brand guidelines
+- **DALL-E Image Creator**: Generate images directly with OpenAI's DALL-E 3
+- **Character Portrait Generator**: Create detailed character portraits and concept art
+- **Product Mockup Generator**: Create professional product mockups for marketing
+- **Landscape Scene Generator**: Create beautiful landscape images for backgrounds
 
 ### Prompt Flows
 Chains of prompts where outputs from one step feed into the next, creating powerful automation sequences. This is the proper way to connect multiple models (like text generation followed by image generation).
@@ -123,6 +128,14 @@ This flow showcases how to:
 8. Need to update Flow examples that rely on multi-model prompts
 
 ## Latest Updates
+
+### Direct Image Generation Support (May 2025)
+- Added 4 new prompts that use DALL-E 3 for direct image generation
+- Implemented DALL-E Image Creator for general image creation
+- Added specialized generators for Character Portraits, Product Mockups, and Landscapes
+- Each prompt follows the one prompt, one model principle
+- Created distinct input fields with appropriate options for each use case
+- Integrated properly with the credit system
 
 ### Prompt Consistency Update (May 2025)
 - Renamed and refined prompts to better match their single-model functionality
