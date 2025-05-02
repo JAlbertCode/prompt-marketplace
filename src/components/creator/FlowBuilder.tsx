@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PromptFlow, FlowStep, Prompt, InputMapping } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
+import { useFlowStore } from '@/store/useFlowStore';
 import { calculateFlowCreditCost, validateFlowSteps } from '@/lib/utils/flowValidator';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
@@ -11,14 +12,17 @@ interface FlowBuilderProps {
   initialFlow?: Partial<PromptFlow>;
   onSave: (flow: Omit<PromptFlow, 'id' | 'createdAt'>) => void;
   onCancel?: () => void;
+  editId?: string;
 }
 
 const FlowBuilder: React.FC<FlowBuilderProps> = ({
   initialFlow,
   onSave,
-  onCancel
+  onCancel,
+  editId
 }) => {
   const { prompts } = usePromptStore();
+  const { getFlowById } = useFlowStore();
   
   const [title, setTitle] = useState(initialFlow?.title || '');
   const [description, setDescription] = useState(initialFlow?.description || '');
@@ -34,6 +38,21 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
       return acc;
     }, {} as Record<string, Prompt>);
   }, [prompts]);
+
+  // Load flow data if editId is provided
+  useEffect(() => {
+    if (editId && getFlowById) {
+      const flowToEdit = getFlowById(editId);
+      if (flowToEdit) {
+        setTitle(flowToEdit.title || '');
+        setDescription(flowToEdit.description || '');
+        setSteps(flowToEdit.steps || []);
+        setUnlockPrice(flowToEdit.unlockPrice || 0);
+        setIsPrivate(flowToEdit.isPrivate !== false);
+        setIsPublished(flowToEdit.isDraft === false);
+      }
+    }
+  }, [editId, getFlowById]);
 
   // State for prompt search
   const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});

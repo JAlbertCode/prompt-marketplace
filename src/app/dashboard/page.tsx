@@ -64,10 +64,10 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
           <p className="text-gray-500">No prompts found.</p>
           {isOwner && (
             <Link
-              href="/create/prompt"
-              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+            href="/create?tab=prompt"
+            className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
             >
-              Create Your First Prompt
+            Create Your First Prompt
             </Link>
           )}
         </div>
@@ -101,7 +101,7 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
                 {isOwner && (
                   <>
                     <Link
-                      href={`/create/prompt?edit=${prompt.id}`}
+                      href={`/create?tab=prompt&edit=${prompt.id}`}
                       className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
                     >
                       Edit
@@ -138,10 +138,10 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
           <p className="text-gray-500">No flows found.</p>
           {isOwner && (
             <Link
-              href="/create/flow"
-              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+            href="/create?tab=flow"
+            className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
             >
-              Create Your First Flow
+            Create Your First Flow
             </Link>
           )}
         </div>
@@ -177,7 +177,7 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
                 {isOwner && (
                   <>
                     <Link
-                      href={`/create/flow?edit=${flow.id}`}
+                      href={`/create?tab=flow&edit=${flow.id}`}
                       className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
                     >
                       Edit

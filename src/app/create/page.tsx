@@ -9,12 +9,13 @@ import PromptBuilder from '@/components/creator/PromptBuilder';
 import FlowBuilder from '@/components/creator/FlowBuilder';
 import { toast } from 'react-hot-toast';
 
-export default function CreatePage() {
+export default function CreatePage({ searchParams }: { searchParams?: { tab?: string, edit?: string } }) {
   const router = useRouter();
   const promptStore = usePromptStore();
   const flowStore = useFlowStore();
   
-  const [itemType, setItemType] = useState<ItemType>('prompt');
+  const [itemType, setItemType] = useState<ItemType>(searchParams?.tab === 'flow' ? 'flow' : 'prompt');
+  const editId = searchParams?.edit;
   
   const handlePromptSave = (promptData: Omit<Prompt, 'id' | 'createdAt'>) => {
     try {
@@ -99,9 +100,17 @@ export default function CreatePage() {
       </div>
       
       {itemType === 'prompt' ? (
-        <PromptBuilder onSave={handlePromptSave} onCancel={handleCancel} />
+        <PromptBuilder 
+          onSave={handlePromptSave} 
+          onCancel={handleCancel} 
+          editId={editId}
+        />
       ) : (
-        <FlowBuilder onSave={handleFlowSave} onCancel={handleCancel} />
+        <FlowBuilder 
+          onSave={handleFlowSave} 
+          onCancel={handleCancel} 
+          editId={editId}
+        />
       )}
     </div>
   );

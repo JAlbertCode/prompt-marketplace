@@ -5,18 +5,22 @@ import { Prompt, SonarModel, ImageModel, InputField } from '@/types';
 import ModelSelector from './ModelSelector';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
+import { usePromptStore } from '@/store/usePromptStore';
 
 interface PromptBuilderProps {
   initialPrompt?: Partial<Prompt>;
   onSave: (prompt: Omit<Prompt, 'id' | 'createdAt'>) => void;
   onCancel?: () => void;
+  editId?: string;
 }
 
 const PromptBuilder: React.FC<PromptBuilderProps> = ({
   initialPrompt,
   onSave,
-  onCancel
+  onCancel,
+  editId
 }) => {
+  const { getPromptById } = usePromptStore();
   const [title, setTitle] = useState(initialPrompt?.title || '');
   const [description, setDescription] = useState(initialPrompt?.description || '');
   const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
@@ -38,6 +42,25 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       addInputField();
     }
   }, []);
+
+  // Load prompt data if editId is provided
+  useEffect(() => {
+    if (editId && getPromptById) {
+      const promptToEdit = getPromptById(editId);
+      if (promptToEdit) {
+        setTitle(promptToEdit.title || '');
+        setDescription(promptToEdit.description || '');
+        setSystemPrompt(promptToEdit.systemPrompt || '');
+        setCreditCost(promptToEdit.creditCost || 50);
+        setModel(promptToEdit.model || 'sonar-medium-chat');
+        setImageModel(promptToEdit.imageModel);
+        setInputFields(promptToEdit.inputFields || []);
+        setIsPrivate(promptToEdit.isPrivate || false);
+        setCapabilities(promptToEdit.capabilities || ['text']);
+        setOutputType(promptToEdit.outputType || 'text');
+      }
+    }
+  }, [editId, getPromptById]);
 
   const addInputField = () => {
     const newField: InputField = {
