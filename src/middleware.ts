@@ -19,13 +19,14 @@ export default withAuth(
   }
 );
 
-// Configure which paths the middleware runs on
+// Configure which paths the middleware runs on - only protect pages that require authentication
 export const config = {
   matcher: [
     // Routes that require authentication
     '/dashboard/:path*',
-    '/create/:path*',
     '/settings/:path*',
+    '/create/:path*', 
+    '/run/execute/:path*', // Only protect execution, not the preview
     '/favorites/:path*',
   ],
 };

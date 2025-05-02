@@ -15,6 +15,8 @@ import Button from '@/components/shared/Button';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
 import StepVisualizer from './StepVisualizer';
 import ResultDisplay from './ResultDisplay';
+import AuthCheck from '@/components/auth/AuthCheck';
+import { useSession } from 'next-auth/react';
 
 interface FlowRunnerProps {
   flow: PromptFlow;
@@ -41,6 +43,7 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
   const { credits, deductCredits } = useCreditStore();
   const promptStore = usePromptStore();
   const favoriteStore = useFavoriteStore();
+  const { data: session } = useSession();
   
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [isRunning, setIsRunning] = useState(false);
@@ -117,6 +120,11 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
   };
   
   const handleFavoritePrompt = (promptId: string) => {
+    if (!session) {
+      toast.error("Please sign in to save favorites");
+      return;
+    }
+    
     // Add prompt to favorites
     favoriteStore.toggleFavorite(promptId);
     toast.success('Prompt added to favorites');
@@ -351,6 +359,187 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
     }
   };
 
+  const contentBeforeExecution = (
+    <div>
+      <h3 className="text-sm font-medium text-gray-700 mb-4">Flow Inputs</h3>
+      
+      {/* Flow step overview */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h4 className="text-xs font-medium text-gray-500 uppercase mb-3">This flow will run these prompts:</h4>
+        <div className="space-y-3">
+          {flow.steps.map((step, index) => {
+            const prompt = promptsMap[step.promptId];
+            return (
+              <div key={step.id} className="flex items-center">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
+                  {index + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{step.title || (prompt ? prompt.title : `Step ${index + 1}`)}</div>
+                  <div className="text-xs text-gray-500 flex items-center">
+                    <span>Using prompt:</span>
+                    <span className="ml-1 font-medium text-indigo-600">{prompt ? prompt.title : 'Unknown'}</span>
+                    <span className="ml-2 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{prompt ? prompt.model : 'unknown'}</span>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {prompt ? `${prompt.creditCost} credits` : ''}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-6">
+        {/* Group input fields by prompt/step */}
+        {flow.steps.map((step, stepIndex) => {
+          const prompt = promptsMap[step.promptId];
+          if (!prompt) return null;
+          
+          // Find all input fields that are associated with this step
+          const stepInputFields = flowInputFields.filter(field => field.stepIndex === stepIndex);
+          
+          if (stepInputFields.length === 0) return null;
+          
+          return (
+            <div key={step.id} className="p-4 border border-gray-200 rounded-lg">
+              <div className="flex items-center mb-3">
+                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
+                  {stepIndex + 1}
+                </div>
+                <div>
+                  <h4 className="font-medium text-sm">{step.title || prompt.title}</h4>
+                  <div className="text-xs text-gray-500">
+                    Input fields for this step
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {stepInputFields.map((field) => (
+                  <div key={field.id} className="space-y-1">
+                    <label 
+                      htmlFor={field.id}
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      {field.label}{field.required && <span className="text-red-500">*</span>}
+                    </label>
+                    
+                    {renderInputField(field)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        
+        {showCreditWarning && (
+          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            Not enough credits! You need {flow.totalCreditCost} credits but have {credits} credits.
+          </div>
+        )}
+        
+        <div className="flex justify-between items-center pt-2">
+          <div>
+            <span className={`text-sm ${credits < flow.totalCreditCost ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
+              Total cost: <span className="font-semibold">{flow.totalCreditCost} credits</span>
+              {credits < flow.totalCreditCost ? ` (You have: ${credits})` : ''}
+            </span>
+          </div>
+          
+          <div className="flex space-x-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onReturn}
+            >
+              Back
+            </Button>
+            
+            <AuthCheck>
+              <Button
+                type="submit"
+                disabled={isRunning || credits < flow.totalCreditCost}
+              >
+                {isRunning ? (
+                  <span className="flex items-center">
+                    <LoadingIndicator size="sm" className="mr-2" />
+                    Running Flow...
+                  </span>
+                ) : (
+                  'Execute Flow'
+                )}
+              </Button>
+            </AuthCheck>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+
+  const contentAfterExecution = (
+    <div className="space-y-6">
+      {/* Flow Execution View */}
+      <StepVisualizer 
+        steps={flow.steps.map((step, i) => {
+          const prompt = promptsMap[step.promptId];
+          return {
+            id: step.id,
+            title: step.title || (prompt ? prompt.title : `Step ${i + 1}`),
+            promptId: step.promptId,
+            promptTitle: prompt ? prompt.title : 'Unknown Prompt',
+            model: prompt ? prompt.model : 'unknown',
+            isActive: i === currentStepIndex,
+            isComplete: results[i]?.isComplete || false,
+            isError: results[i]?.isError || false
+          };
+        })}
+        onViewPrompt={handleViewPrompt}
+        onFavoritePrompt={handleFavoritePrompt}
+      />
+      
+      <div className="space-y-4">
+        {results.map((result, i) => (
+          <ResultDisplay 
+            key={result.stepId}
+            result={{
+              ...result,
+              promptTitle: promptsMap[result.promptId]?.title || 'Unknown Prompt',
+              model: promptsMap[result.promptId]?.model || 'unknown',
+              hasImageCapability: promptsMap[result.promptId]?.capabilities?.includes('image') || false
+            }}
+            stepNumber={i + 1}
+            onDownload={() => handleDownload(result)}
+            onViewPrompt={handleViewPrompt}
+          />
+        ))}
+      </div>
+      
+      <div className="flex justify-end space-x-3 pt-4">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setResults([]);
+            setCurrentStepIndex(-1);
+          }}
+        >
+          Try Again
+        </Button>
+        
+        <Button
+          variant="outline"
+          onClick={onReturn}
+        >
+          Back
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
@@ -368,182 +557,7 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
       </div>
       
       <div className="p-4">
-        {results.length === 0 ? (
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-4">Flow Inputs</h3>
-            
-            {/* Flow step overview */}
-            <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <h4 className="text-xs font-medium text-gray-500 uppercase mb-3">This flow will run these prompts:</h4>
-              <div className="space-y-3">
-                {flow.steps.map((step, index) => {
-                  const prompt = promptsMap[step.promptId];
-                  return (
-                    <div key={step.id} className="flex items-center">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{step.title || (prompt ? prompt.title : `Step ${index + 1}`)}</div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <span>Using prompt:</span>
-                          <span className="ml-1 font-medium text-indigo-600">{prompt ? prompt.title : 'Unknown'}</span>
-                          <span className="ml-2 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{prompt ? prompt.model : 'unknown'}</span>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {prompt ? `${prompt.creditCost} credits` : ''}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-6">
-              {/* Group input fields by prompt/step */}
-              {flow.steps.map((step, stepIndex) => {
-                const prompt = promptsMap[step.promptId];
-                if (!prompt) return null;
-                
-                // Find all input fields that are associated with this step
-                const stepInputFields = flowInputFields.filter(field => field.stepIndex === stepIndex);
-                
-                if (stepInputFields.length === 0) return null;
-                
-                return (
-                  <div key={step.id} className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center mb-3">
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 font-medium text-xs mr-2">
-                        {stepIndex + 1}
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-sm">{step.title || prompt.title}</h4>
-                        <div className="text-xs text-gray-500">
-                          Input fields for this step
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {stepInputFields.map((field) => (
-                        <div key={field.id} className="space-y-1">
-                          <label 
-                            htmlFor={field.id}
-                            className="block text-sm font-medium text-gray-700"
-                          >
-                            {field.label}{field.required && <span className="text-red-500">*</span>}
-                          </label>
-                          
-                          {renderInputField(field)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {showCreditWarning && (
-                <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Not enough credits! You need {flow.totalCreditCost} credits but have {credits} credits.
-                </div>
-              )}
-              
-              <div className="flex justify-between items-center pt-2">
-                <div>
-                  <span className={`text-sm ${credits < flow.totalCreditCost ? 'text-red-500 font-semibold' : 'text-gray-500'}`}>
-                    Total cost: <span className="font-semibold">{flow.totalCreditCost} credits</span>
-                    {credits < flow.totalCreditCost ? ` (You have: ${credits})` : ''}
-                  </span>
-                </div>
-                
-                <div className="flex space-x-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onReturn}
-                  >
-                    Back
-                  </Button>
-                  
-                  <Button
-                    type="submit"
-                    disabled={isRunning || credits < flow.totalCreditCost}
-                  >
-                    {isRunning ? (
-                      <span className="flex items-center">
-                        <LoadingIndicator size="sm" className="mr-2" />
-                        Running Flow...
-                      </span>
-                    ) : (
-                      'Execute Flow'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Flow Execution View */}
-            <StepVisualizer 
-              steps={flow.steps.map((step, i) => {
-                const prompt = promptsMap[step.promptId];
-                return {
-                  id: step.id,
-                  title: step.title || (prompt ? prompt.title : `Step ${i + 1}`),
-                  promptId: step.promptId,
-                  promptTitle: prompt ? prompt.title : 'Unknown Prompt',
-                  model: prompt ? prompt.model : 'unknown',
-                  isActive: i === currentStepIndex,
-                  isComplete: results[i]?.isComplete || false,
-                  isError: results[i]?.isError || false
-                };
-              })}
-              onViewPrompt={handleViewPrompt}
-              onFavoritePrompt={handleFavoritePrompt}
-            />
-            
-            <div className="space-y-4">
-              {results.map((result, i) => (
-                <ResultDisplay 
-                  key={result.stepId}
-                  result={{
-                    ...result,
-                    promptTitle: promptsMap[result.promptId]?.title || 'Unknown Prompt',
-                    model: promptsMap[result.promptId]?.model || 'unknown',
-                    hasImageCapability: promptsMap[result.promptId]?.capabilities?.includes('image') || false
-                  }}
-                  stepNumber={i + 1}
-                  onDownload={() => handleDownload(result)}
-                  onViewPrompt={handleViewPrompt}
-                />
-              ))}
-            </div>
-            
-            <div className="flex justify-end space-x-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setResults([]);
-                  setCurrentStepIndex(-1);
-                }}
-              >
-                Try Again
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={onReturn}
-              >
-                Back
-              </Button>
-            </div>
-          </div>
-        )}
+        {results.length === 0 ? contentBeforeExecution : contentAfterExecution}
       </div>
     </div>
   );
