@@ -90,6 +90,38 @@ export const authOptions = {
       
       return session;
     },
+    async signIn({ user, account, profile, email, credentials }) {
+      // Create UserCredits record for new users
+      if (user?.id) {
+        const existingCredits = await prisma.userCredits.findUnique({
+          where: {
+            userId: user.id,
+          },
+        });
+        
+        if (!existingCredits) {
+          // Add initial 1000 credits for new users
+          await prisma.userCredits.create({
+            data: {
+              userId: user.id,
+              balance: 1000, // Starting with 1000 credits ($1.00)
+            },
+          });
+          
+          // Record the initial credit transaction
+          await prisma.creditTransaction.create({
+            data: {
+              userId: user.id,
+              amount: 1000,
+              type: "PURCHASE",
+              description: "Initial signup bonus credits",
+            },
+          });
+        }
+      }
+      
+      return true;
+    },
   },
 };
 

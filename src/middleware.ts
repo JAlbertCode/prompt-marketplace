@@ -13,6 +13,9 @@ export default withAuth(
     callbacks: {
       authorized: ({ token }) => !!token, // If there is a token, the user is authenticated
     },
+    pages: {
+      signIn: '/login',
+    },
   }
 );
 
@@ -24,8 +27,5 @@ export const config = {
     '/create/:path*',
     '/settings/:path*',
     '/favorites/:path*',
-    
-    // Exclude public routes and API routes
-    '/((?!api|login|register|_next/static|_next/image|favicon.ico).*)',
   ],
 };

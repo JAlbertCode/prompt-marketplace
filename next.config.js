@@ -3,9 +3,13 @@ const nextConfig = {
   // Enable server components by default
   reactStrictMode: true,
   
-  // Configure image domains if we need to load images from Sonar
+  // Configure image domains for Sonar and Google profile images
   images: {
-    domains: ['sonar.perplexity.ai'],
+    domains: [
+      'sonar.perplexity.ai',
+      'lh3.googleusercontent.com', // Google profile images
+      'avatars.githubusercontent.com' // GitHub profile images
+    ],
   },
   
   // Disable ESLint during builds
