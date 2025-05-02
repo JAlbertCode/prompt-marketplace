@@ -10,6 +10,8 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 - Build advanced flows by chaining multiple prompts together
 - Spend credits per prompt execution
 - Export flows to external automation platforms
+- User accounts with favorites, personal dashboard, and credit management
+- User-owned prompts and flows with publishing controls
 
 ## Core Concepts
 
@@ -52,10 +54,19 @@ This flow showcases how to:
 - Combine text generation with image generation
 - Create a complete content package (text + matching image) in one workflow
 
+### User Account System
+- **User Authentication**: Register and login with email/password or OAuth (GitHub, Google)
+- **User Dashboard**: View all your created prompts and flows
+- **Favorites**: Save prompts and flows for quick access
+- **User Settings**: Manage profile information and password
+- **Credit Management**: View balance and purchase credits
+
 ### Credit System
 - Each prompt execution costs credits
 - Each step in a flow burns credits separately
 - Users can earn or spend credits by running or unlocking prompts/flows
+- Creator fees are automatically distributed to prompt creators
+- Platform takes a percentage of Flow unlock fees
 
 ### Marketplace
 - Browse both single prompts and flows
@@ -64,41 +75,92 @@ This flow showcases how to:
 
 ## Tech Stack
 
-- **Frontend**: Next.js + TypeScript
+The project is built with a practical, scalable architecture:
+
+- **Frontend**: Next.js with App Router + TypeScript
+- **Authentication**: NextAuth.js with JWT strategy
+- **Database**: PostgreSQL with Prisma ORM
 - **Styling**: TailwindCSS
 - **State Management**: Zustand
 - **Notifications**: react-hot-toast
-- **API**: Perplexity Sonar API
-- **Persistence**: localStorage (MVP)
+- **API**: Perplexity Sonar API, OpenAI API
+- **Payments**: Stripe integration (planned)
+
+### Scalability Considerations
+
+The architecture is designed for practical initial deployment with a clear path to scale:
+
+- **Authentication**: NextAuth.js with the JWT strategy works well for the initial user base. Can be switched to database sessions for larger scale.
+- **Database**: Postgres provides a solid foundation. Ready for connection pooling and read replicas when needed.
+- **API Design**: RESTful endpoints with modular structure for easy maintenance and scaling.
+- **Caching**: Next.js built-in caching utilized for static content. Can add Redis or similar when needed.
+- **Statelessness**: Components designed to be stateless to support horizontal scaling later.
 
 ## Getting Started
 
 1. Clone the repository
-2. Install dependencies: `npm install`
-3. Run the development server: `npm run dev`
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+2. Copy `.env.local.example` to `.env.local` and fill in the required values
+3. Install dependencies: `npm install`
+4. Create and migrate the database: `npx prisma migrate dev`
+5. Run the development server: `npm run dev`
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### First-time Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Create database migrations
+npx prisma migrate dev --name init
+
+# Start development server
+npm run dev
+```
 
 ## Project Structure
 
 ```
 /
+├── prisma/                   # Database schema and migrations
 ├── src/
-│   ├── app/                    # App routes
-│   │   ├── page.tsx            # Marketplace home page
-│   │   ├── create/             # Create prompts and flows
-│   │   └── run/                # Execute prompts and flows
-│   ├── components/             # UI components
-│   │   ├── layout/             # Layout components
-│   │   ├── marketplace/        # Marketplace components
-│   │   ├── creator/            # Prompt and flow creation
-│   │   ├── runner/             # Prompt and flow execution
-│   │   └── ui/                 # Common UI elements
-│   ├── lib/                    # Utilities and logic
-│   │   ├── store/              # Zustand stores
-│   │   ├── api/                # API integrations
-│   │   └── utils/              # Helper utilities
-│   ├── types/                  # TypeScript definitions
-│   └── styles/                 # Global styles
+│   ├── app/                  # App routes
+│   │   ├── api/              # API routes
+│   │   │   ├── auth/         # Authentication API
+│   │   │   ├── credits/      # Credit management API
+│   │   │   ├── favorites/    # Favorites API
+│   │   │   ├── flows/        # Flows API
+│   │   │   ├── prompts/      # Prompts API
+│   │   │   ├── register/     # User registration API
+│   │   │   └── user/         # User profile API
+│   │   ├── dashboard/        # User dashboard
+│   │   ├── login/            # Login page
+│   │   ├── register/         # Registration page
+│   │   ├── settings/         # User settings
+│   │   ├── create/           # Create prompts and flows
+│   │   ├── run/              # Execute prompts and flows
+│   │   └── page.tsx          # Marketplace home page
+│   ├── components/           # UI components
+│   │   ├── layout/           # Layout components
+│   │   ├── marketplace/      # Marketplace components
+│   │   ├── creator/          # Prompt and flow creation
+│   │   ├── runner/           # Prompt and flow execution
+│   │   └── ui/               # Common UI elements
+│   ├── providers/            # React context providers
+│   ├── utils/                # Utilities and helpers
+│   │   ├── creditManager.ts  # Credit management logic
+│   │   ├── imageTransformer.ts # Image transformation
+│   │   ├── validationRules.ts # Input validation
+│   │   └── exportManager.ts  # Export functionality
+│   ├── lib/                  # Utilities and logic
+│   │   ├── store/            # Zustand stores
+│   │   ├── api/              # API integrations
+│   │   └── utils/            # Helper utilities
+│   ├── types/                # TypeScript definitions
+│   └── styles/               # Global styles
 ```
 
 ## Development Status
@@ -114,11 +176,20 @@ This flow showcases how to:
 - Fixed image generation in flows
 - Favorite prompt functionality from flows
 
+### Recently Added (May 2025)
+- **User Authentication System**: Register, login, profile management
+- **User Dashboard**: View and manage your prompts and flows
+- **Favorites Management**: Save and organize your favorite prompts and flows
+- **Profile Settings**: Update user profile and change password
+- **Credit Purchase System**: Buy credits with integrated payment processing
+- **Creator Payments**: Automatic distribution of fees to prompt creators
+
 ### In Progress
 - Editing published prompts
 - Search functionality for prompt selection in flow builder
 - Comprehensive image output handling
 - Webhook URL functionality for flows
+- Basic observability and logging
 
 ### Known Issues
 1. No way to edit prompts after publication
@@ -131,6 +202,15 @@ This flow showcases how to:
 8. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
 
 ## Latest Updates
+
+### User Account System (May 2025)
+- Implemented complete user authentication with email/password and OAuth
+- Created user dashboard for managing personal prompts and flows
+- Added favorites system for saving prompts and flows
+- Created user profile and settings management
+- Integrated credit purchase system with secure payment processing
+- Implemented creator payment distribution for prompt fees
+- Added favorites management for organizing saved content
 
 ### Direct Image Generation Support (May 2025)
 - Added 4 new prompts that use DALL-E 3 for direct image generation
@@ -158,35 +238,11 @@ This flow showcases how to:
 - Removed dual-model prompts that had both text and image capabilities
 - Simplified types to maintain only working models with clear separation of concerns
 
-### UI and Navigation Improvements (April 2025)
-- Fixed navigation in the prompt execution flow for easier return to the marketplace
-- Improved image generation to properly display generated images
-- Removed duplicate credit displays across the application
-- Updated hero section to better account for prompt flows
-- Added breadcrumb navigation for better user orientation
-- Enhanced image generation prompts for better quality results
-
-### Flow Execution UI Improvements
-- Input fields are now organized by prompt/step for clarity
-- Added prompt step preview on the flow execution page
-- Each step now shows which specific prompt is being used
-- Fixed card text truncation with line clamping
-- Positioned flow buttons and credits consistently at the bottom of cards
-- Improved flow step visualization with vertical timeline view
-
-### Select Options Enhancement
-- Added proper UI for managing select field options in the PromptBuilder
-- Fields now display a dedicated options editor when the type is set to 'select'
-- Multiple options can be added, edited, and removed
-
-### Credit System Fixes
-- Credits are now properly deducted when running flows
-- Added credit warnings when insufficient credits are available
-- Improved credit information display throughout the application
-
 ## Contributing
 
 To continue development:
 1. Address the known issues listed above
 2. Complete the flow execution components
 3. Finalize the export functionality
+4. Improve user dashboard features and analytics
+5. Enhance credit purchase options and history
