@@ -3,7 +3,7 @@ const nextConfig = {
   // Enable server components by default
   reactStrictMode: true,
   
-  // Configure image domains for Sonar and Google profile images
+  // Configure image domains for Sonar and OAuth providers
   images: {
     domains: [
       'sonar.perplexity.ai',

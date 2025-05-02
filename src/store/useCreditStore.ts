@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getOrCreateSessionId, isValidSession } from '@/lib/sessionHelpers';
 import { getCreditWarningLevel } from '@/lib/creditHelpers';
+import { useSession } from 'next-auth/react';
 
 interface CreditTransaction {
   id: string;
@@ -26,6 +27,7 @@ interface CreditState {
   setAutoTopUp: (enabled: boolean) => void;
   setAutoTopUpSettings: (threshold: number, amount: number) => void;
   updateWarningLevel: () => void;
+  syncWithSession: (sessionCredits?: number) => void;
 }
 
 const INITIAL_CREDITS = 1000;
@@ -46,6 +48,13 @@ export const useCreditStore = create<CreditState>()(
       autoTopUp: false,
       autoTopUpThreshold: DEFAULT_AUTO_TOPUP_THRESHOLD,
       autoTopUpAmount: DEFAULT_AUTO_TOPUP_AMOUNT,
+      
+      // Sync credits with session
+      syncWithSession: (sessionCredits?: number) => {
+        if (typeof sessionCredits === 'number') {
+          set({ credits: sessionCredits });
+        }
+      },
       
       deductCredits: (amount: number, reason: string = "Credit deduction", promptId?: string) => {
         const currentCredits = get().credits;
@@ -138,17 +147,22 @@ export const useCreditStore = create<CreditState>()(
           if (state) {
             state.sessionId = getOrCreateSessionId();
             state.updateWarningLevel();
-            
-            // If session validation fails, reset to initial state
-            // This prevents credit refresh exploits
-            if (!isValidSession()) {
-              state.credits = INITIAL_CREDITS;
-              state.transactions = [];
-              state.warningLevel = 'none';
-            }
           }
         };
       }
     }
   )
 );
+
+// Credit hook that syncs with NextAuth session
+export const useSessionCredits = () => {
+  const { data: session } = useSession();
+  const creditStore = useCreditStore();
+  
+  // If we have a logged-in user with credits, sync the store
+  if (session?.user?.credits) {
+    creditStore.syncWithSession(session.user.credits);
+  }
+  
+  return creditStore;
+};

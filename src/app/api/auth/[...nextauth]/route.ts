@@ -1,15 +1,15 @@
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcrypt";
+import { JWT } from "next-auth/jwt";
 
-const prisma = new PrismaClient();
+// Define types for our session
+interface ExtendedJWT extends JWT {
+  credits?: number;
+}
 
+// For development, we'll use JWT-only mode without a database adapter
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     GithubProvider({
       clientId: process.env.GITHUB_ID || "",
@@ -19,44 +19,6 @@ export const authOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
-
-        if (!user || !user?.hashedPassword) {
-          return null;
-        }
-
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.hashedPassword
-        );
-
-        if (!isCorrectPassword) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
-      },
-    }),
   ],
   pages: {
     signIn: "/login",
@@ -64,63 +26,32 @@ export const authOptions = {
   debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
+    async jwt({ token, account, profile }) {
+      // Initial sign in
+      if (account && profile) {
+        // Add initial credits for new users
+        if (!token.credits) {
+          token.credits = 1000; // Starting with 1000 credits ($1.00)
+        }
+      }
+      
+      return token as ExtendedJWT;
+    },
     async session({ session, token }) {
       if (token.sub && session.user) {
         session.user.id = token.sub;
       }
       
       // Add user's credit balance to the session
-      if (token.sub) {
-        const userCredits = await prisma.userCredits.findUnique({
-          where: {
-            userId: token.sub,
-          },
-          select: {
-            balance: true,
-          },
-        });
-        
-        if (session.user) {
-          session.user.credits = userCredits?.balance || 0;
-        }
+      if (session.user && typeof (token as ExtendedJWT).credits !== 'undefined') {
+        session.user.credits = (token as ExtendedJWT).credits;
       }
       
       return session;
-    },
-    async signIn({ user, account, profile, email, credentials }) {
-      // Create UserCredits record for new users
-      if (user?.id) {
-        const existingCredits = await prisma.userCredits.findUnique({
-          where: {
-            userId: user.id,
-          },
-        });
-        
-        if (!existingCredits) {
-          // Add initial 1000 credits for new users
-          await prisma.userCredits.create({
-            data: {
-              userId: user.id,
-              balance: 1000, // Starting with 1000 credits ($1.00)
-            },
-          });
-          
-          // Record the initial credit transaction
-          await prisma.creditTransaction.create({
-            data: {
-              userId: user.id,
-              amount: 1000,
-              type: "PURCHASE",
-              description: "Initial signup bonus credits",
-            },
-          });
-        }
-      }
-      
-      return true;
     },
   },
 };
