@@ -67,7 +67,8 @@ const ItemCard: React.FC<ItemCardProps> = ({
         router.push(`/run/${prompt.id}`);
       }
     } else {
-      router.push(`/flow/${item.id}/run`);
+      // First navigate to the flow detail page which will handle redirection to run
+      router.push(`/flow/${item.id}`);
     }
   };
 

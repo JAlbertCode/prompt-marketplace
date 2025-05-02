@@ -30,6 +30,10 @@ interface MarketplaceCardProps {
 }
 
 const MarketplaceCard: React.FC<MarketplaceCardProps> = ({ item }) => {
+  // Ensure the item has all required properties
+  if (!item.createdAt) {
+    item.createdAt = Date.now();
+  }
   // Determine if the item is a prompt or flow
   const isPrompt = item.type === 'prompt';
   

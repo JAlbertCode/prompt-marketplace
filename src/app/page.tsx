@@ -237,7 +237,11 @@ export default function HomePage() {
                     type: 'flow',
                     isLocked: flow.unlockPrice > 0 && !unlockedFlowStore.isFlowUnlocked(flow.id),
                     unlockPrice: flow.unlockPrice,
-                    isDraft: flow.isDraft
+                    isDraft: flow.isDraft,
+                    createdAt: flow.createdAt,
+                    ownerId: flow.ownerId,
+                    steps: flow.steps,
+                    totalCreditCost: flow.totalCreditCost
                   }}
                 />
               ))}

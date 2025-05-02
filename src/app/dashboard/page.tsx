@@ -5,33 +5,27 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import { usePromptStore } from '@/store/usePromptStore';
+import { useFlowStore } from '@/store/useFlowStore'; 
+import { useFavoriteStore } from '@/store/useFavoriteStore';
 
-type Prompt = {
-  id: string;
-  title: string;
-  model: string;
-  isPublished: boolean;
-  createdAt: string;
-};
-
-type Flow = {
-  id: string;
-  title: string;
-  unlockFee: number | null;
-  isPublished: boolean;
-  createdAt: string;
-};
-
-export default function DashboardPage() {
+export default function DashboardPage({ searchParams }: { searchParams?: { tab?: string } }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { prompts } = usePromptStore();
+  const { flows } = useFlowStore();
+  const { favorites } = useFavoriteStore();
   
-  const [myPrompts, setMyPrompts] = useState<Prompt[]>([]);
-  const [myFlows, setMyFlows] = useState<Flow[]>([]);
-  const [favoritePrompts, setFavoritePrompts] = useState<Prompt[]>([]);
-  const [favoriteFlows, setFavoriteFlows] = useState<Flow[]>([]);
-  const [activeTab, setActiveTab] = useState("myPrompts");
+  const [activeTab, setActiveTab] = useState(searchParams?.tab || "myPrompts");
   const [isLoading, setIsLoading] = useState(true);
+
+  // Get user's prompts and flows (simplified for development - we'll use local store data)
+  const myPrompts = prompts.filter(prompt => prompt.creatorId === session?.user?.id);
+  const myFlows = flows.filter(flow => flow.creatorId === session?.user?.id);
+  
+  // Get favorite prompts and flows
+  const favoritePrompts = prompts.filter(prompt => favorites.includes(prompt.id));
+  const favoriteFlows = flows.filter(flow => favorites.includes(flow.id));
 
   useEffect(() => {
     // Redirect if not authenticated
@@ -39,49 +33,8 @@ export default function DashboardPage() {
       router.push("/login");
       return;
     }
-
-    // Fetch user's prompts, flows, and favorites
-    const fetchUserContent = async () => {
-      try {
-        setIsLoading(true);
-        // We'll implement these API endpoints later
-        const [promptsRes, flowsRes, favPromptsRes, favFlowsRes] = await Promise.all([
-          fetch("/api/prompts/user"),
-          fetch("/api/flows/user"),
-          fetch("/api/favorites/prompts"),
-          fetch("/api/favorites/flows"),
-        ]);
-
-        if (promptsRes.ok) {
-          const data = await promptsRes.json();
-          setMyPrompts(data);
-        }
-        
-        if (flowsRes.ok) {
-          const data = await flowsRes.json();
-          setMyFlows(data);
-        }
-        
-        if (favPromptsRes.ok) {
-          const data = await favPromptsRes.json();
-          setFavoritePrompts(data);
-        }
-        
-        if (favFlowsRes.ok) {
-          const data = await favFlowsRes.json();
-          setFavoriteFlows(data);
-        }
-      } catch (error) {
-        toast.error("Failed to load your content");
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (status === "authenticated") {
-      fetchUserContent();
-    }
+    
+    setIsLoading(false);
   }, [status, router]);
 
   const renderContent = () => {
@@ -104,7 +57,7 @@ export default function DashboardPage() {
     }
   };
 
-  const renderPromptsList = (prompts: Prompt[], isOwner: boolean) => {
+  const renderPromptsList = (prompts, isOwner) => {
     if (prompts.length === 0) {
       return (
         <div className="p-8 text-center">
@@ -178,7 +131,7 @@ export default function DashboardPage() {
     );
   };
 
-  const renderFlowsList = (flows: Flow[], isOwner: boolean) => {
+  const renderFlowsList = (flows, isOwner) => {
     if (flows.length === 0) {
       return (
         <div className="p-8 text-center">
@@ -207,9 +160,9 @@ export default function DashboardPage() {
                 {flow.title}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {flow.unlockFee === null
+                {flow.unlockPrice === null || flow.unlockPrice === 0
                   ? "Free to use"
-                  : `Unlock fee: ${flow.unlockFee} credits`}
+                  : `Unlock fee: ${flow.unlockPrice} credits`}
               </p>
               <p className="mt-1 text-xs text-gray-400">
                 Created: {new Date(flow.createdAt).toLocaleDateString()}

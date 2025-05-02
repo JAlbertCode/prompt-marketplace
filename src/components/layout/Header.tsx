@@ -64,8 +64,8 @@ const Header: React.FC = () => {
             </Link>
             
             <Link 
-              href="/favorites"
-              className={`text-sm font-medium px-3 py-2 rounded-md flex items-center ${isActive('/favorites') 
+              href="/dashboard?tab=favoritePrompts"
+              className={`text-sm font-medium px-3 py-2 rounded-md flex items-center ${pathname.startsWith('/dashboard') && pathname.includes('favorite') 
                 ? 'bg-gray-100 text-gray-900' 
                 : 'text-gray-600 hover:text-gray-900'}`}
             >
@@ -78,7 +78,7 @@ const Header: React.FC = () => {
             </Link>
             
             <Link 
-              href="/create/prompt"
+              href="/create"
               className={`text-sm font-medium px-3 py-2 rounded-md ${
                 pathname.startsWith('/create') || pathname.startsWith('/submit')
                   ? 'bg-gray-100 text-gray-900' 

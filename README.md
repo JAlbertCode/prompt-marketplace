@@ -200,8 +200,20 @@ npm run dev
 6. ~~Duplicate credit displays~~ (Fixed April 2025)
 7. ~~Non-functional image transformation prompts~~ (Fixed May 2025)
 8. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
+9. ~~Inconsistent navigation with favorites and create buttons~~ (Fixed May 2025)
+10. ~~"Flow not found" error when clicking on flows from home page~~ (Fixed May 2025)
 
 ## Latest Updates
+
+### Navigation & Interface Updates (May 2025)
+- Consolidated favorites functionality to use the same UI/logic throughout the application
+- Fixed navigation issues with inconsistent favorites button behavior
+- Standardized "Create" button to always navigate to the main create page
+- Fixed "Flow not found" error when clicking on flows from the home page
+- Improved flow navigation to properly validate and load flow data
+- Unified user experience for favorites between navbar and dashboard
+- Implemented automatic redirect from standalone favorites page to dashboard
+- Enhanced marketplace card data to ensure proper flow rendering
 
 ### User Account System (May 2025)
 - Implemented complete user authentication with email/password and OAuth
