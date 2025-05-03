@@ -187,6 +187,8 @@ npm run dev
 │   │   │   ├── register/     # User registration API
 │   │   │   └── user/         # User profile API
 │   │   ├── dashboard/        # User dashboard
+│   │   │   ├── credits/      # Credit purchase and management
+│   │   │   └── creator/      # Creator earnings dashboard
 │   │   ├── login/            # Login page
 │   │   ├── register/         # Registration page
 │   │   ├── settings/         # User settings
@@ -199,6 +201,8 @@ npm run dev
 │   │   ├── creator/          # Prompt and flow creation
 │   │   ├── runner/           # Prompt and flow execution
 │   │   └── ui/               # Common UI elements
+│   │       ├── CreditBalance.tsx    # Credit balance display
+│   │       └── CreditConfirmationDialog.tsx # Credit confirmation UI
 │   ├── providers/            # React context providers
 │   ├── utils/                # Utilities and helpers
 │   │   ├── creditManager.ts  # Credit management logic
@@ -233,8 +237,16 @@ npm run dev
 - **Profile Settings**: Update user profile and change password
 - **Credit Purchase System**: Buy credits with integrated payment processing
 - **Creator Payments**: Automatic distribution of fees to prompt creators
+- **Credit Management Dashboard**: View credit balance, transaction history, and purchase credits
+- **Creator Earnings Dashboard**: View earnings from prompt uses and flow unlocks
+- **Credit Confirmation Dialogs**: Confirm credit charges before running prompts or unlocking flows
+- **Credit Balance Component**: Display user's credit balance throughout the app
+- **API Routes for Credit System**: Handle credit transactions, charges, and unlocks 
 
 ### In Progress
+- Connecting the credit system to the existing prompt and flow execution flows
+- Stripe integration for payment processing
+- Adding credit-related analytics and reports
 - Editing published prompts
 - Search functionality for prompt selection in flow builder
 - Comprehensive image output handling
@@ -245,15 +257,26 @@ npm run dev
 1. No way to edit prompts after publication
 2. Flow builder needs search functionality for adding prompts
 3. Flow export implementation is incomplete
-4. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
-5. ~~Image generation not displaying properly~~ (Fixed April 2025)
-6. ~~Duplicate credit displays~~ (Fixed April 2025)
-7. ~~Non-functional image transformation prompts~~ (Fixed May 2025)
-8. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
-9. ~~Inconsistent navigation with favorites and create buttons~~ (Fixed May 2025)
-10. ~~"Flow not found" error when clicking on flows from home page~~ (Fixed May 2025)
+4. Credit confirmation dialog needs to be integrated with prompt execution
+5. Credit purchase flow mock implementation needs to be replaced with actual Stripe integration
+6. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
+7. ~~Image generation not displaying properly~~ (Fixed April 2025)
+8. ~~Duplicate credit displays~~ (Fixed April 2025)
+9. ~~Non-functional image transformation prompts~~ (Fixed May 2025)
+10. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
 
 ## Latest Updates
+
+### Credit System Implementation (May 2025)
+- Created credit purchase page with different credit packages
+- Implemented transaction history page to view credit usage
+- Added creator earnings dashboard to track revenue from prompts and flows
+- Improved header with credit balance component
+- Added confirmation dialogs for credit charges
+- Created API routes for credit operations
+- Enhanced credit manager utility with additional features
+- Updated UI components to support credit system
+- Added flow unlock confirmation with fee breakdown
 
 ### Model Registry and Tiered Pricing System (May 2025)
 - Implemented centralized model registry with complete metadata
@@ -311,14 +334,6 @@ npm run dev
 - Updated "Brand Mood Board Creator" to "Brand Style Guide Creator"
 - Fixed misleading descriptions that implied image generation within single prompts
 - Made all prompt descriptions clearly indicate their text-only output purpose
-
-### Image Transformation Prompts Removal (May 2025)
-- Removed non-functional image transformation prompts that didn't work with OpenAI API
-- Eliminated prompts with 'transformation' capability and 'gpt-image-1' model
-- Removed prompts: Lego Character Transformation, Studio Ghibli Art Style, Pixel Art Converter, Oil Painting Portrait, and Comic Book Hero Transformation
-- Updated remaining prompts to strictly follow the one prompt, one model principle
-- Removed dual-model prompts that had both text and image capabilities
-- Simplified types to maintain only working models with clear separation of concerns
 
 ## Feedback and Issues
 
