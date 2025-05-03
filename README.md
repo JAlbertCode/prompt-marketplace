@@ -83,15 +83,20 @@ This flow showcases how to:
 - **Credit Management**: View balance and purchase credits
 
 ### Credit System
-- 1,000 credits = $1.00
-- Transparent cost breakdown for all transactions
-- Each prompt has three cost components:
+- **Accurate Pricing Structure**: 1 credit = $0.000001 (USD)
+- **Transparent Cost Breakdown**: All transactions have clear component costs
+- **Three-Part Pricing Model**:
   - System cost (based on actual provider API pricing)
   - Creator fee (optional, set by prompt creator, defaults to 0)
-  - Platform fee (10% of creator fee or 100 credits minimum)
-- Each step in a flow burns credits separately when executed
-- Creators earn 90% of unlock fees for premium flows
-- Platform takes only 10% of prompt and flow fees
+  - Platform fee (dynamically calculated based on inference cost tiers)
+- **Tiered Platform Fees**:
+  - 20% markup for inference costs under $0.01
+  - 10% markup for inference costs between $0.01 and $0.10
+  - Flat 500 credit fee ($0.0005) for inference costs over $0.10
+  - Minimum platform fee: 1 credit
+- **Credit Distribution**: Credits are transferred, not burned, during transactions
+- **Flow Execution**: Each step in a flow burns credits separately when executed
+- **Earnings Split**: Creators earn 80% of unlock fees for premium flows
 
 ### Marketplace
 - Browse both single prompts and flows
@@ -120,6 +125,26 @@ The architecture is designed for practical initial deployment with a clear path 
 - **API Design**: RESTful endpoints with modular structure for easy maintenance and scaling.
 - **Caching**: Next.js built-in caching utilized for static content. Can add Redis or similar when needed.
 - **Statelessness**: Components designed to be stateless to support horizontal scaling later.
+
+## Sonar Token Pricing
+
+To correctly compute the cost of running a prompt through Sonar, we use the following pricing table:
+
+| Model | Tier | Short Prompt | Standard Chat | Long Prompt |
+|-------|------|--------------|--------------|-------------|
+| Sonar Pro | Low | $0.0034 | $0.0060 | $0.0094 |
+| Sonar Pro | Medium | $0.0007 | $0.0012 | $0.0019 |
+| Sonar Pro | High | $0.0002 | $0.0003 | $0.0005 |
+| Sonar | Low | $0.0170 | $0.0300 | $0.0470 |
+| Sonar | Medium | $0.0019 | $0.0033 | $0.0052 |
+| Sonar | High | $0.0085 | $0.0150 | $0.0235 |
+| Sonar Reasoning Pro | Low | $0.0010 | $0.0018 | $0.0028 |
+| Sonar Reasoning Pro | Medium | $0.0440 | $0.0800 | $0.1240 |
+| Sonar Reasoning Pro | High | $0.0110 | $0.0200 | $0.0310 |
+| Sonar Reasoning | Low | $0.0170 | $0.0300 | $0.0470 |
+| Sonar Deep Research | — | $0.0020 | $0.0080 | $0.0050 |
+
+Each prompt run checks the `model`, `tier`, and `prompt_length_category` (short, standard, long) and applies the correct price from this table to calculate the base cost in USD before converting to credits (1 credit = $0.000001).
 
 ## Getting Started
 
@@ -230,14 +255,25 @@ npm run dev
 
 ## Latest Updates
 
+### Model Registry and Tiered Pricing System (May 2025)
+- Implemented centralized model registry with complete metadata
+- Updated credit value to $0.000001 per credit
+- Created dynamic pricing calculations based on model and prompt length
+- Implemented tiered platform fee structure (20%, 10%, or fixed rate)
+- Added Sonar pricing module with detailed pricing tables
+- Updated cost breakdown display with inference, platform, and creator fee components
+- Added minimum platform fee of 1 credit
+- Created GitHub issue templates for feature requests and bug reports
+- Enhanced model information display throughout the platform
+
 ### Credit System Improvements (May 2025)
-- Reduced platform fee from 20% to 10% for prompt runs and flow unlocks
+- Updated credit value to $0.000001 per credit (from previous $0.001 per 1,000 credits)
+- Implemented tiered platform fee structure based on inference cost
 - Added transparent cost breakdown in prompt creation UI
 - Improved clarity on how credits are calculated and distributed
 - Created separate creator fee field distinct from total prompt cost
 - Added real-time cost calculation based on selected model and creator fee
 - Ensured users cannot set costs below the baseline system cost
-- Updated all related documentation to reflect the new fee structure
 
 ### Navigation & Interface Updates (May 2025)
 - Consolidated favorites functionality to use the same UI/logic throughout the application
@@ -284,11 +320,31 @@ npm run dev
 - Removed dual-model prompts that had both text and image capabilities
 - Simplified types to maintain only working models with clear separation of concerns
 
-## Contributing
+## Feedback and Issues
 
-To continue development:
-1. Address the known issues listed above
-2. Complete the flow execution components
-3. Finalize the export functionality
-4. Improve user dashboard features and analytics
-5. Enhance credit purchase options and history
+We welcome your feedback to help improve PromptFlow! Here are ways to contribute:
+
+### Feature Requests
+
+Have an idea for a new feature or enhancement? We'd love to hear it!
+
+[Submit a Feature Request](https://github.com/your-username/prompt-marketplace/issues/new?template=feature_request.md)
+
+Popular feature requests:
+- Browse the [most requested features](https://github.com/your-username/prompt-marketplace/issues?q=is%3Aissue+is%3Aopen+sort%3Areactions-%2B1-desc+label%3Aenhancement)
+- Vote by adding a 👍 reaction to issues you support
+
+### Bug Reports
+
+Found something not working as expected? Help us fix it:
+
+[Report a Bug](https://github.com/your-username/prompt-marketplace/issues/new?template=bug_report.md)
+
+Before submitting:
+1. Check if your issue is already known by browsing [existing bugs](https://github.com/your-username/prompt-marketplace/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+2. Include clear steps to reproduce the issue
+3. Add screenshots if applicable
+
+### Roadmap
+
+View our [development roadmap](https://github.com/your-username/prompt-marketplace/projects/1) to see what features are planned for upcoming releases.
