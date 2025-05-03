@@ -2,6 +2,8 @@
  * Central registry for all AI models available in the marketplace
  */
 
+import { calculateSonarInferenceCost, mapModelIdToSonar, getPromptLengthCategory } from './sonarPricing';
+
 export interface ModelInfo {
   id: string;            // Internal ID used in the system
   displayName: string;   // User-friendly display name
@@ -45,11 +47,10 @@ export const TEXT_MODELS: ModelInfo[] = [
     displayName: 'Sonar Small',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 15,
+    baseCost: 3400, // $0.0034 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Fast, efficient text model with good performance for simple tasks.',
-    tokensPerCredit: 5000,
     apiPricing: {
       input: 0.0008,
       output: 0.0016
@@ -64,22 +65,24 @@ export const TEXT_MODELS: ModelInfo[] = [
     displayName: 'Sonar Small Chat',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 15,
+    baseCost: 3400, // $0.0034 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Optimized for conversational interactions with good responsiveness.',
-    tokensPerCredit: 5000,
+    apiPricing: {
+      input: 0.0008,
+      output: 0.0016
+    }
   },
   {
     id: 'sonar-medium-online',
     displayName: 'Sonar Medium',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 25,
+    baseCost: 3300, // $0.0033 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Balanced text model with good quality and reasonable response times.',
-    tokensPerCredit: 4000,
     apiPricing: {
       input: 0.0016,
       output: 0.0032
@@ -94,56 +97,71 @@ export const TEXT_MODELS: ModelInfo[] = [
     displayName: 'Sonar Medium Chat',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 25,
+    baseCost: 3300, // $0.0033 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'High-quality conversational model suited for complex dialogues.',
-    tokensPerCredit: 4000,
+    apiPricing: {
+      input: 0.0016,
+      output: 0.0032
+    }
   },
   {
     id: 'sonar-large-online',
     displayName: 'Sonar Large',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 40,
+    baseCost: 30000, // $0.0300 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Most powerful Sonar model with excellent reasoning capabilities.',
-    tokensPerCredit: 2500,
+    apiPricing: {
+      input: 0.0024,
+      output: 0.0088
+    },
+    averageUsage: {
+      inputTokens: 500,
+      outputTokens: 1000
+    }
   },
   {
     id: 'sonar',
     displayName: 'Sonar Default',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 25,
+    baseCost: 3300, // $0.0033 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Standard Sonar model, balanced for most use cases.',
-    tokensPerCredit: 4000,
+    apiPricing: {
+      input: 0.0016,
+      output: 0.0032
+    }
   },
   {
     id: 'llama-3.1-sonar-small-128k-online',
     displayName: 'Llama 3.1 Sonar',
     provider: 'perplexity',
     type: 'text',
-    baseCost: 20,
+    baseCost: 3000, // $0.0030 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Open model with extended context window for larger documents.',
     maxTokens: 128000,
-    tokensPerCredit: 5000,
+    apiPricing: {
+      input: 0.0008,
+      output: 0.0016
+    }
   },
   {
     id: 'gpt-4o',
     displayName: 'GPT-4o',
     provider: 'openai',
     type: 'hybrid',
-    baseCost: 40,
+    baseCost: 20000, // $0.0200 * 1,000,000
     capabilities: ['text', 'code', 'image'],
     status: 'active',
     description: 'Latest, multi-modal model from OpenAI with vision capabilities.',
-    tokensPerCredit: 2500,
     apiPricing: {
       input: 0.005,
       output: 0.015
@@ -158,22 +176,28 @@ export const TEXT_MODELS: ModelInfo[] = [
     displayName: 'GPT-4 Turbo',
     provider: 'openai',
     type: 'text',
-    baseCost: 35,
+    baseCost: 40000, // $0.0400 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Powerful model with good balance of performance and cost.',
-    tokensPerCredit: 3000,
+    apiPricing: {
+      input: 0.01,
+      output: 0.03
+    }
   },
   {
     id: 'gpt-4o-mini',
     displayName: 'GPT-4o Mini',
     provider: 'openai',
     type: 'text',
-    baseCost: 25,
+    baseCost: 6000, // $0.0060 * 1,000,000
     capabilities: ['text', 'code'],
     status: 'active',
     description: 'Smaller, faster version of GPT-4o at a lower cost.',
-    tokensPerCredit: 4000,
+    apiPricing: {
+      input: 0.0015,
+      output: 0.006
+    }
   },
 ];
 
@@ -184,7 +208,7 @@ export const IMAGE_MODELS: ModelInfo[] = [
     displayName: 'GPT-image-1',
     provider: 'openai',
     type: 'image',
-    baseCost: 100,
+    baseCost: 50000, // $0.0500 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'Image editing and generation model from OpenAI.',
@@ -197,7 +221,7 @@ export const IMAGE_MODELS: ModelInfo[] = [
     displayName: 'DALL-E 3',
     provider: 'openai',
     type: 'image',
-    baseCost: 100,
+    baseCost: 40000, // $0.0400 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'High quality image generation with excellent prompt following.',
@@ -211,7 +235,7 @@ export const IMAGE_MODELS: ModelInfo[] = [
     displayName: 'DALL-E 2',
     provider: 'openai',
     type: 'image',
-    baseCost: 50,
+    baseCost: 20000, // $0.0200 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'More affordable image generation option with good results.',
@@ -224,61 +248,66 @@ export const IMAGE_MODELS: ModelInfo[] = [
     displayName: 'Stable Diffusion XL',
     provider: 'stability',
     type: 'image',
-    baseCost: 80,
+    baseCost: 40000, // $0.0400 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'Open source image model with high-quality outputs.',
+    apiPricing: {
+      standard: 0.040
+    }
   },
   {
     id: 'stability-xl-turbo',
     displayName: 'Stability AI XL Turbo',
     provider: 'stability',
     type: 'image',
-    baseCost: 60,
+    baseCost: 30000, // $0.0300 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'Faster image generation with good quality-speed balance.',
+    apiPricing: {
+      standard: 0.030
+    }
   },
   {
     id: 'stability-xl-ultra',
     displayName: 'Stability AI XL Ultra',
     provider: 'stability',
     type: 'image',
-    baseCost: 120,
+    baseCost: 60000, // $0.0600 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'Ultra-high quality image generation with fine details.',
+    apiPricing: {
+      standard: 0.060
+    }
   },
   {
     id: 'sdxl',
     displayName: 'SDXL',
     provider: 'stability',
     type: 'image',
-    baseCost: 80,
+    baseCost: 40000, // $0.0400 * 1,000,000
     capabilities: ['image'],
     status: 'active',
     description: 'Standard Stable Diffusion XL model.',
+    apiPricing: {
+      standard: 0.040
+    }
   },
   {
     id: 'sd3',
     displayName: 'SD3',
     provider: 'stability',
     type: 'image',
-    baseCost: 90,
+    baseCost: 45000, // $0.0450 * 1,000,000
     capabilities: ['image'],
     status: 'beta',
     description: 'Latest generation of Stable Diffusion, currently in beta.',
-  },
-  {
-    id: 'gpt-image-1',
-    displayName: 'GPT-image-1',
-    provider: 'openai',
-    type: 'image',
-    baseCost: 100,
-    capabilities: ['image'],
-    status: 'active',
-    description: 'Image editing and generation model from OpenAI.',
-  },
+    apiPricing: {
+      standard: 0.045
+    }
+  }
 ];
 
 // Combine all models without duplicates
@@ -337,13 +366,36 @@ export function getActiveModels(): ModelInfo[] {
 }
 
 /**
+ * Calculate the inference cost for a specific model and prompt
+ * @param modelId The model ID
+ * @param promptTokens The number of tokens in the prompt (default: standard chat length)
+ * @returns The inference cost in credits
+ */
+export function calculateInferenceCost(modelId: string, promptTokens: number = 1000): number {
+  // For Sonar models, use the Sonar pricing module
+  const sonarMapping = mapModelIdToSonar(modelId);
+  if (sonarMapping) {
+    const promptLengthCategory = getPromptLengthCategory(promptTokens);
+    return calculateSonarInferenceCost(
+      sonarMapping.model,
+      sonarMapping.tier,
+      promptLengthCategory
+    );
+  }
+  
+  // For other models, use the base cost from the model info
+  const model = getModelById(modelId);
+  return model?.baseCost || 0;
+}
+
+/**
  * Get base cost for a model
  * @param modelId The ID of the model to get the cost for
  * @returns The base cost in credits, or a default if not found
  */
 export function getModelBaseCost(modelId: string): number {
   const model = getModelById(modelId);
-  return model?.baseCost || 25; // Default to 25 if model not found
+  return model?.baseCost || 25000; // Default to 25000 if model not found (equivalent to $0.025)
 }
 
 /**
@@ -353,10 +405,12 @@ export function getModelBaseCost(modelId: string): number {
  */
 export function calculatePlatformFee(inferenceCost: number): number {
   // Apply tiered markup rate to inference cost
-  if (inferenceCost < 10000) { // < $0.01 → 20%
-    return Math.ceil(inferenceCost * 0.20);
+  if (inferenceCost === 0) {
+    return 1; // Minimum fee of 1 credit
+  } else if (inferenceCost < 10000) { // < $0.01 → 20%
+    return Math.max(Math.ceil(inferenceCost * 0.20), 1);
   } else if (inferenceCost < 100000) { // < $0.10 → 10%
-    return Math.ceil(inferenceCost * 0.10);
+    return Math.max(Math.ceil(inferenceCost * 0.10), 1);
   } else {
     return 500; // Flat 500 credits ($0.0005)
   }
@@ -366,14 +420,16 @@ export function calculatePlatformFee(inferenceCost: number): number {
  * Calculate the total cost for running a prompt
  * @param modelId The model ID
  * @param creatorFee The creator fee in credits (optional, defaults to 0)
+ * @param promptTokens The number of tokens in the prompt (optional, defaults to standard chat length)
  * @returns The total cost in credits
  */
-export function calculateTotalPromptCost(modelId: string, creatorFee: number = 0): number {
-  const model = getModelById(modelId);
-  if (!model) return 0;
-  
-  // Get base inference cost from the model
-  const inferenceCost = model.baseCost;
+export function calculateTotalPromptCost(
+  modelId: string, 
+  creatorFee: number = 0, 
+  promptTokens: number = 1000
+): number {
+  // Get inference cost
+  const inferenceCost = calculateInferenceCost(modelId, promptTokens);
   
   // Calculate platform fee using tiered pricing
   const platformFee = calculatePlatformFee(inferenceCost);
@@ -386,9 +442,14 @@ export function calculateTotalPromptCost(modelId: string, creatorFee: number = 0
  * Generate user-friendly cost breakdown
  * @param modelId The model ID
  * @param creatorFee The creator fee
+ * @param promptTokens The number of tokens in the prompt (optional)
  * @returns Object with formatted cost breakdown
  */
-export function getCostBreakdown(modelId: string, creatorFee: number = 0): {
+export function getCostBreakdown(
+  modelId: string, 
+  creatorFee: number = 0,
+  promptTokens: number = 1000
+): {
   inferenceCost: number;
   platformFee: number;
   creatorFee: number;
@@ -396,20 +457,8 @@ export function getCostBreakdown(modelId: string, creatorFee: number = 0): {
   dollarCost: string;
   runsFor10Dollars: number;
 } {
-  const model = getModelById(modelId);
-  if (!model) {
-    return {
-      inferenceCost: 0,
-      platformFee: 0,
-      creatorFee,
-      totalCost: 0, 
-      dollarCost: "0.00",
-      runsFor10Dollars: 0
-    };
-  }
-  
   // Get inference cost
-  const inferenceCost = model.baseCost;
+  const inferenceCost = calculateInferenceCost(modelId, promptTokens);
   
   // Calculate platform fee using tiered pricing
   const platformFee = calculatePlatformFee(inferenceCost);
@@ -421,7 +470,7 @@ export function getCostBreakdown(modelId: string, creatorFee: number = 0): {
   const dollarCost = (totalCost / 1000000).toFixed(6);
   
   // Calculate runs for $10
-  const runsFor10Dollars = getRunsPerDollar(modelId, creatorFee, 10);
+  const runsFor10Dollars = getRunsPerDollar(modelId, creatorFee, 10, promptTokens);
   
   return {
     inferenceCost,
@@ -438,14 +487,18 @@ export function getCostBreakdown(modelId: string, creatorFee: number = 0): {
  * @param modelId The model ID
  * @param creatorFee The additional creator fee
  * @param dollarAmount The dollar amount to calculate runs for
+ * @param promptTokens The number of tokens in the prompt (optional)
  * @returns Number of runs possible (rounded down)
  */
-export function getRunsPerDollar(modelId: string, creatorFee: number = 0, dollarAmount: number): number {
-  const model = getModelById(modelId);
-  if (!model) return 0;
-  
+export function getRunsPerDollar(
+  modelId: string, 
+  creatorFee: number = 0, 
+  dollarAmount: number,
+  promptTokens: number = 1000
+): number {
   // Get inference cost
-  const inferenceCost = model.baseCost;
+  const inferenceCost = calculateInferenceCost(modelId, promptTokens);
+  if (inferenceCost === 0) return 0;
   
   // Calculate platform fee using tiered pricing
   const platformFee = calculatePlatformFee(inferenceCost);
@@ -464,14 +517,16 @@ export function getRunsPerDollar(modelId: string, creatorFee: number = 0, dollar
  * Calculate the dollar cost for a single run
  * @param modelId The model ID
  * @param creatorFee The creator fee
+ * @param promptTokens The number of tokens in the prompt (optional)
  * @returns Dollar cost for a single run
  */
-export function getDollarCostPerRun(modelId: string, creatorFee: number = 0): number {
-  const model = getModelById(modelId);
-  if (!model) return 0;
-  
+export function getDollarCostPerRun(
+  modelId: string, 
+  creatorFee: number = 0,
+  promptTokens: number = 1000
+): number {
   // Get inference cost
-  const inferenceCost = model.baseCost;
+  const inferenceCost = calculateInferenceCost(modelId, promptTokens);
   
   // Calculate platform fee using tiered pricing
   const platformFee = calculatePlatformFee(inferenceCost);

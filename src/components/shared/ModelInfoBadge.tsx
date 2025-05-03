@@ -31,7 +31,7 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
       >
         <span className="whitespace-nowrap">{model.displayName}</span>
         <span className="h-3 border-l border-blue-300"></span>
-        <span className="whitespace-nowrap">{costBreakdown.totalCost} credits</span>
+        <span className="whitespace-nowrap">{costBreakdown.totalCost.toLocaleString()} credits</span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           width="14" 
@@ -55,24 +55,24 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
             <div className="font-medium text-gray-800">{model.provider}</div>
             
             <div>Inference cost:</div>
-            <div className="font-medium text-gray-800">{costBreakdown.inferenceCost} credits</div>
+            <div className="font-medium text-gray-800">{costBreakdown.inferenceCost.toLocaleString()} credits</div>
             
             <div>Platform fee:</div>
-            <div className="font-medium text-gray-800">{costBreakdown.platformFee} credits</div>
+            <div className="font-medium text-gray-800">{costBreakdown.platformFee.toLocaleString()} credits</div>
             
             <div>Creator fee:</div>
-            <div className="font-medium text-gray-800">{costBreakdown.creatorFee} credits</div>
+            <div className="font-medium text-gray-800">{costBreakdown.creatorFee.toLocaleString()} credits</div>
             
             <div className="col-span-2 border-t border-gray-200 my-1"></div>
             
             <div>Total cost:</div>
-            <div className="font-medium text-gray-800">{costBreakdown.totalCost} credits</div>
+            <div className="font-medium text-gray-800">{costBreakdown.totalCost.toLocaleString()} credits</div>
             
             <div>Dollar cost:</div>
             <div className="font-medium text-gray-800">${costBreakdown.dollarCost}</div>
             
             <div className="col-span-2 mt-2 text-gray-500 text-[11px]">
-              With $10 credit purchase, you get approximately {costBreakdown.runsFor10Dollars} runs.
+              With $10 credit purchase, you get approximately {costBreakdown.runsFor10Dollars.toLocaleString()} runs.
             </div>
           </div>
         </div>
