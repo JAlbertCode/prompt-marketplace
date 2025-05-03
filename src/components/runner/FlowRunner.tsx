@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { PromptFlow, Prompt, FlowStep } from '@/types';
 import { useCreditStore } from '@/store/useCreditStore';
+import { getModelById } from '@/lib/models/modelRegistry';
+import ModelInfoBadge from '@/components/shared/ModelInfoBadge';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
 import { executePrompt } from '@/lib/sonarApi';
@@ -375,16 +377,13 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
                   {index + 1}
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-sm">{step.title || (prompt ? prompt.title : `Step ${index + 1}`)}</div>
-                  <div className="text-xs text-gray-500 flex items-center">
-                    <span>Using prompt:</span>
-                    <span className="ml-1 font-medium text-indigo-600">{prompt ? prompt.title : 'Unknown'}</span>
-                    <span className="ml-2 bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-xs">{prompt ? prompt.model : 'unknown'}</span>
+                    <div className="font-medium text-sm">{step.title || (prompt ? prompt.title : `Step ${index + 1}`)}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                      <span>Using prompt:</span>
+                      <span className="font-medium text-indigo-600">{prompt ? prompt.title : 'Unknown'}</span>
+                      {prompt && <ModelInfoBadge modelId={prompt.model} creatorFee={prompt.creatorFee || 0} />}
+                    </div>
                   </div>
-                </div>
-                <div className="text-xs text-gray-500">
-                  {prompt ? `${prompt.creditCost} credits` : ''}
-                </div>
               </div>
             );
           })}

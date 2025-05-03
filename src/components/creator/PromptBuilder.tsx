@@ -6,6 +6,7 @@ import ModelSelector from './ModelSelector';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { usePromptStore } from '@/store/usePromptStore';
+import { getModelBaseCost, getDollarCostPerRun, getRunsPerDollar } from '@/lib/models/modelRegistry';
 
 interface PromptBuilderProps {
   initialPrompt?: Partial<Prompt>;
@@ -24,11 +25,13 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   const [title, setTitle] = useState(initialPrompt?.title || '');
   const [description, setDescription] = useState(initialPrompt?.description || '');
   const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
-  const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 50);
-  const [model, setModel] = useState<SonarModel>(initialPrompt?.model || 'sonar-medium-chat');
+  const [creatorFee, setCreatorFee] = useState(initialPrompt?.creatorFee || 0);
+  const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 0);
+  const [model, setModel] = useState<string>(initialPrompt?.model || 'sonar-medium-chat');
   const [imageModel, setImageModel] = useState<ImageModel | undefined>(initialPrompt?.imageModel);
   const [inputFields, setInputFields] = useState<InputField[]>(initialPrompt?.inputFields || []);
-  const [isPrivate, setIsPrivate] = useState(initialPrompt?.isPrivate || false);
+  const [isPublished, setIsPublished] = useState(initialPrompt?.isPublished || false);
+  const [isPrivate, setIsPrivate] = useState(initialPrompt?.isPrivate || true);
   const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(
     initialPrompt?.capabilities || ['text']
   );
@@ -51,6 +54,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         setTitle(promptToEdit.title || '');
         setDescription(promptToEdit.description || '');
         setSystemPrompt(promptToEdit.systemPrompt || '');
+        setCreatorFee(promptToEdit.creatorFee || 50);
         setCreditCost(promptToEdit.creditCost || 50);
         setModel(promptToEdit.model || 'sonar-medium-chat');
         setImageModel(promptToEdit.imageModel);
@@ -61,6 +65,24 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       }
     }
   }, [editId, getPromptById]);
+  
+  // Calculate total cost whenever the model or fee changes
+  useEffect(() => {
+    // Get the baseline cost for the selected model
+    const baselineCost = getModelBaseCost(model);
+    
+    // Creator fee must be at least 0
+    const safeFee = Math.max(0, creatorFee);
+    
+    // Calculate platform fee (10% of creator fee or 100 minimum)
+    const platformFee = safeFee > 0 ? Math.max(Math.floor(safeFee * 0.1), 1) : 100;
+    
+    // Calculate total cost
+    const total = baselineCost + safeFee + platformFee;
+    
+    // Update total cost
+    setCreditCost(total);
+  }, [model, creatorFee]);
 
   const addInputField = () => {
     const newField: InputField = {
@@ -122,6 +144,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       inputFields,
       model,
       creditCost,
+      creatorFee,
       isPrivate,
       capabilities,
       outputType
@@ -202,20 +225,55 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         </div>
         
         <div className="mb-4">
-          <label htmlFor="creditCost" className="block text-sm font-medium text-gray-700 mb-1">
-            Credit Cost <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Pricing Breakdown <span className="text-red-500">*</span>
           </label>
-          <input
-            type="number"
-            id="creditCost"
-            value={creditCost}
-            onChange={(e) => setCreditCost(Math.max(1, parseInt(e.target.value) || 0))}
-            min="1"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            How many credits users will spend to run this prompt
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">System cost for {model}:</span>
+              <span className="font-medium">{getModelBaseCost(model)} credits</span>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">Your fee:</span>
+              <div className="flex">
+                <input
+                  type="number"
+                  id="creatorFee"
+                  value={creatorFee}
+                  onChange={(e) => setCreatorFee(Math.max(0, parseInt(e.target.value) || 0))}
+                  min="0"
+                  className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+                  required
+                />
+                <span className="ml-2 text-sm text-gray-700 pt-1">credits</span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">Platform fee (10% of your fee{creatorFee === 0 ? ', min. 100' : ''}):</span>
+              <span className="font-medium">{creatorFee > 0 ? Math.max(Math.floor(creatorFee * 0.1), 1) : 100} credits</span>
+            </div>
+            <div className="pt-2 mt-2 border-t border-gray-300 flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-900">Total user cost:</span>
+              <span className="font-bold text-lg text-indigo-600">{creditCost} credits</span>
+            </div>
+            
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-800 mb-2">What users get for their money:</h4>
+              <div className="bg-blue-50 p-2 rounded-md text-sm">
+                <div className="flex justify-between mb-1">
+                  <span>Cost per run:</span>
+                  <span className="font-medium">${getDollarCostPerRun(model, creatorFee).toFixed(3)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Runs per $10:</span>
+                  <span className="font-medium">{getRunsPerDollar(model, creatorFee, 10)} runs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500">
+            These are the credits users will spend each time they run this prompt.
+            You'll receive {creatorFee} credits per run, and we take a 10% fee.
           </p>
         </div>
       </div>

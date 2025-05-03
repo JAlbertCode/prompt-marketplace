@@ -1,4 +1,6 @@
 import { PrismaClient, TransactionType } from "@prisma/client";
+import { getModelById } from "@/lib/models/modelRegistry";
+import { calculateTotalPromptCost, calculatePlatformFee } from "@/lib/models/modelCosts";
 
 const prisma = new PrismaClient();
 
@@ -104,8 +106,6 @@ export async function deductCredits(
   return updatedCredits.balance;
 }
 
-import { getModelById, calculateTotalPromptCost, calculatePlatformFee } from "@/lib/models/modelRegistry";
-
 export async function calculatePromptRunCost(
   promptId: string,
   modelId: string
@@ -190,6 +190,101 @@ export async function chargeForPromptRun(
   return true;
 }
 
+export async function calculateFlowRunCost(
+  flowId: string
+): Promise<{ stepCosts: Array<{ stepId: string; cost: number }>; totalCost: number }> {
+  // Get flow details with steps
+  const flow = await prisma.flow.findUnique({
+    where: {
+      id: flowId,
+    },
+    include: {
+      steps: {
+        include: {
+          prompt: true,
+        },
+        orderBy: {
+          position: "asc",
+        },
+      },
+    },
+  });
+
+  if (!flow) {
+    return { stepCosts: [], totalCost: 0 };
+  }
+
+  const stepCosts = await Promise.all(
+    flow.steps.map(async (step) => {
+      // Calculate cost for each step
+      const { totalCost } = await calculatePromptRunCost(
+        step.promptId,
+        step.model || "gpt-4o" // Default to gpt-4o if not specified
+      );
+
+      return {
+        stepId: step.id,
+        cost: totalCost,
+      };
+    })
+  );
+
+  // Sum up all step costs
+  const totalCost = stepCosts.reduce((sum, step) => sum + step.cost, 0);
+
+  return {
+    stepCosts,
+    totalCost,
+  };
+}
+
+export async function chargeForFlowRun(
+  userId: string,
+  flowId: string
+): Promise<boolean> {
+  const { stepCosts, totalCost } = await calculateFlowRunCost(flowId);
+
+  if (totalCost === 0) {
+    return true; // No charge for empty flows
+  }
+
+  // Deduct total cost from user
+  const remainingBalance = await deductCredits(
+    userId,
+    totalCost,
+    `Flow run: ${flowId}`,
+    "FLOW_RUN"
+  );
+
+  if (remainingBalance === null) {
+    return false; // Not enough credits
+  }
+
+  // Process each step payment
+  for (const stepCost of stepCosts) {
+    const step = await prisma.flowStep.findUnique({
+      where: {
+        id: stepCost.stepId,
+      },
+      include: {
+        prompt: true,
+      },
+    });
+
+    if (step && step.prompt && step.prompt.creatorFee > 0) {
+      // Pay the creator their fee
+      await addCredits(
+        step.prompt.creatorId,
+        step.prompt.creatorFee,
+        `Creator payment for prompt used in flow step: ${step.id}`,
+        "CREATOR_PAYMENT"
+      );
+    }
+  }
+
+  return true;
+}
+
 export async function chargeForFlowUnlock(
   userId: string,
   flowId: string
@@ -206,112 +301,16 @@ export async function chargeForFlowUnlock(
     },
   });
 
-  if (!flow || flow.unlockFee === null) {
+  if (!flow || flow.unlockFee === null || flow.unlockFee === 0) {
     return true; // Flow is free
   }
 
   const unlockFee = flow.unlockFee;
-  const platformFee = Math.floor(unlockFee * 0.1); // 10% platform fee
+  // Platform takes 20% of the unlock fee
+  const platformFee = Math.floor(unlockFee * 0.2);
   const creatorPayment = unlockFee - platformFee;
   
   // Deduct unlock fee from user
   const remainingBalance = await deductCredits(
     userId,
-    unlockFee,
-    `Flow unlock: ${flow.title}`,
-    "FLOW_UNLOCK"
-  );
-
-  if (remainingBalance === null) {
-    return false; // Not enough credits
-  }
-
-  // Pay the creator
-  await addCredits(
-    flow.creatorId,
-    creatorPayment,
-    `Creator payment for flow unlock: ${flow.title}`,
-    "CREATOR_PAYMENT"
-  );
-
-  // Record the flow unlock
-  await prisma.flowUnlock.create({
-    data: {
-      userId,
-      flowId,
-    },
-  });
-
-  return true;
-}
-
-export async function hasUnlockedFlow(userId: string, flowId: string): Promise<boolean> {
-  // Check if the user is the creator of the flow
-  const flow = await prisma.flow.findUnique({
-    where: {
-      id: flowId,
-    },
-    select: {
-      creatorId: true,
-      unlockFee: true,
-    },
-  });
-
-  if (!flow) {
-    return false; // Flow doesn't exist
-  }
-
-  // Creator always has access to their own flows
-  if (flow.creatorId === userId) {
-    return true;
-  }
-
-  // If flow is free, no unlock required
-  if (flow.unlockFee === null) {
-    return true;
-  }
-
-  // Check if user has unlocked this flow
-  const unlock = await prisma.flowUnlock.findUnique({
-    where: {
-      userId_flowId: {
-        userId,
-        flowId,
-      },
-    },
-  });
-
-  return !!unlock;
-}
-
-export async function getUserTransactions(userId: string, page = 1, limit = 10) {
-  const skip = (page - 1) * limit;
-  
-  const [transactions, total] = await Promise.all([
-    prisma.creditTransaction.findMany({
-      where: {
-        userId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      skip,
-      take: limit,
-    }),
-    prisma.creditTransaction.count({
-      where: {
-        userId,
-      },
-    }),
-  ]);
-
-  return {
-    transactions,
-    pagination: {
-      total,
-      pages: Math.ceil(total / limit),
-      page,
-      limit,
-    },
-  };
-}
+    unlockF

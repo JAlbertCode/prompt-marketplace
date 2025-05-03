@@ -54,7 +54,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setError(null);
     
     // Check if user has enough credits
-    if (credits < prompt.creditCost) {
+    if (credits < totalCost) {
       toast.error('Not enough credits to run this prompt');
       return;
     }
@@ -151,10 +151,10 @@ const PromptForm: React.FC<PromptFormProps> = ({
       }
       
       // Deduct credits
-      deductCredits(prompt.creditCost, "Run prompt", prompt.id);
+      deductCredits(totalCost, "Run prompt", prompt.id);
       
       // Show success notification
-      toast.success(`Prompt executed! -${prompt.creditCost} credits`);
+      toast.success(`Prompt executed! -${totalCost} credits`);
       
       // Toggle to show output
       setShowOutput(true);
@@ -183,7 +183,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setIsLoading(true);
       
       // Check if user has enough credits for regeneration
-      const regenerationCost = Math.ceil(prompt.creditCost / 2);
+      const regenerationCost = Math.ceil(totalCost / 2);
       
       if (credits < regenerationCost) {
         toast.error(`Not enough credits to regenerate image. Needs ${regenerationCost} credits.`);
@@ -325,6 +325,14 @@ const PromptForm: React.FC<PromptFormProps> = ({
             Text Generation
           </div>
         )}
+        
+        <div className="mt-2">
+          <ModelInfoBadge 
+            modelId={prompt.model} 
+            creatorFee={prompt.creatorFee || 0} 
+            showDetails={false} 
+          />
+        </div>
       </div>
       
       <div className="p-4">
@@ -360,9 +368,11 @@ const PromptForm: React.FC<PromptFormProps> = ({
             
             <div className="flex justify-between items-center pt-2">
               <div>
-                <span className="text-sm text-gray-500">
-                  Cost: <span className="font-semibold">{prompt.creditCost} credits</span>
-                </span>
+                <ModelInfoBadge 
+                  modelId={prompt.model} 
+                  creatorFee={prompt.creatorFee || 0}
+                  showDetails={true} 
+                />
               </div>
               
               <div className="flex space-x-3">
@@ -376,7 +386,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 
                 <Button
                   type="submit"
-                  disabled={isLoading || credits < prompt.creditCost}
+                  disabled={isLoading || credits < totalCost}
                 >
                   {isLoading ? (
                     <span className="flex items-center">

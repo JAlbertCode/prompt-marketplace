@@ -604,7 +604,7 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
                             <span className="ml-2 text-sm text-gray-500">credits</span>
                           </div>
                           <div className="mt-1 text-xs text-gray-500">
-                            <span className="font-medium">You earn 80%</span> ({Math.round(unlockPrice * 0.8)} credits) per unlock
+                            <span className="font-medium">You earn 90%</span> ({Math.round(unlockPrice * 0.9)} credits) per unlock
                           </div>
                         </div>
                       </label>

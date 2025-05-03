@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import ModelInfoBadge from '@/components/shared/ModelInfoBadge';
 
 interface StepInfo {
   id: string;
@@ -78,10 +79,10 @@ const StepVisualizer: React.FC<StepVisualizerProps> = ({
                   <div>
                     <h4 className="font-medium text-gray-900">{step.title}</h4>
                     
-                    <div className="mt-1 flex items-center">
+                    <div className="mt-1 flex items-center gap-1">
                       <span className="text-xs text-gray-500">Using prompt:</span>
-                      <span className="ml-1 text-xs font-medium text-indigo-600">{step.promptTitle}</span>
-                      <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{step.model}</span>
+                      <span className="text-xs font-medium text-indigo-600">{step.promptTitle}</span>
+                      <ModelInfoBadge modelId={step.model} creatorFee={0} />                      
                     </div>
                   </div>
                   

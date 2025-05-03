@@ -13,9 +13,30 @@ A modular prompt marketplace where users can create, run, and chain AI prompts.
 - User accounts with favorites, personal dashboard, and credit management
 - User-owned prompts and flows with publishing controls
 
-## Core Concepts
+## Model Registry System
 
-### Single Prompts
+The platform uses a centralized model registry system to manage all available AI models:
+
+- **Central Registry**: All models are defined in a single source of truth at `/src/lib/models/modelRegistry.ts`
+- **Model Metadata**: Each model includes comprehensive metadata such as provider, type, capabilities, pricing, and status
+- **Transparent Pricing**: Base costs are calculated from actual provider API pricing with clear formulas
+- **Consistent Usage**: All components reference the same registry for model information
+- **User Interface**: Model details are displayed consistently throughout the application
+- **Flexible Creator Fees**: Creators can set optional fees that are added to the base cost
+- **Cost Calculations**: Automatic calculation of total cost with platform fees
+
+The model registry supports multiple model types:
+- **Text Generation**: Models like GPT-4, GPT-4o, and Sonar series
+- **Image Generation**: Models like DALL-E 3, DALL-E 2, and Stable Diffusion
+- **Hybrid Models**: Models that support both text and image capabilities
+
+Components that use the model registry:
+- `ModelInfoBadge`: Displays model information with cost breakdown
+- `EnhancedModelSelector`: Improved model selection interface with filtering
+- `ModelCard`: Detailed card view for models with complete pricing information
+- `PriceCalculator`: Component for calculating costs with different fee structures
+
+### Core Concepts
 Individual prompts tied to specific AI models with defined input/output structure.
 
 #### Supported Models
@@ -62,11 +83,15 @@ This flow showcases how to:
 - **Credit Management**: View balance and purchase credits
 
 ### Credit System
-- Each prompt execution costs credits
-- Each step in a flow burns credits separately
-- Users can earn or spend credits by running or unlocking prompts/flows
-- Creator fees are automatically distributed to prompt creators
-- Platform takes a percentage of Flow unlock fees
+- 1,000 credits = $1.00
+- Transparent cost breakdown for all transactions
+- Each prompt has three cost components:
+  - System cost (based on actual provider API pricing)
+  - Creator fee (optional, set by prompt creator, defaults to 0)
+  - Platform fee (10% of creator fee or 100 credits minimum)
+- Each step in a flow burns credits separately when executed
+- Creators earn 90% of unlock fees for premium flows
+- Platform takes only 10% of prompt and flow fees
 
 ### Marketplace
 - Browse both single prompts and flows
@@ -204,6 +229,15 @@ npm run dev
 10. ~~"Flow not found" error when clicking on flows from home page~~ (Fixed May 2025)
 
 ## Latest Updates
+
+### Credit System Improvements (May 2025)
+- Reduced platform fee from 20% to 10% for prompt runs and flow unlocks
+- Added transparent cost breakdown in prompt creation UI
+- Improved clarity on how credits are calculated and distributed
+- Created separate creator fee field distinct from total prompt cost
+- Added real-time cost calculation based on selected model and creator fee
+- Ensured users cannot set costs below the baseline system cost
+- Updated all related documentation to reflect the new fee structure
 
 ### Navigation & Interface Updates (May 2025)
 - Consolidated favorites functionality to use the same UI/logic throughout the application

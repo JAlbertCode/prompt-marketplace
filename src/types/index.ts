@@ -11,6 +11,7 @@ export interface Prompt {
   inputFields: InputField[];
   model: SonarModel | GPTModel;
   creditCost: number;
+  creatorFee: number; // Fee set by the creator
   createdAt: number;
   exampleOutput?: string;
   exampleImageUrl?: string;
