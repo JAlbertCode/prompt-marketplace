@@ -185,7 +185,7 @@ const models: ModelInfo[] = [
       medium: 20000, // Same cost regardless of prompt length
       long: 20000,   // Same cost regardless of prompt length
     },
-    available: false, // Hidden temporarily
+    available: true, // Hidden temporarily
     isPopular: true,
   },
   
