@@ -5,13 +5,17 @@
  * It defines model metadata, capabilities, pricing, and status.
  * 
  * All components should reference this registry to ensure consistent model information throughout the app.
+ * 
+ * Credit costs are based on the accurate pricing data.
+ * 1 credit = $0.000001
+ * $1 = 1,000,000 credits
  */
 
-type ModelProvider = 'openai' | 'perplexity' | 'anthropic' | 'stability' | 'internal';
-type ModelType = 'text' | 'image' | 'hybrid';
+type ModelProvider = 'openai' | 'sonar' | 'anthropic' | 'stability' | 'internal';
+type ModelType = 'text' | 'image' | 'audio' | 'hybrid';
 type ModelTier = 'high' | 'medium' | 'low';
 type ModelStatus = 'active' | 'beta' | 'deprecated';
-type PromptCategory = 'short' | 'standard' | 'long';
+export type PromptLength = 'short' | 'medium' | 'long';
 
 export interface ModelInfo {
   id: string;
@@ -20,213 +24,141 @@ export interface ModelInfo {
   provider: ModelProvider;
   type: ModelType;
   capabilities: string[];
-  maxTokens: number;
-  baseCost: number; // Base cost in whole-number credits
+  maxTokens?: number;
   status: ModelStatus;
   tier?: ModelTier;
-  promptCategoryCosts?: Record<PromptCategory, number>;
+  cost: {
+    short: number;  // Credits for short prompts
+    medium: number; // Credits for medium prompts
+    long: number;   // Credits for long prompts
+  };
+  available?: boolean;
+  isPopular?: boolean;
 }
 
 // Define all available models
-// Base costs are in whole-number credits (1 credit = $0.000001)
+// Costs are in credits (1 credit = $0.000001)
+// Only including models we actually support via API based on the PDF pricing
 const models: ModelInfo[] = [
-  // OpenAI models
-  {
-    id: 'gpt-4',
-    displayName: 'GPT-4',
-    description: 'Advanced reasoning and language understanding model from OpenAI',
-    provider: 'openai',
-    type: 'text',
-    capabilities: ['text'],
-    maxTokens: 8192,
-    baseCost: 30000, // $0.03 per 1000 tokens = 30,000 credits
-    status: 'active',
-  },
+  // OpenAI GPT-4o models
   {
     id: 'gpt-4o',
     displayName: 'GPT-4o',
-    description: 'Optimized version of GPT-4 with improved performance',
+    description: 'Latest GPT-4o model with excellent reasoning capabilities',
     provider: 'openai',
     type: 'text',
     capabilities: ['text'],
     maxTokens: 8192,
-    baseCost: 10000, // $0.01 per 1000 tokens = 10,000 credits
     status: 'active',
+    cost: {
+      short: 8500,   // $0.0085 per request
+      medium: 15000, // $0.0150 per request
+      long: 23500,   // $0.0235 per request
+    },
+    available: true,
+    isPopular: true,
   },
   {
-    id: 'dall-e-3',
-    displayName: 'DALL-E 3',
-    description: 'Advanced image generation model from OpenAI',
+    id: 'gpt-4o-mini',
+    displayName: 'GPT-4o Mini',
+    description: 'Fast and cost-effective version of GPT-4o',
     provider: 'openai',
-    type: 'image',
-    capabilities: ['image'],
-    maxTokens: 0,
-    baseCost: 20000, // $0.02 per image = 20,000 credits
+    type: 'text',
+    capabilities: ['text'],
+    maxTokens: 8192,
     status: 'active',
-  },
-  {
-    id: 'gpt-image-1',
-    displayName: 'GPT Image 1',
-    description: 'Image editing and transformation model from OpenAI',
-    provider: 'openai',
-    type: 'image',
-    capabilities: ['image'],
-    maxTokens: 0,
-    baseCost: 30000, // $0.03 per image edit = 30,000 credits
-    status: 'active',
+    cost: {
+      short: 1000,   // $0.0010 per request
+      medium: 1800,  // $0.0018 per request
+      long: 2800,    // $0.0028 per request
+    },
+    available: true,
+    isPopular: true,
   },
   
-  // Perplexity models
+  // GPT-4.1 Series
   {
-    id: 'sonar-small-online',
-    displayName: 'Sonar Small',
-    description: 'Efficient model for everyday text tasks',
-    provider: 'perplexity',
+    id: 'gpt-4.1',
+    displayName: 'GPT-4.1',
+    description: 'Latest GPT-4.1 model with excellent reasoning capabilities',
+    provider: 'openai',
     type: 'text',
     capabilities: ['text'],
-    maxTokens: 4096,
-    baseCost: 200, // $0.0002 per 1000 tokens = 200 credits
+    maxTokens: 8192,
     status: 'active',
-    tier: 'high',
-    promptCategoryCosts: {
-      short: 200,
-      standard: 300,
-      long: 500
-    }
+    cost: {
+      short: 3400,   // $0.0034 per request
+      medium: 6000,  // $0.0060 per request
+      long: 9400,    // $0.0094 per request
+    },
+    available: true,
   },
   {
-    id: 'sonar-medium-online',
-    displayName: 'Sonar Medium',
-    description: 'Balanced model for more complex tasks',
-    provider: 'perplexity',
+    id: 'gpt-4.1-mini',
+    displayName: 'GPT-4.1 Mini',
+    description: 'Smaller and faster version of GPT-4.1',
+    provider: 'openai',
     type: 'text',
     capabilities: ['text'],
-    maxTokens: 4096,
-    baseCost: 1900, // $0.0019 per 1000 tokens = 1,900 credits
+    maxTokens: 8192,
     status: 'active',
-    tier: 'medium',
-    promptCategoryCosts: {
-      short: 1900,
-      standard: 3300,
-      long: 5200
-    }
+    cost: {
+      short: 700,    // $0.0007 per request
+      medium: 1200,  // $0.0012 per request
+      long: 1900,    // $0.0019 per request
+    },
+    available: true,
   },
+  
+  // Sonar Models
   {
-    id: 'sonar-large-online',
-    displayName: 'Sonar Large',
-    description: 'Advanced model for sophisticated content generation',
-    provider: 'perplexity',
-    type: 'text',
-    capabilities: ['text'],
-    maxTokens: 4096,
-    baseCost: 8500, // $0.0085 per 1000 tokens = 8,500 credits
-    status: 'active',
-    tier: 'low',
-    promptCategoryCosts: {
-      short: 17000,
-      standard: 30000,
-      long: 47000
-    }
-  },
-  {
-    id: 'sonar-pro-small-online',
-    displayName: 'Sonar Pro Small',
-    description: 'Enhanced efficiency for everyday tasks',
-    provider: 'perplexity',
-    type: 'text',
-    capabilities: ['text'],
-    maxTokens: 4096,
-    baseCost: 200, // $0.0002 per 1000 tokens = 200 credits
-    status: 'active',
-    tier: 'high',
-    promptCategoryCosts: {
-      short: 200,
-      standard: 300,
-      long: 500
-    }
-  },
-  {
-    id: 'sonar-pro-medium-online',
+    id: 'sonar-pro-medium',
     displayName: 'Sonar Pro Medium',
-    description: 'Enhanced model for complex tasks',
-    provider: 'perplexity',
+    description: 'High performance model from Sonar with balanced resource usage',
+    provider: 'sonar',
     type: 'text',
     capabilities: ['text'],
     maxTokens: 4096,
-    baseCost: 700, // $0.0007 per 1000 tokens = 700 credits
     status: 'active',
-    tier: 'medium',
-    promptCategoryCosts: {
-      short: 700,
-      standard: 1200,
-      long: 1900
-    }
+    cost: {
+      short: 700,   // $0.0007 per request
+      medium: 1200, // $0.0012 per request
+      long: 1900,   // $0.0019 per request
+    },
+    available: true,
   },
   {
-    id: 'sonar-pro-large-online',
-    displayName: 'Sonar Pro Large',
-    description: 'Enhanced model for sophisticated content',
-    provider: 'perplexity',
+    id: 'sonar-pro-high',
+    displayName: 'Sonar Pro High',
+    description: 'Premium AI model from Sonar with advanced reasoning',
+    provider: 'sonar',
     type: 'text',
     capabilities: ['text'],
     maxTokens: 4096,
-    baseCost: 3400, // $0.0034 per 1000 tokens = 3,400 credits
     status: 'active',
-    tier: 'low',
-    promptCategoryCosts: {
-      short: 3400,
-      standard: 6000,
-      long: 9400
-    }
+    cost: {
+      short: 200,   // $0.0002 per request
+      medium: 300,  // $0.0003 per request
+      long: 500,    // $0.0005 per request
+    },
+    available: true,
   },
-  
-  // Anthropic models
   {
-    id: 'claude-3-opus',
-    displayName: 'Claude 3 Opus',
-    description: 'Anthropic\'s most intelligent model',
-    provider: 'anthropic',
+    id: 'sonar-reasoning-low',
+    displayName: 'Sonar Reasoning',
+    description: 'Specialized AI model for complex reasoning tasks',
+    provider: 'sonar',
     type: 'text',
     capabilities: ['text'],
-    maxTokens: 200000,
-    baseCost: 15000, // $0.015 per 1000 tokens = 15,000 credits
+    maxTokens: 4096,
     status: 'active',
-  },
-  {
-    id: 'claude-3-sonnet',
-    displayName: 'Claude 3 Sonnet',
-    description: 'Balanced Anthropic model for everyday tasks',
-    provider: 'anthropic',
-    type: 'text',
-    capabilities: ['text'],
-    maxTokens: 200000,
-    baseCost: 3000, // $0.003 per 1000 tokens = 3,000 credits
-    status: 'active',
-  },
-  {
-    id: 'claude-3-haiku',
-    displayName: 'Claude 3 Haiku',
-    description: 'Fast and efficient Anthropic model',
-    provider: 'anthropic',
-    type: 'text',
-    capabilities: ['text'],
-    maxTokens: 200000,
-    baseCost: 250, // $0.00025 per 1000 tokens = 250 credits
-    status: 'active',
-  },
-  
-  // Stability AI models
-  {
-    id: 'stable-diffusion-xl',
-    displayName: 'Stable Diffusion XL',
-    description: 'High quality image generation from Stability AI',
-    provider: 'stability',
-    type: 'image',
-    capabilities: ['image'],
-    maxTokens: 0,
-    baseCost: 2000, // $0.002 per image = 2,000 credits
-    status: 'active',
-  },
+    cost: {
+      short: 17000,  // $0.0170 per request
+      medium: 30000, // $0.0300 per request
+      long: 47000,   // $0.0470 per request
+    },
+    available: true,
+  }
 ];
 
 /**
@@ -268,70 +200,67 @@ export function getModelsByType(type: ModelType): ModelInfo[] {
  * Get active models
  */
 export function getActiveModels(): ModelInfo[] {
-  return models.filter(model => model.status === 'active');
+  return models.filter(model => model.status === 'active' && model.available !== false);
 }
 
 /**
- * Calculate platform markup based on inference cost
- * @param inferenceCost Base inference cost in credits
- * @returns Platform markup in credits
+ * Calculate platform fee (10% of model cost when there is no creator fee)
+ * @param modelCost Base model cost in credits
  */
-export function calculatePlatformMarkup(inferenceCost: number): number {
-  if (inferenceCost < 10_000) {
-    // < $0.01
-    return Math.floor(inferenceCost * 0.20);
-  } else if (inferenceCost < 100_000) {
-    // < $0.10
-    return Math.floor(inferenceCost * 0.10);
-  } else {
-    // Flat fee for expensive operations
-    return 500; // $0.0005 = 500 credits
+export function calculatePlatformFee(modelCost: number, hasCreatorFee: boolean = false): number {
+  // If there's a creator fee, platform gets 20% of that instead
+  if (hasCreatorFee) {
+    return 0;
   }
+  
+  return Math.floor(modelCost * 0.10); // 10% platform fee
 }
 
 /**
  * Interface for cost breakdown
  */
-interface CostBreakdown {
-  inferenceCost: number;  // Base cost for the model inference
-  platformMarkup: number;    // Platform's markup
-  creatorFee: number;     // Creator's fee (if applicable)
-  totalCost: number;      // Total cost in credits
-  dollarCost: string;     // Dollar representation (formatted)
+export interface CostBreakdown {
+  baseCost: number;     // Base cost for the model (from cost table)
+  platformFee: number;  // Platform's fee
+  creatorFee: number;   // Creator's fee (if applicable)
+  totalCost: number;    // Total cost in credits
+  dollarCost: string;   // Dollar representation (formatted)
 }
 
 /**
- * Calculate cost breakdown for a model and additional fees
+ * Calculate cost breakdown for a model and prompt length
  */
-export function getCostBreakdown(modelId: string, creatorFee: number = 0): CostBreakdown {
+export function getCostBreakdown(
+  modelId: string, 
+  promptLength: PromptLength = 'medium',
+  creatorFeePercentage: number = 0
+): CostBreakdown {
   const model = getModelById(modelId);
   
   if (!model) {
-    // Default to a minimum cost if model not found
-    return {
-      inferenceCost: 10000,
-      platformMarkup: 2000,
-      creatorFee: creatorFee,
-      totalCost: 12000 + creatorFee,
-      dollarCost: `$${((12000 + creatorFee) * 0.000001).toFixed(6)}`
-    };
+    throw new Error(`Model ${modelId} not found`);
   }
   
-  // Get base inference cost (already in credits)
-  const inferenceCost = model.baseCost;
+  // Get base cost based on prompt length
+  const baseCost = model.cost[promptLength];
   
-  // Calculate platform markup (only if no creator fee)
-  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  // Calculate creator fee if applicable
+  const creatorFee = creatorFeePercentage > 0 
+    ? Math.floor(baseCost * (creatorFeePercentage / 100)) 
+    : 0;
+  
+  // Calculate platform fee (0 if there's a creator fee since platform gets 20% of that)
+  const platformFee = calculatePlatformFee(baseCost, creatorFee > 0);
   
   // Calculate total cost
-  const totalCost = inferenceCost + platformMarkup + creatorFee;
+  const totalCost = baseCost + platformFee + creatorFee;
   
   // Format dollar cost (1 credit = $0.000001)
   const dollarCost = `$${(totalCost * 0.000001).toFixed(6)}`;
   
   return {
-    inferenceCost,
-    platformMarkup,
+    baseCost,
+    platformFee,
     creatorFee,
     totalCost,
     dollarCost
@@ -339,22 +268,43 @@ export function getCostBreakdown(modelId: string, creatorFee: number = 0): CostB
 }
 
 /**
+ * Estimate prompt length based on text content
+ */
+export function estimatePromptLength(text: string): PromptLength {
+  const charCount = text.length;
+  
+  if (charCount < 1500) {
+    return 'short';
+  } else if (charCount < 6000) {
+    return 'medium';
+  } else {
+    return 'long';
+  }
+}
+
+/**
  * Calculate credit cost for a prompt run
  */
-export function calculatePromptCreditCost(modelId: string, creatorFee: number = 0): number {
-  const breakdown = getCostBreakdown(modelId, creatorFee);
+export function calculatePromptCreditCost(
+  modelId: string, 
+  promptLength: PromptLength = 'medium',
+  creatorFeePercentage: number = 0
+): number {
+  const breakdown = getCostBreakdown(modelId, promptLength, creatorFeePercentage);
   return breakdown.totalCost;
 }
 
 /**
  * Calculate total credit cost for a flow run
  */
-export function calculateFlowCreditCost(modelIds: string[], creatorFees: number[] = []): number {
+export function calculateFlowCreditCost(
+  steps: Array<{modelId: string, promptLength: PromptLength, creatorFeePercentage?: number}>
+): number {
   let totalCost = 0;
   
-  modelIds.forEach((modelId, index) => {
-    const creatorFee = creatorFees[index] || 0;
-    const breakdown = getCostBreakdown(modelId, creatorFee);
+  steps.forEach(step => {
+    const { modelId, promptLength, creatorFeePercentage = 0 } = step;
+    const breakdown = getCostBreakdown(modelId, promptLength, creatorFeePercentage);
     totalCost += breakdown.totalCost;
   });
   

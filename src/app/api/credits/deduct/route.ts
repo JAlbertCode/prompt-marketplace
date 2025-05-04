@@ -1,126 +1,105 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { burnCredits, getUserTotalCredits, hasEnoughCredits } from '@/lib/credits';
+import { getModelById, calculatePromptCreditCost } from '@/lib/models/modelRegistry';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
+// Validate request body
+const deductCreditsSchema = z.object({
+  modelId: z.string(),
+  promptLength: z.enum(['short', 'medium', 'long']).optional(),
+  promptText: z.string().optional(),
+  creatorId: z.string().optional(),
+  creatorFeePercentage: z.number().min(0).max(100).optional(),
+  flowId: z.string().optional(),
+  itemType: z.enum(['prompt', 'flow', 'completion']).optional(),
+  itemId: z.string().optional(),
+});
+
+/**
+ * POST /api/credits/deduct
+ * 
+ * Deduct credits from the user's account
+ */
+export async function POST(req: NextRequest) {
   try {
-    // Get the authenticated user
+    // Get session and verify authentication
     const session = await getServerSession(authOptions);
+    
     if (!session?.user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Parse request body
-    const body = await request.json();
-    const { amount, reason, itemId, itemType } = body;
-
-    if (!amount || typeof amount !== 'number' || amount <= 0) {
-      return NextResponse.json({ error: 'Valid amount is required' }, { status: 400 });
+    
+    const userId = session.user.id;
+    
+    // Parse and validate request body
+    const body = await req.json();
+    const validation = deductCreditsSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return NextResponse.json({ 
+        error: 'Invalid request', 
+        details: validation.error.format() 
+      }, { status: 400 });
     }
-
-    if (!reason || !itemId || !itemType) {
-      return NextResponse.json({ error: 'reason, itemId, and itemType are required' }, { status: 400 });
+    
+    const { 
+      modelId, 
+      promptLength, 
+      promptText,
+      creatorId,
+      creatorFeePercentage,
+      flowId,
+      itemType,
+      itemId
+    } = validation.data;
+    
+    // Verify the model exists
+    const model = getModelById(modelId);
+    if (!model) {
+      return NextResponse.json({ error: 'Model not found' }, { status: 404 });
     }
-
-    // Find the user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email as string },
-      select: { id: true, credits: true }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
+    
+    // Calculate the cost
+    const cost = calculatePromptCreditCost(
+      modelId, 
+      promptLength || (promptText ? undefined : 'medium'), 
+      creatorFeePercentage || 0
+    );
+    
     // Check if user has enough credits
-    if (user.credits < amount) {
-      return NextResponse.json(
-        { error: 'Insufficient credits', available: user.credits, required: amount },
-        { status: 400 }
-      );
+    const hasCredits = await hasEnoughCredits(userId, cost);
+    if (!hasCredits) {
+      return NextResponse.json({ 
+        error: 'Insufficient credits',
+        required: cost,
+        available: await getUserTotalCredits(userId)
+      }, { status: 403 });
     }
-
-    // Get creator information for profit sharing
-    let creatorId = null;
-    let creatorShare = 0;
-
-    if (itemType === 'prompt') {
-      const prompt = await prisma.prompt.findUnique({
-        where: { id: itemId },
-        select: { id: true, creatorId: true, creatorFee: true }
-      });
-
-      if (prompt && prompt.creatorId && prompt.creatorFee > 0) {
-        creatorId = prompt.creatorId;
-        creatorShare = prompt.creatorFee;
-      }
-    } else if (itemType === 'flow') {
-      const promptStep = await prisma.promptFlowStep.findFirst({
-        where: { flowId: itemId },
-        select: { prompt: { select: { id: true, creatorId: true, creatorFee: true } } }
-      });
-
-      if (promptStep?.prompt?.creatorId && promptStep.prompt.creatorFee > 0) {
-        creatorId = promptStep.prompt.creatorId;
-        creatorShare = promptStep.prompt.creatorFee;
-      }
-    }
-
-    // Start a transaction to handle atomicity
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Deduct credits from user
-      const updatedUser = await tx.user.update({
-        where: { id: user.id },
-        data: {
-          credits: { decrement: amount }
-        },
-        select: { id: true, credits: true }
-      });
-
-      // 2. Add credits to creator if applicable
-      if (creatorId && creatorShare > 0) {
-        await tx.user.update({
-          where: { id: creatorId },
-          data: {
-            credits: { increment: creatorShare }
-          }
-        });
-      }
-
-      // 3. Record the transaction in credit history
-      await tx.creditTransaction.create({
-        data: {
-          userId: user.id,
-          amount: -amount,
-          reason,
-          itemId,
-          itemType,
-          creatorId: creatorId || null
-        }
-      });
-
-      // 4. Record creator's earning if applicable
-      if (creatorId && creatorShare > 0) {
-        await tx.creditTransaction.create({
-          data: {
-            userId: creatorId,
-            amount: creatorShare,
-            reason: `Creator earnings: ${reason}`,
-            itemId,
-            itemType,
-            creatorId: null
-          }
-        });
-      }
-
-      return { updatedCredits: updatedUser.credits };
+    
+    // Burn credits
+    const success = await burnCredits({
+      userId,
+      modelId,
+      promptLength,
+      promptText,
+      creatorId,
+      creatorFeePercentage,
+      flowId,
+      itemType,
+      itemId
     });
-
-    // Return success response
+    
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to deduct credits' }, { status: 500 });
+    }
+    
+    // Return success response with updated credit balance
     return NextResponse.json({
       success: true,
-      remainingCredits: result.updatedCredits
+      deducted: cost,
+      remaining: await getUserTotalCredits(userId)
     });
   } catch (error) {
     console.error('Error deducting credits:', error);

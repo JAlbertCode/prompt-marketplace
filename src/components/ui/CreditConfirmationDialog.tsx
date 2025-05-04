@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Button from '@/components/shared/Button';
 import { getCostBreakdown } from '@/lib/models/modelRegistry';
 import { useCreditStore } from '@/store/useCreditStore';

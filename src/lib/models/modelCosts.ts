@@ -5,7 +5,7 @@
  * All costs are stored as whole-number credits (no decimals)
  */
 
-import { getModelById, ModelInfo, calculatePlatformMarkup } from './modelRegistry';
+import { getModelById, ModelInfo, calculatePlatformFee } from './modelRegistry';
 
 // API pricing constants in dollars (per 1K tokens)
 const OPENAI_PRICING = {
@@ -197,7 +197,7 @@ export function calculateTotalPromptCost(modelId: string, creatorFee: number): n
   const inferenceCost = model.baseCost;
   
   // Platform markup only if no creator fee
-  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformFee(inferenceCost);
   
   return inferenceCost + creatorFee + platformMarkup;
 }
@@ -253,7 +253,7 @@ export function getCostBreakdown(modelId: string, creatorFee: number): {
   const inferenceCost = model?.baseCost || 10000;
   
   // Platform markup only applied if no creator fee
-  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformFee(inferenceCost);
   
   const totalCost = inferenceCost + creatorFee + platformMarkup;
   const dollarCost = (totalCost * 0.000001).toFixed(6);
