@@ -1,42 +1,44 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
 
 interface UnlockedFlowState {
-  unlockedFlowIds: string[];
-  unlockFlow: (flowId: string) => void;
+  // The list of flow IDs that the user has unlocked
+  unlockedFlows: string[];
+  
+  // Check if a flow is unlocked
   isFlowUnlocked: (flowId: string) => boolean;
-  resetStore: () => void;
+  
+  // Unlock a flow
+  unlockFlow: (flowId: string) => void;
+  
+  // Set the initial unlocked flows list (e.g., from the server)
+  setUnlockedFlows: (flowIds: string[]) => void;
 }
 
 export const useUnlockedFlowStore = create<UnlockedFlowState>()(
   persist(
     (set, get) => ({
-      unlockedFlowIds: ['flow-1'], // Start with sample flow unlocked
-      
-      unlockFlow: (flowId: string) => {
-        const currentUnlocked = get().unlockedFlowIds;
-        
-        // Don't add duplicates
-        if (currentUnlocked.includes(flowId)) {
-          return;
-        }
-        
-        set((state) => ({
-          unlockedFlowIds: [...state.unlockedFlowIds, flowId]
-        }));
-      },
+      unlockedFlows: [],
       
       isFlowUnlocked: (flowId: string) => {
-        return get().unlockedFlowIds.includes(flowId);
+        return get().unlockedFlows.includes(flowId);
       },
       
-      resetStore: () => {
-        set({ unlockedFlowIds: ['flow-1'] });
-      }
+      unlockFlow: (flowId: string) => {
+        // Only add the flow if it's not already unlocked
+        if (!get().isFlowUnlocked(flowId)) {
+          set((state) => ({
+            unlockedFlows: [...state.unlockedFlows, flowId],
+          }));
+        }
+      },
+      
+      setUnlockedFlows: (flowIds: string[]) => {
+        set({ unlockedFlows: flowIds });
+      },
     }),
     {
       name: 'unlocked-flows-storage',
-      storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : null)
     }
   )
 );

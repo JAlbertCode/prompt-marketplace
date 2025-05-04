@@ -96,7 +96,12 @@ This flow showcases how to:
   - Minimum platform fee: 1 credit
 - **Credit Distribution**: Credits are transferred, not burned, during transactions
 - **Flow Execution**: Each step in a flow burns credits separately when executed
+- **Premium Flows**: Creators can set one-time unlock prices for premium flows
+- **Unlock Mechanics**: Users pay credits once to permanently unlock a premium flow
 - **Earnings Split**: Creators earn 80% of unlock fees for premium flows
+- **Credit Confirmation**: Dialogs to confirm credit charges for both prompt execution and flow unlocks
+- **Transaction History**: Complete tracking of all credit movements with timestamps and reasons
+- **Client-Server Sync**: Unlocked flows are synced between client and server for reliable access
 
 ### Marketplace
 - Browse both single prompts and flows
@@ -181,11 +186,14 @@ npm run dev
 │   │   ├── api/              # API routes
 │   │   │   ├── auth/         # Authentication API
 │   │   │   ├── credits/      # Credit management API
+│   │   │   │   └── deduct/   # Credit deduction API
 │   │   │   ├── favorites/    # Favorites API
 │   │   │   ├── flows/        # Flows API
+│   │   │   │   └── unlock/   # Flow unlocking API
 │   │   │   ├── prompts/      # Prompts API
 │   │   │   ├── register/     # User registration API
 │   │   │   └── user/         # User profile API
+│   │   │       └── unlocked-flows/ # Unlocked flows API
 │   │   ├── dashboard/        # User dashboard
 │   │   │   ├── credits/      # Credit purchase and management
 │   │   │   └── creator/      # Creator earnings dashboard
@@ -200,9 +208,12 @@ npm run dev
 │   │   ├── marketplace/      # Marketplace components
 │   │   ├── creator/          # Prompt and flow creation
 │   │   ├── runner/           # Prompt and flow execution
+│   │   │   └── FlowRunner.tsx # Flow execution component with unlock functionality
 │   │   └── ui/               # Common UI elements
 │   │       ├── CreditBalance.tsx    # Credit balance display
-│   │       └── CreditConfirmationDialog.tsx # Credit confirmation UI
+│   │       ├── CreditConfirmationDialog.tsx # Credit confirmation UI
+│   │       ├── FlowUnlockDialog.tsx # Flow unlock confirmation UI
+│   │       └── ModelInfoBadge.tsx   # Model info with price breakdown
 │   ├── providers/            # React context providers
 │   ├── utils/                # Utilities and helpers
 │   │   ├── creditManager.ts  # Credit management logic
@@ -211,7 +222,9 @@ npm run dev
 │   │   └── exportManager.ts  # Export functionality
 │   ├── lib/                  # Utilities and logic
 │   │   ├── store/            # Zustand stores
+│   │   │   └── useUnlockedFlowStore.ts # Store for tracking unlocked flows
 │   │   ├── api/              # API integrations
+│   │   │   └── fetchUnlockedFlows.ts # Utility to fetch unlocked flows
 │   │   └── utils/            # Helper utilities
 │   ├── types/                # TypeScript definitions
 │   └── styles/               # Global styles
@@ -236,12 +249,15 @@ npm run dev
 - **Favorites Management**: Save and organize your favorite prompts and flows
 - **Profile Settings**: Update user profile and change password
 - **Credit Purchase System**: Buy credits with integrated payment processing
-- **Creator Payments**: Automatic distribution of fees to prompt creators
+- **Premium Flow System**: Support for flows with one-time unlock fees
+- **Flow Unlocking**: Users can permanently unlock premium flows with credits
+- **Creator Payments**: Automatic distribution of fees to prompt creators (80% to creator)
 - **Credit Management Dashboard**: View credit balance, transaction history, and purchase credits
 - **Creator Earnings Dashboard**: View earnings from prompt uses and flow unlocks
 - **Credit Confirmation Dialogs**: Confirm credit charges before running prompts or unlocking flows
 - **Credit Balance Component**: Display user's credit balance throughout the app
-- **API Routes for Credit System**: Handle credit transactions, charges, and unlocks 
+- **API Routes for Credit System**: Handle credit transactions, charges, and unlocks
+- **Flow Preview for Locked Flows**: Preview flow steps before unlocking
 
 ### In Progress
 - Connecting the credit system to the existing prompt and flow execution flows
@@ -257,7 +273,7 @@ npm run dev
 1. No way to edit prompts after publication
 2. Flow builder needs search functionality for adding prompts
 3. Flow export implementation is incomplete
-4. Credit confirmation dialog needs to be integrated with prompt execution
+4. ~~Credit confirmation dialog needs to be integrated with prompt execution~~ (Fixed May 2025)
 5. Credit purchase flow mock implementation needs to be replaced with actual Stripe integration
 6. ~~Navigation issues in prompt execution flow~~ (Fixed April 2025)
 7. ~~Image generation not displaying properly~~ (Fixed April 2025)
@@ -266,6 +282,18 @@ npm run dev
 10. ~~Outdated prompt references in flow examples~~ (Fixed May 2025)
 
 ## Latest Updates
+
+### Flow Unlock System Implementation (May 2025)
+- Implemented premium flow functionality with one-time unlock fees
+- Created flow unlock dialog with visual preview and credit confirmation
+- Added server-side API for handling flow unlocks with transaction support
+- Implemented client-side tracking of unlocked flows with Zustand store
+- Added ability for creators to set unlock prices when publishing flows
+- Created flow preview component for locked flows
+- Implemented server-client sync for unlocked flows to maintain state
+- Added 80/20 revenue split for flow unlocks (80% to creator)
+- Created transaction history for all flow unlock operations
+- Added unlock indicator in flow details and marketplace
 
 ### Credit System Implementation (May 2025)
 - Created credit purchase page with different credit packages
