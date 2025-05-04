@@ -9,16 +9,14 @@ interface ModelSelectorProps {
 }
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onChange }) => {
-  // Get all active text models
+  // Get all active models - don't filter by type so we include image models too
   const allModels = getActiveModels();
-  const textModels = getModelsByType('text').filter(model => model.status === 'active');
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-      {textModels.map((model) => {
-        // Get cost breakdown for display
-        const costBreakdown = getModelById(model.id);
-        const baseCost = costBreakdown ? Math.ceil(costBreakdown.baseCost * 1000000) : 100;
+      {allModels.map((model) => {
+        // Get base cost for medium prompts
+        const baseCost = model.cost.medium;
         
         return (
           <div
@@ -33,7 +31,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onChange })
             <div className="flex justify-between items-start">
               <h3 className="font-medium text-sm">{model.displayName}</h3>
               <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-                {baseCost} credits
+                {baseCost.toLocaleString()} credits
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-1">{model.description}</p>
@@ -46,6 +44,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onChange })
               )}
               {model.capabilities.includes('image') && (
                 <span className="text-xs bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded">Image</span>
+              )}
+              {model.capabilities.includes('search') && (
+                <span className="text-xs bg-green-100 text-green-600 px-1.5 py-0.5 rounded">Search</span>
               )}
             </div>
           </div>

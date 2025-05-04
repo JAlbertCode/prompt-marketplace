@@ -12,7 +12,7 @@
  * $1 = 1,000,000 credits
  */
 
-import { prisma } from './db';
+import { prisma } from '@/lib/db';
 import { PromptLength, calculatePromptCreditCost, getModelById } from '@/lib/models/modelRegistry';
 
 export type CreditBucketType = 'purchased' | 'bonus' | 'referral';

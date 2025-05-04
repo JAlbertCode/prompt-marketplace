@@ -34,7 +34,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
   
   // Get cost breakdown
-  const costBreakdown = getCostBreakdown(prompt.model, prompt.creatorFee || 0);
+  const promptLength = prompt.inputFields.some(f => f.type === 'textarea') ? 'long' : 'medium';
+  const costBreakdown = getCostBreakdown(prompt.model, promptLength, prompt.creatorFee || 0);
   const totalCost = costBreakdown.totalCost;
   
   // Determine prompt capabilities

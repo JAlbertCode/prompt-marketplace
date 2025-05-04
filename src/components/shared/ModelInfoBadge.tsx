@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { getModelById, getCostBreakdown } from '@/lib/models/modelRegistry';
+import { getModelById, getCostBreakdown, PromptLength } from '@/lib/models/modelRegistry';
 
 interface ModelInfoBadgeProps {
   modelId: string;
   creatorFee?: number;
+  promptLength?: PromptLength;
   showDetails?: boolean;
 }
 
 const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({ 
   modelId, 
   creatorFee = 0,
+  promptLength = 'medium',
   showDetails = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(showDetails);
@@ -21,7 +23,8 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
     return null;
   }
 
-  const costBreakdown = getCostBreakdown(modelId, creatorFee);
+  // Get cost breakdown with the correct parameters
+  const costBreakdown = getCostBreakdown(modelId, promptLength, creatorFee);
   
   return (
     <div className="inline-block">
@@ -54,8 +57,8 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
             <div>Provider:</div>
             <div className="font-medium text-gray-800">{model.provider}</div>
             
-            <div>Inference cost:</div>
-            <div className="font-medium text-gray-800">{costBreakdown.inferenceCost.toLocaleString()} credits</div>
+            <div>Base cost:</div>
+            <div className="font-medium text-gray-800">{costBreakdown.baseCost.toLocaleString()} credits</div>
             
             <div>Platform fee:</div>
             <div className="font-medium text-gray-800">{costBreakdown.platformFee.toLocaleString()} credits</div>
@@ -69,10 +72,10 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
             <div className="font-medium text-gray-800">{costBreakdown.totalCost.toLocaleString()} credits</div>
             
             <div>Dollar cost:</div>
-            <div className="font-medium text-gray-800">${costBreakdown.dollarCost}</div>
+            <div className="font-medium text-gray-800">{costBreakdown.dollarCost}</div>
             
             <div className="col-span-2 mt-2 text-gray-500 text-[11px]">
-              With $10 credit purchase, you get approximately {costBreakdown.runsFor10Dollars.toLocaleString()} runs.
+              With $10 credit purchase, you get approximately {Math.floor(10000000 / costBreakdown.totalCost).toLocaleString()} runs.
             </div>
           </div>
         </div>

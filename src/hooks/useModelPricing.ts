@@ -25,7 +25,7 @@ interface ModelPricingResult {
 /**
  * Hook for easily accessing model pricing and credit availability
  */
-export default function useModelPricing({
+export function useModelPricing({
   modelId,
   promptLength,
   creatorFeePercentage = 0,

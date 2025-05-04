@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { getModelById, getCostBreakdown } from '@/lib/models/modelRegistry';
-import { InformationCircleIcon } from '@heroicons/react/24/outline';
+import { getModelById, getCostBreakdown, PromptLength } from '@/lib/models/modelRegistry';
 
 interface ModelInfoBadgeProps {
   modelId: string;
   creatorFee?: number;
+  promptLength?: PromptLength;
   showDetails?: boolean;
   className?: string;
 }
@@ -12,6 +12,7 @@ interface ModelInfoBadgeProps {
 const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
   modelId,
   creatorFee = 0,
+  promptLength = 'medium',
   showDetails = false,
   className = '',
 }) => {
@@ -27,13 +28,13 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
     );
   }
   
-  // Get cost breakdown
-  const costBreakdown = getCostBreakdown(modelId, creatorFee);
+  // Get cost breakdown with the correct parameters
+  const costBreakdown = getCostBreakdown(modelId, promptLength, creatorFee);
   
   // Define provider-based colors
-  const providerColors = {
+  const providerColors: Record<string, string> = {
     openai: 'bg-green-100 text-green-800 border-green-200',
-    perplexity: 'bg-purple-100 text-purple-800 border-purple-200',
+    sonar: 'bg-purple-100 text-purple-800 border-purple-200',
     anthropic: 'bg-blue-100 text-blue-800 border-blue-200',
     stability: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     internal: 'bg-gray-100 text-gray-800 border-gray-200',
@@ -66,7 +67,8 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
               type="button"
               className="flex items-center focus:outline-none"
             >
-              <InformationCircleIcon className="h-3.5 w-3.5 opacity-70" />
+              {/* Simple info icon instead of heroicon */}
+              <span className="h-3.5 w-3.5 flex items-center justify-center rounded-full border border-current opacity-70 text-xs">i</span>
             </button>
             
             {showTooltip && (
@@ -80,7 +82,7 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span>Base cost:</span>
-                      <span>{costBreakdown.inferenceCost.toLocaleString()}</span>
+                      <span>{costBreakdown.baseCost.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Platform fee:</span>
@@ -97,7 +99,7 @@ const ModelInfoBadge: React.FC<ModelInfoBadgeProps> = ({
                       <span>{costBreakdown.totalCost.toLocaleString()} credits</span>
                     </div>
                     <div className="text-xs text-right text-gray-500">
-                      ${costBreakdown.dollarCost}
+                      ${(costBreakdown.totalCost * 0.000001).toFixed(6)}
                     </div>
                   </div>
                 </div>

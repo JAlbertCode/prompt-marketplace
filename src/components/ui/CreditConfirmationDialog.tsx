@@ -28,7 +28,7 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   // Get cost breakdown
-  const costBreakdown = getCostBreakdown(modelId);
+  const costBreakdown = getCostBreakdown(modelId, 'medium', 0);
   const totalCost = costBreakdown.totalCost;
   
   const handleConfirm = async () => {
@@ -102,7 +102,7 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base model cost:</span>
-                  <span>{costBreakdown.inferenceCost.toLocaleString()}</span>
+                  <span>{costBreakdown.baseCost.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Platform fee:</span>

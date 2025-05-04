@@ -6,8 +6,7 @@ import ModelSelector from './ModelSelector';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { usePromptStore } from '@/store/usePromptStore';
-import { getModelById } from '@/lib/models/modelRegistry';
-import { getDollarCostPerRun, getRunsPerDollar } from '@/lib/models/modelCosts';
+import { getModelById, getCostBreakdown } from '@/lib/models/modelRegistry';
 
 interface PromptBuilderProps {
   initialPrompt?: Partial<Prompt>;
@@ -28,7 +27,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
   const [creatorFee, setCreatorFee] = useState(initialPrompt?.creatorFee || 0);
   const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 0);
-  const [model, setModel] = useState<string>(initialPrompt?.model || 'sonar-medium-chat');
+  const [model, setModel] = useState<string>(initialPrompt?.model || 'gpt-4o');
   const [imageModel, setImageModel] = useState<ImageModel | undefined>(initialPrompt?.imageModel);
   const [inputFields, setInputFields] = useState<InputField[]>(initialPrompt?.inputFields || []);
   const [isPublished, setIsPublished] = useState(initialPrompt?.isPublished || false);
@@ -57,7 +56,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         setSystemPrompt(promptToEdit.systemPrompt || '');
         setCreatorFee(promptToEdit.creatorFee || 50);
         setCreditCost(promptToEdit.creditCost || 50);
-        setModel(promptToEdit.model || 'sonar-medium-chat');
+        setModel(promptToEdit.model || 'gpt-4o');
         setImageModel(promptToEdit.imageModel);
         setInputFields(promptToEdit.inputFields || []);
         setIsPrivate(promptToEdit.isPrivate || false);
@@ -69,22 +68,62 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   
   // Calculate total cost whenever the model or fee changes
   useEffect(() => {
-    // Get the baseline cost for the selected model
+    // Get the model information
     const modelInfo = getModelById(model);
-    const baselineCost = modelInfo?.baseCost || 10000; // Default to 10000 credits if model not found
+    
+    if (!modelInfo) {
+      // Default to 10000 credits if model not found
+      setCreditCost(10000 + creatorFee);
+      return;
+    }
     
     // Creator fee must be at least 0
     const safeFee = Math.max(0, creatorFee);
     
-    // Calculate platform fee (10% of creator fee or 100 minimum)
-    const platformFee = safeFee > 0 ? Math.max(Math.floor(safeFee * 0.1), 1) : 100;
-    
-    // Calculate total cost
-    const total = baselineCost + safeFee + platformFee;
+    // Get cost breakdown for medium prompt
+    const costBreakdown = getCostBreakdown(model, 'medium', safeFee);
     
     // Update total cost
-    setCreditCost(total);
+    setCreditCost(costBreakdown.totalCost);
   }, [model, creatorFee]);
+  
+  // Update capabilities based on selected model
+  useEffect(() => {
+    const selectedModel = getModelById(model);
+    if (selectedModel) {
+      // Update capabilities based on model type
+      const newCapabilities: ('text' | 'image' | 'code')[] = [];
+      
+      if (selectedModel.type === 'text' || selectedModel.capabilities.includes('text')) {
+        newCapabilities.push('text');
+      }
+      
+      if (selectedModel.type === 'image' || selectedModel.capabilities.includes('image')) {
+        newCapabilities.push('image');
+      }
+      
+      if (selectedModel.capabilities.includes('code')) {
+        newCapabilities.push('code');
+      }
+      
+      // Only update if capabilities have changed
+      if (JSON.stringify(newCapabilities.sort()) !== JSON.stringify(capabilities.sort())) {
+        setCapabilities(newCapabilities);
+      }
+      
+      // Update output type based on model type
+      if (selectedModel.type === 'image' && outputType !== 'image') {
+        setOutputType('image');
+      } else if (selectedModel.type === 'text' && outputType !== 'text') {
+        setOutputType('text');
+      }
+      
+      // For image models, set the imageModel too
+      if (selectedModel.type === 'image') {
+        setImageModel(selectedModel.id as ImageModel);
+      }
+    }
+  }, [model]);
 
   const addInputField = () => {
     const newField: InputField = {
@@ -218,13 +257,71 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Text Model <span className="text-red-500">*</span>
+            Select Model <span className="text-red-500">*</span>
           </label>
           <ModelSelector 
             currentModel={model} 
             onChange={setModel} 
           />
         </div>
+        
+        {/* Display model capabilities */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Model Capabilities
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {capabilities.map(capability => (
+              <span 
+                key={capability}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  capability === 'text' ? 'bg-blue-100 text-blue-800' :
+                  capability === 'image' ? 'bg-pink-100 text-pink-800' :
+                  'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {capability.charAt(0).toUpperCase() + capability.slice(1)}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        {/* Display output type selector for models with multiple capabilities */}
+        {capabilities.length > 1 && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Primary Output Type <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-3">
+              {capabilities.includes('text') && (
+                <label className="inline-flex items-center">
+                  <input 
+                    type="radio" 
+                    name="outputType" 
+                    value="text"
+                    checked={outputType === 'text'}
+                    onChange={() => setOutputType('text')}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Text</span>
+                </label>
+              )}
+              {capabilities.includes('image') && (
+                <label className="inline-flex items-center">
+                  <input 
+                    type="radio" 
+                    name="outputType" 
+                    value="image"
+                    checked={outputType === 'image'}
+                    onChange={() => setOutputType('image')}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Image</span>
+                </label>
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -233,7 +330,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
           <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-gray-700">System cost for {model}:</span>
-              <span className="font-medium">{getModelById(model)?.baseCost || 10000} credits</span>
+              <span className="font-medium">{model && getModelById(model)?.cost.medium.toLocaleString() || 10000} credits</span>
             </div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-gray-700">Your fee:</span>
@@ -264,11 +361,11 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
               <div className="bg-blue-50 p-2 rounded-md text-sm">
                 <div className="flex justify-between mb-1">
                   <span>Cost per run:</span>
-                  <span className="font-medium">${getDollarCostPerRun(model, creatorFee).toFixed(6)}</span>
+                  <span className="font-medium">${(creditCost * 0.000001).toFixed(6)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Runs per $10:</span>
-                  <span className="font-medium">{getRunsPerDollar(model, creatorFee, 10)} runs</span>
+                  <span className="font-medium">{Math.floor(10000000 / creditCost)} runs</span>
                 </div>
               </div>
             </div>
@@ -295,76 +392,76 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         <div className="space-y-4">
           {inputFields.map((field, index) => (
             <div key={field.id} className="border border-gray-200 rounded-md p-4">
-            <div className="flex justify-between items-center mb-3">
-            <h3 className="font-medium">Field {index + 1}</h3>
-            <button
-            type="button"
-            onClick={() => removeInputField(field.id)}
-            className="text-red-600 hover:text-red-800 text-sm"
-            >
-            Remove
-            </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-            <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
-            Label <span className="text-red-500">*</span>
-            </label>
-            <input
-            type="text"
-            id={`field-${field.id}-label`}
-            value={field.label}
-            onChange={(e) => updateInputField(field.id, { label: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g., Topic"
-            required
-            />
-            </div>
-            
-            <div>
-            <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
-            Placeholder
-            </label>
-            <input
-            type="text"
-            id={`field-${field.id}-placeholder`}
-            value={field.placeholder}
-            onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g., Enter a topic..."
-            />
-            </div>
-            
-            <div>
-            <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
-            Type
-            </label>
-            <select
-            id={`field-${field.id}-type`}
-            value={field.type || 'text'}
-            onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-            <option value="text">Text</option>
-            <option value="textarea">Text Area</option>
-            <option value="select">Select</option>
-            </select>
-            </div>
-            
-            <div className="flex items-center">
-            <input
-            type="checkbox"
-            id={`field-${field.id}-required`}
-            checked={field.required}
-            onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
-            Required field
-            </label>
-            </div>
-            </div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-medium">Field {index + 1}</h3>
+                <button
+                  type="button"
+                  onClick={() => removeInputField(field.id)}
+                  className="text-red-600 hover:text-red-800 text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Label <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id={`field-${field.id}-label`}
+                    value={field.label}
+                    onChange={(e) => updateInputField(field.id, { label: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g., Topic"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    id={`field-${field.id}-placeholder`}
+                    value={field.placeholder}
+                    onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g., Enter a topic..."
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    id={`field-${field.id}-type`}
+                    value={field.type || 'text'}
+                    onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="text">Text</option>
+                    <option value="textarea">Text Area</option>
+                    <option value="select">Select</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`field-${field.id}-required`}
+                    checked={field.required}
+                    onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
+                    Required field
+                  </label>
+                </div>
+              </div>
 
               {/* Select options editor */}
               {field.type === 'select' && (

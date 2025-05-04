@@ -75,6 +75,21 @@ const models: ModelInfo[] = [
     available: true,
     isPopular: true,
   },
+  {
+    id: 'gpt-4o-audio',
+    displayName: 'GPT-4o Audio',
+    description: 'Process audio input with GPT-4o',
+    provider: 'openai',
+    type: 'audio',
+    capabilities: ['text', 'audio'],
+    status: 'active',
+    cost: {
+      short: 44000,  // $0.0440 per request
+      medium: 80000, // $0.0800 per request
+      long: 124000,  // $0.1240 per request
+    },
+    available: true,
+  },
   
   // GPT-4.1 Series
   {
@@ -108,6 +123,70 @@ const models: ModelInfo[] = [
       long: 1900,    // $0.0019 per request
     },
     available: true,
+  },
+  {
+    id: 'gpt-4.1-nano',
+    displayName: 'GPT-4.1 Nano',
+    description: 'Ultra-efficient version of GPT-4.1',
+    provider: 'openai',
+    type: 'text',
+    capabilities: ['text'],
+    maxTokens: 4096,
+    status: 'active',
+    cost: {
+      short: 200,    // $0.0002 per request
+      medium: 300,   // $0.0003 per request
+      long: 500,     // $0.0005 per request
+    },
+    available: true,
+  },
+  
+  // OpenAI Image Models
+  {
+    id: 'gpt-image-1-text',
+    displayName: 'GPT Image 1 (Text)',
+    description: 'Generate images from text prompts',
+    provider: 'openai',
+    type: 'image',
+    capabilities: ['image'],
+    status: 'active',
+    cost: {
+      short: 5000,   // $0.0050 per image
+      medium: 5000,  // Same cost regardless of prompt length
+      long: 5000,    // Same cost regardless of prompt length
+    },
+    available: true,
+  },
+  {
+    id: 'gpt-image-1-image',
+    displayName: 'GPT Image 1 (Image)',
+    description: 'Edit or enhance existing images',
+    provider: 'openai',
+    type: 'image',
+    capabilities: ['image'],
+    status: 'active',
+    cost: {
+      short: 17000,  // $0.0170 per request
+      medium: 30000, // $0.0300 per request
+      long: 47000,   // $0.0470 per request
+    },
+    available: true,
+  },
+  {
+    id: 'dall-e-3',
+    displayName: 'DALL-E 3',
+    description: 'Generate detailed images from text descriptions',
+    provider: 'openai',
+    type: 'image',
+    capabilities: ['image'],
+    status: 'active',
+    cost: {
+      short: 20000,  // $0.0200 per image
+      medium: 20000, // Same cost regardless of prompt length
+      long: 20000,   // Same cost regardless of prompt length
+    },
+    available: true,
+    isPopular: true,
   },
   
   // Sonar Models
@@ -156,6 +235,22 @@ const models: ModelInfo[] = [
       short: 17000,  // $0.0170 per request
       medium: 30000, // $0.0300 per request
       long: 47000,   // $0.0470 per request
+    },
+    available: true,
+  },
+  {
+    id: 'sonar-deep-research',
+    displayName: 'Sonar Deep Research',
+    description: 'Comprehensive research model with web search capabilities',
+    provider: 'sonar',
+    type: 'text',
+    capabilities: ['text', 'search'],
+    maxTokens: 8192,
+    status: 'active',
+    cost: {
+      short: 2000,   // $0.0020 per request
+      medium: 8000,  // $0.0080 per request
+      long: 5000,    // $0.0050 per request
     },
     available: true,
   }
