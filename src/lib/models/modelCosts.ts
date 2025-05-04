@@ -1,12 +1,13 @@
 /**
  * Utility functions for calculating model costs
  * Based on actual provider pricing with conversion to our credit system
- * 1,000 credits = $1.00
+ * 1 credit = $0.000001, therefore $1 = 1,000,000 credits
+ * All costs are stored as whole-number credits (no decimals)
  */
 
-import { getModelById, ModelInfo } from './modelRegistry';
+import { getModelById, ModelInfo, calculatePlatformMarkup } from './modelRegistry';
 
-// API pricing constants (per 1K tokens)
+// API pricing constants in dollars (per 1K tokens)
 const OPENAI_PRICING = {
   'gpt-4o': {
     input: 0.005, // $0.005 per 1K input tokens
@@ -160,25 +161,22 @@ function calculateImageModelCost(model: ModelInfo): number {
 }
 
 /**
- * Convert dollar cost to credits with appropriate margin
+ * Convert dollar cost to credits with whole-number rounding
  * @param apiCost The raw API cost in dollars
- * @returns The cost in credits (1,000 credits = $1.00)
+ * @returns The cost in whole-number credits (1 credit = $0.000001)
  */
 export function convertApiCostToCredits(apiCost: number): number {
-  // Apply a 20% margin to cover operational costs
-  const withMargin = apiCost * 1.2;
+  // Convert to credits (1 credit = $0.000001)
+  const credits = apiCost * 1_000_000;
   
-  // Convert to credits (1,000 credits = $1.00)
-  const credits = withMargin * 1000;
-  
-  // Round to nearest 5 credits for cleaner pricing
-  return Math.ceil(credits / 5) * 5;
+  // Round to whole number credits
+  return Math.ceil(credits);
 }
 
 /**
  * Calculate the recommended base cost for a model in credits
  * @param modelId The ID of the model
- * @returns The recommended base cost in credits
+ * @returns The recommended base cost in whole-number credits
  */
 export function calculateRecommendedBaseCost(modelId: string): number {
   const apiCost = calculateApiCost(modelId);
@@ -186,34 +184,22 @@ export function calculateRecommendedBaseCost(modelId: string): number {
 }
 
 /**
- * Calculate platform fee based on creator fee
- * @param creatorFee The creator fee in credits
- * @returns The platform fee in credits
- */
-export function calculatePlatformFee(creatorFee: number): number {
-  // If creator fee is 0, use the standard platform fee of 100 credits
-  if (creatorFee <= 0) {
-    return 100;
-  }
-  
-  // Otherwise, take 10% of creator fee with a minimum of 10 credits
-  return Math.max(Math.floor(creatorFee * 0.1), 10);
-}
-
-/**
  * Calculate the total cost for running a prompt
  * @param modelId The model ID
  * @param creatorFee The creator fee in credits
- * @returns The total cost in credits
+ * @returns The total cost in whole-number credits
  */
 export function calculateTotalPromptCost(modelId: string, creatorFee: number): number {
   const model = getModelById(modelId);
   if (!model) return 0;
   
-  const baseCost = model.baseCost;
-  const platformFee = calculatePlatformFee(creatorFee);
+  // Base cost is already in credits
+  const inferenceCost = model.baseCost;
   
-  return baseCost + creatorFee + platformFee;
+  // Platform markup only if no creator fee
+  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  
+  return inferenceCost + creatorFee + platformMarkup;
 }
 
 /**
@@ -227,8 +213,8 @@ export function getRunsPerDollar(modelId: string, creatorFee: number, dollarAmou
   const totalCostPerRun = calculateTotalPromptCost(modelId, creatorFee);
   if (totalCostPerRun <= 0) return 0;
   
-  // 1,000 credits = $1.00
-  const totalCredits = dollarAmount * 1000;
+  // $1 = 1,000,000 credits
+  const totalCredits = dollarAmount * 1_000_000;
   
   // Round down to get whole number of runs
   return Math.floor(totalCredits / totalCostPerRun);
@@ -243,8 +229,8 @@ export function getRunsPerDollar(modelId: string, creatorFee: number, dollarAmou
 export function getDollarCostPerRun(modelId: string, creatorFee: number): number {
   const totalCostInCredits = calculateTotalPromptCost(modelId, creatorFee);
   
-  // Convert credits to dollars (1,000 credits = $1.00)
-  return totalCostInCredits / 1000;
+  // Convert credits to dollars (1 credit = $0.000001)
+  return totalCostInCredits * 0.000001;
 }
 
 /**
@@ -254,26 +240,56 @@ export function getDollarCostPerRun(modelId: string, creatorFee: number): number
  * @returns Object with formatted cost breakdown
  */
 export function getCostBreakdown(modelId: string, creatorFee: number): {
-  baseCost: number;
+  inferenceCost: number;
   creatorFee: number;
-  platformFee: number;
+  platformMarkup: number;
   totalCost: number;
   dollarCost: string;
-  runsFor10Dollars: number;
+  runsPerDollar: number;
 } {
   const model = getModelById(modelId);
-  const baseCost = model?.baseCost || 0;
-  const platformFee = calculatePlatformFee(creatorFee);
-  const totalCost = baseCost + creatorFee + platformFee;
-  const dollarCost = (totalCost / 1000).toFixed(2);
-  const runsFor10Dollars = getRunsPerDollar(modelId, creatorFee, 10);
+  
+  // Base inference cost in credits (already whole numbers)
+  const inferenceCost = model?.baseCost || 10000;
+  
+  // Platform markup only applied if no creator fee
+  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  
+  const totalCost = inferenceCost + creatorFee + platformMarkup;
+  const dollarCost = (totalCost * 0.000001).toFixed(6);
+  const runsPerDollar = getRunsPerDollar(modelId, creatorFee, 1);
   
   return {
-    baseCost,
+    inferenceCost,
     creatorFee,
-    platformFee,
+    platformMarkup,
     totalCost,
     dollarCost,
-    runsFor10Dollars,
+    runsPerDollar,
   };
+}
+
+/**
+ * Utility function to format credit amount as dollar string
+ * @param credits Number of credits
+ * @returns Formatted dollar string
+ */
+export function formatCreditsToDollars(credits: number): string {
+  const dollars = credits * 0.000001;
+  
+  if (dollars < 0.01) {
+    // Scientific notation for very small amounts
+    return `$${dollars.toExponential(6)}`;
+  }
+  
+  return `$${dollars.toFixed(6)}`;
+}
+
+/**
+ * Convert dollar amount to credits
+ * @param dollars Dollar amount
+ * @returns Number of whole-number credits
+ */
+export function convertDollarsToCredits(dollars: number): number {
+  return Math.round(dollars * 1_000_000);
 }

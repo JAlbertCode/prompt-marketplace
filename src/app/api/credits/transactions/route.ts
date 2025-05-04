@@ -1,35 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getUserTransactions } from '@/utils/creditManager';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Get the authenticated user
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    
+    if (!userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'User ID is required' 
+      }, { status: 400 });
     }
-
-    const userId = session.user.id;
     
-    // Get query parameters
-    const url = new URL(req.url);
-    const page = parseInt(url.searchParams.get('page') || '1', 10);
-    const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+    const { transactions, pagination } = await getUserTransactions(userId, page, limit);
     
-    // Get user's transaction history
-    const transactions = await getUserTransactions(userId, page, limit);
-    
-    return NextResponse.json(transactions);
+    return NextResponse.json({ 
+      success: true, 
+      transactions,
+      pagination
+    });
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    return NextResponse.json(
-      { error: 'Failed to retrieve transaction history' },
-      { status: 500 }
-    );
+    console.error('Error fetching user transactions:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Failed to fetch transactions' 
+    }, { status: 500 });
   }
 }

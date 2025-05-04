@@ -1,33 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { getUserCredits } from '@/utils/creditManager';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Get the authenticated user
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
     
-    // Get user's credit balance
-    const credits = await getUserCredits(userId);
+    if (!userId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'User ID is required' 
+      }, { status: 400 });
+    }
+    
+    const balance = await getUserCredits(userId);
     
     return NextResponse.json({ 
-      credits,
-      dollarValue: (credits / 1000000).toFixed(6)
+      success: true, 
+      balance 
     });
   } catch (error) {
-    console.error('Error fetching credit balance:', error);
-    return NextResponse.json(
-      { error: 'Failed to retrieve credit balance' },
-      { status: 500 }
-    );
+    console.error('Error fetching user credits:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Failed to fetch credit balance' 
+    }, { status: 500 });
   }
 }

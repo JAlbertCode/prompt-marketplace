@@ -6,7 +6,8 @@ import ModelSelector from './ModelSelector';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
 import { usePromptStore } from '@/store/usePromptStore';
-import { getModelBaseCost, getDollarCostPerRun, getRunsPerDollar } from '@/lib/models/modelRegistry';
+import { getModelById } from '@/lib/models/modelRegistry';
+import { getDollarCostPerRun, getRunsPerDollar } from '@/lib/models/modelCosts';
 
 interface PromptBuilderProps {
   initialPrompt?: Partial<Prompt>;
@@ -69,7 +70,8 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   // Calculate total cost whenever the model or fee changes
   useEffect(() => {
     // Get the baseline cost for the selected model
-    const baselineCost = getModelBaseCost(model);
+    const modelInfo = getModelById(model);
+    const baselineCost = modelInfo?.baseCost || 10000; // Default to 10000 credits if model not found
     
     // Creator fee must be at least 0
     const safeFee = Math.max(0, creatorFee);
@@ -231,7 +233,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
           <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-gray-700">System cost for {model}:</span>
-              <span className="font-medium">{getModelBaseCost(model)} credits</span>
+              <span className="font-medium">{getModelById(model)?.baseCost || 10000} credits</span>
             </div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-gray-700">Your fee:</span>
@@ -262,7 +264,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
               <div className="bg-blue-50 p-2 rounded-md text-sm">
                 <div className="flex justify-between mb-1">
                   <span>Cost per run:</span>
-                  <span className="font-medium">${getDollarCostPerRun(model, creatorFee).toFixed(3)}</span>
+                  <span className="font-medium">${getDollarCostPerRun(model, creatorFee).toFixed(6)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Runs per $10:</span>

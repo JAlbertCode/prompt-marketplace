@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import ClientLayout from '@/components/layout/ClientLayout';
 import { Suspense } from 'react';
 import { SessionProvider } from '@/providers/SessionProvider';
+import { CreditProvider } from '@/providers/CreditProvider';
+import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,7 +30,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
-          <ClientLayout>{children}</ClientLayout>
+          <CreditProvider>
+            <ClientLayout>{children}</ClientLayout>
+            <Toaster position="top-right" />
+          </CreditProvider>
         </SessionProvider>
       </body>
     </html>

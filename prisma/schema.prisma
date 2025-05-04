@@ -1,14 +1,15 @@
-// prisma/schema.prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// NextAuth Models
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -36,27 +37,6 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
-  image          String?
-  hashedPassword String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  accounts        Account[]
-  sessions        Session[]
-  prompts         Prompt[]
-  flows           Flow[]
-  favoritePrompts FavoritePrompt[]
-  favoriteFlows   FavoriteFlow[]
-  flowUnlocks     FlowUnlock[] // Add this relation
-  credits         UserCredits?
-  transactions    CreditTransaction[]
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -65,121 +45,161 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// PromptFlow Models
+enum UserRole {
+  USER
+  ADMIN
+  CREATOR
+}
+
+model User {
+  id                String            @id @default(cuid())
+  name              String?
+  email             String?           @unique
+  emailVerified     DateTime?
+  image             String?
+  role              UserRole          @default(USER)
+  credits           Int               @default(1000)    // User's credit balance
+  accounts          Account[]
+  sessions          Session[]
+  prompts           Prompt[]
+  flows             PromptFlow[]
+  favorites         Favorite[]
+  createdPrompts    Prompt[]          @relation("CreatedPrompts")
+  createdFlows      PromptFlow[]      @relation("CreatedFlows")
+  creditTransactions CreditTransaction[] // Relation to credit transactions
+  unlockedFlows     UnlockedFlow[]    // Relation to unlocked flows
+  userCredits       UserCredits?      // Relation to user credits
+  promptRuns        PromptRun[]       // Relation to prompt runs
+}
+
 model Prompt {
-  id             String   @id @default(cuid())
-  title          String
-  description    String?
-  template       String   @db.Text
-  model          String   // gpt-4, gpt-4o, or gpt-image-1
-  inputSchema    Json
-  outputExpectations Json?
-  creatorFee     Int?     // in credits
-  isPublished    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  creator        User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId      String
-  
-  flows          FlowPrompt[]
-  favorites      FavoritePrompt[]
+  id               String          @id @default(cuid())
+  title            String
+  description      String?
+  systemPrompt     String          @db.Text
+  model            String
+  imageModel       String?
+  capabilities     String[]        @default([])
+  inputFields      Json            @default("[]")
+  tags             String[]        @default([])
+  creditCost       Int             @default(100)     // Base cost in credits
+  creatorFee       Int             @default(0)       // Creator's fee in credits
+  userId           String?
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  creatorId        String?
+  creator          User?           @relation("CreatedPrompts", fields: [creatorId], references: [id], onDelete: SetNull)
+  promptFlowSteps  PromptFlowStep[]
+  favorites        Favorite[]
+  promptRuns       PromptRun[]     // Relation to prompt runs
+  outputType       String          @default("text")  // Can be "text" or "image"
+  isPrivate        Boolean         @default(false)
+  isPublished      Boolean         @default(false)   // Whether the prompt is published
 }
 
-model Flow {
-  id             String   @id @default(cuid())
-  title          String
-  description    String?
-  unlockFee      Int?     // in credits, null means free
-  isPublished    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  creator        User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  creatorId      String
-  
-  prompts        FlowPrompt[]
-  favorites      FavoriteFlow[]
-  unlocks        FlowUnlock[]
+model PromptFlow {
+  id               String             @id @default(cuid())
+  title            String
+  description      String?
+  steps            PromptFlowStep[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  isPublished      Boolean            @default(false)
+  totalCreditCost  Int                @default(0)
+  unlockPrice      Int                @default(0)     // Price in credits to unlock this flow
+  creatorId        String?            // The user who created this flow
+  creator          User?              @relation("CreatedFlows", fields: [creatorId], references: [id], onDelete: SetNull)
+  unlockedBy       UnlockedFlow[]     // Relation to track which users have unlocked this flow
+  favorites        Favorite[]
+  isPrivate        Boolean            @default(false) // Whether the flow is private
+  unlockFee        Int?               // Optional fee to unlock (null means free)
 }
 
-model FlowPrompt {
-  id             String   @id @default(cuid())
-  order          Int
-  
-  flow           Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowId         String
-  
-  prompt         Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  promptId       String
-  
-  @@unique([flowId, order])
+model PromptFlowStep {
+  id            String      @id @default(cuid())
+  flow          PromptFlow  @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowId        String
+  prompt        Prompt      @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  promptId      String
+  order         Int
+  title         String?
+  inputMappings Json        @default("[]")
+  position      Int         @default(0) // Position in the flow (for ordering)
+  model         String?     // Optional override for the model
 }
 
-model FavoritePrompt {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
-  
-  prompt         Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  promptId       String
-  
-  @@unique([userId, promptId])
+model Favorite {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId  String?
+  prompt    Prompt?     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  flowId    String?
+  flow      PromptFlow? @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([userId, promptId, flowId])
 }
 
-model FavoriteFlow {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
-  
-  flow           Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowId         String
-  
-  @@unique([userId, flowId])
-}
-
-model FlowUnlock {
-  id             String   @id @default(cuid())
-  createdAt      DateTime @default(now())
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
-  
-  flow           Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  flowId         String
-  
-  @@unique([userId, flowId])
-}
-
-// Credit System
-model UserCredits {
-  id             String   @id @default(cuid())
-  balance        Int      @default(0)
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String   @unique
-}
-
-model CreditTransaction {
-  id             String   @id @default(cuid())
-  amount         Int
-  description    String
-  type           TransactionType
-  createdAt      DateTime @default(now())
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId         String
-}
-
+// Transaction type enum for different credit operations
 enum TransactionType {
-  PURCHASE
-  PROMPT_RUN
-  FLOW_UNLOCK
-  CREATOR_PAYMENT
-  PLATFORM_FEE
-  REFERRAL_BONUS
+  CREDIT_PURCHASE  // Adding credits (purchased)
+  PROMPT_RUN       // Running a prompt
+  FLOW_RUN         // Running a flow
+  FLOW_UNLOCK      // Unlocking a flow
+  CREATOR_PAYMENT  // Payment to creator
+  REFUND           // Refunding credits
+}
+
+// Model to track user credits (replaced the credits field in User)
+model UserCredits {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+// Model to track credit transactions with typed reasons
+model CreditTransaction {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int             // Can be positive (add) or negative (deduct)
+  description String          // Human-readable description
+  type        TransactionType // Type of transaction
+  createdAt   DateTime        @default(now())
+  promptId    String?         // ID of related prompt
+  flowId      String?         // ID of related flow
+}
+
+// Model to track unlocked flows
+model UnlockedFlow {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flowId     String
+  flow       PromptFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  unlockedAt DateTime   @default(now())
+
+  @@unique([userId, flowId])
+}
+
+// Model to track prompt runs with detailed cost breakdown
+model PromptRun {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptId      String
+  prompt        Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  model         String   // The model used
+  cost          Int      // Total cost in credits
+  creatorFee    Int      // Creator fee portion
+  inferenceCost Int      // Base inference cost
+  platformFee   Int      // Platform fee portion
+  createdAt     DateTime @default(now())
+  success       Boolean  @default(true)
 }
