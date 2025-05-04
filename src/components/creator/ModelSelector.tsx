@@ -9,7 +9,7 @@ interface ModelSelectorProps {
 }
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ currentModel, onChange }) => {
-  // Get all active models - don't filter by type so we include image models too
+  // Get all active and available models
   const allModels = getActiveModels();
 
   return (

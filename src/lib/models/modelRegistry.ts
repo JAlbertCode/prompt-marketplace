@@ -155,7 +155,7 @@ const models: ModelInfo[] = [
       medium: 5000,  // Same cost regardless of prompt length
       long: 5000,    // Same cost regardless of prompt length
     },
-    available: true,
+    available: false, // Hidden temporarily
   },
   {
     id: 'gpt-image-1-image',
@@ -170,7 +170,7 @@ const models: ModelInfo[] = [
       medium: 30000, // $0.0300 per request
       long: 47000,   // $0.0470 per request
     },
-    available: true,
+    available: false, // Hidden temporarily
   },
   {
     id: 'dall-e-3',
@@ -185,7 +185,7 @@ const models: ModelInfo[] = [
       medium: 20000, // Same cost regardless of prompt length
       long: 20000,   // Same cost regardless of prompt length
     },
-    available: true,
+    available: false, // Hidden temporarily
     isPopular: true,
   },
   

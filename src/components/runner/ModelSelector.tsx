@@ -29,11 +29,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
 }) => {
   const { data: session } = useSession();
   const { credits } = useCreditStore();
-  const [models, setModels] = useState(getAllModels());
+  const [models, setModels] = useState(getAllModels().filter(model => model.available !== false));
   
   // Filter models based on input/output types
   useEffect(() => {
-    let filteredModels = getAllModels();
+    let filteredModels = getAllModels().filter(model => model.available !== false);
     
     if (inputType || outputType) {
       filteredModels = filteredModels.filter(model => {
