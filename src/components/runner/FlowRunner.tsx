@@ -9,6 +9,7 @@ import { getModelById } from '@/lib/models/modelRegistry';
 import ModelInfoBadge from '@/components/shared/ModelInfoBadge';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
+import { useUnlockedFlowStore } from '@/store/useUnlockedFlowStore';
 import { executePrompt } from '@/lib/sonarApi';
 import { generateImage } from '@/lib/imageApi';
 import { downloadTextFile, generateFilename } from '@/lib/downloadHelpers';
@@ -19,6 +20,8 @@ import StepVisualizer from './StepVisualizer';
 import ResultDisplay from './ResultDisplay';
 import AuthCheck from '@/components/auth/AuthCheck';
 import { useSession } from 'next-auth/react';
+import FlowUnlockDialog from '@/components/ui/FlowUnlockDialog';
+import CreditConfirmationDialog from '@/components/ui/CreditConfirmationDialog';
 
 interface FlowRunnerProps {
   flow: PromptFlow;
@@ -52,6 +55,14 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
   const [results, setResults] = useState<FlowResult[]>([]);
   const [showCreditWarning, setShowCreditWarning] = useState(credits < flow.totalCreditCost);
+  
+  // Credit confirmation dialog state
+  const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
+  // Flow unlock dialog state
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  
+  // Check if flow is locked
+  const isFlowLocked = flow.unlockPrice > 0 && !unlockedFlowStore.isFlowUnlocked(flow.id);
   
   // Create a map of prompts for easy lookup
   const promptsMap: Record<string, Prompt> = {};
@@ -121,6 +132,20 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
     router.push(`/run/${promptId}?type=prompt`);
   };
   
+  const handleUnlockFlow = () => {
+    if (session) {
+      setShowUnlockDialog(true);
+    } else {
+      toast.error("Please sign in to unlock this flow");
+    }
+  };
+  
+  const handleFlowUnlocked = () => {
+    toast.success(`Flow "${flow.title}" unlocked successfully!`);
+    // Redirect to run page to refresh the flow state
+    router.refresh();
+  };
+
   const handleFavoritePrompt = (promptId: string) => {
     if (!session) {
       toast.error("Please sign in to save favorites");
@@ -132,7 +157,7 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
     toast.success('Prompt added to favorites');
   };
   
-  const runFlow = async () => {
+  const initiateFlowRun = () => {
     // Check if all required fields are filled
     const missingFields = flowInputFields
       .filter(field => field.required && !inputValues[field.id])
@@ -148,6 +173,14 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
       toast.error(`Not enough credits to run this flow. Needed: ${flow.totalCreditCost}, Available: ${credits}`);
       return;
     }
+    
+    // Show credit confirmation dialog
+    setShowCreditConfirmation(true);
+  };
+  
+const runFlow = async () => {
+    // Close the confirmation dialog
+    setShowCreditConfirmation(false);
     
     try {
       setIsRunning(true);
@@ -310,6 +343,97 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
     toast.success('Output downloaded');
   };
   
+  // Render locked flow content
+  const renderLockStatus = () => {
+    return (
+      <div className="p-6 text-center">
+        <div className="inline-flex justify-center items-center p-3 rounded-full bg-amber-100 text-amber-700 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+        </div>
+        
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          This Flow is Locked
+        </h3>
+        
+        <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+          You need to unlock this flow before you can run it. Unlocking gives you permanent access to run, clone, and modify this flow.
+        </p>
+        
+        <div className="space-y-4">
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 max-w-md mx-auto">
+            <h4 className="text-sm font-medium text-gray-800 mb-2">Flow Preview</h4>
+            
+            <div className="space-y-2">
+              {flow.steps.map((step, index) => {
+                const prompt = promptsMap[step.promptId];
+                const displayTitle = step.title || (prompt ? prompt.title : `Step ${index + 1}`);
+                
+                return (
+                  <div key={step.id} className="flex items-start">
+                    <div className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-medium text-xs mt-0.5">
+                      {index + 1}
+                    </div>
+                    <div className="ml-2">
+                      <div className="text-sm font-medium text-gray-700">{displayTitle}</div>
+                      {prompt && (
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span>{prompt.title}</span>
+                          <span className="text-gray-400">•</span>
+                          <span>{getModelById(prompt.model)?.displayName || prompt.model}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 max-w-md mx-auto">
+            <div className="flex justify-between mb-1">
+              <span className="text-sm text-gray-600">Unlock price:</span>
+              <span className="text-sm font-medium">{flow.unlockPrice.toLocaleString()} credits</span>
+            </div>
+            
+            <div className="flex justify-between mb-1">
+              <span className="text-sm text-gray-600">Your balance:</span>
+              <span className="text-sm font-medium">{credits.toLocaleString()} credits</span>
+            </div>
+            
+            {credits < flow.unlockPrice && (
+              <div className="mt-3 text-xs text-amber-600 bg-amber-50 p-2 rounded flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                You need {(flow.unlockPrice - credits).toLocaleString()} more credits to unlock
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-center space-x-3">
+            <Button
+              variant="outline"
+              onClick={onReturn}
+            >
+              Back
+            </Button>
+            
+            <AuthCheck>
+              <Button
+                onClick={handleUnlockFlow}
+                disabled={credits < flow.unlockPrice}
+              >
+                Unlock Flow
+              </Button>
+            </AuthCheck>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderInputField = (field: typeof flowInputFields[0]) => {
     switch (field.type) {
       case 'textarea':
@@ -390,7 +514,7 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
         </div>
       </div>
       
-      <form onSubmit={(e) => { e.preventDefault(); runFlow(); }} className="space-y-6">
+      <form onSubmit={(e) => { e.preventDefault(); initiateFlowRun(); }} className="space-y-6">
         {/* Group input fields by prompt/step */}
         {flow.steps.map((step, stepIndex) => {
           const prompt = promptsMap[step.promptId];
@@ -541,6 +665,25 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+      {/* Credit Confirmation Dialog */}
+      <CreditConfirmationDialog
+        isOpen={showCreditConfirmation}
+        onClose={() => setShowCreditConfirmation(false)}
+        onConfirm={runFlow}
+        promptId={flow.id}
+        modelId={flow.steps[0]?.promptId ? (promptsMap[flow.steps[0].promptId]?.model || 'unknown') : 'unknown'}
+        title={`Execute Flow: ${flow.title}`}
+      />
+      
+      {/* Flow Unlock Dialog */}
+      <FlowUnlockDialog
+        isOpen={showUnlockDialog}
+        onClose={() => setShowUnlockDialog(false)}
+        flowId={flow.id}
+        title={flow.title}
+        unlockPrice={flow.unlockPrice}
+        onUnlocked={handleFlowUnlocked}
+      />
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">{flow.title}</h2>
         <p className="text-sm text-gray-600 mt-1">{flow.description}</p>
@@ -552,11 +695,26 @@ const FlowRunner: React.FC<FlowRunnerProps> = ({ flow, onReturn }) => {
           <span className="ml-2 text-sm text-gray-500">
             Total cost: <span className="font-semibold">{flow.totalCreditCost} credits</span>
           </span>
+          
+          {flow.unlockPrice > 0 && (
+            <span className="ml-2 text-sm text-gray-500">
+              Unlock price: <span className="font-semibold">{flow.unlockPrice} credits</span>
+            </span>
+          )}
+          
+          {isFlowLocked && (
+            <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              Locked
+            </span>
+          )}
         </div>
       </div>
       
       <div className="p-4">
-        {results.length === 0 ? contentBeforeExecution : contentAfterExecution}
+        {isFlowLocked ? renderLockStatus() : (results.length === 0 ? contentBeforeExecution : contentAfterExecution)}
       </div>
     </div>
   );

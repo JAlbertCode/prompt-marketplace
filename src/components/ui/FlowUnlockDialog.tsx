@@ -1,63 +1,63 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
 import Button from '@/components/shared/Button';
-import { getCostBreakdown } from '@/lib/models/modelRegistry';
 import { useCreditStore } from '@/store/useCreditStore';
-import { useUserStore } from '@/store/useUserStore';
+import { useUnlockedFlowStore } from '@/store/useUnlockedFlowStore';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
 
-interface CreditConfirmationDialogProps {
+interface FlowUnlockDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
-  promptId: string;
-  modelId: string;
+  flowId: string;
   title: string;
+  unlockPrice: number;
+  onUnlocked: () => void;
 }
 
-const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
+const FlowUnlockDialog: React.FC<FlowUnlockDialogProps> = ({
   isOpen,
   onClose,
-  onConfirm,
-  promptId,
-  modelId,
+  flowId,
   title,
+  unlockPrice,
+  onUnlocked,
 }) => {
-  const { credits } = useCreditStore();
-  const { user } = useUserStore();
+  const { credits, deductCredits } = useCreditStore();
+  const { unlockFlow } = useUnlockedFlowStore();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  // Get cost breakdown
-  const costBreakdown = getCostBreakdown(modelId);
-  const totalCost = costBreakdown.totalCost;
-  
-  const handleConfirm = async () => {
+  const handleUnlock = async () => {
     try {
       setIsSubmitting(true);
       
-      // Call API endpoint to confirm credit deduction
-      const response = await fetch('/api/credits/deduct', {
+      // Call API endpoint to unlock the flow
+      const response = await fetch('/api/flows/unlock', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          amount: totalCost,
-          reason: 'Run prompt',
-          itemId: promptId,
-          itemType: 'prompt',
+          flowId,
+          amount: unlockPrice,
         }),
       });
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to deduct credits');
+        throw new Error(errorData.message || 'Failed to unlock flow');
       }
       
-      // Proceed with prompt execution
-      onConfirm();
+      // Update local stores
+      deductCredits(unlockPrice, 'Flow unlock', flowId);
+      unlockFlow(flowId);
+      
+      // Call callback
+      onUnlocked();
+      
+      // Close dialog
+      onClose();
     } catch (error) {
-      console.error('Error deducting credits:', error);
+      console.error('Error unlocking flow:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -67,16 +67,16 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Confirm Prompt Execution</DialogTitle>
+          <DialogTitle>Unlock Flow</DialogTitle>
         </DialogHeader>
         
         <div className="py-4">
           <h3 className="text-sm font-medium text-gray-900 mb-2">
-            You are about to run: <span className="text-blue-600">{title}</span>
+            Unlock <span className="text-blue-600">{title}</span>
           </h3>
           
           <p className="text-sm text-gray-600 mb-4">
-            This will deduct {totalCost.toLocaleString()} credits from your balance.
+            This will permanently unlock this flow for your account, allowing you to run, clone, and modify it.
           </p>
           
           <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-4">
@@ -85,40 +85,28 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
               <span className="text-sm font-medium">{credits.toLocaleString()} credits</span>
             </div>
             <div className="flex justify-between mb-1">
-              <span className="text-sm text-gray-600">Cost:</span>
-              <span className="text-sm font-medium text-red-500">-{totalCost.toLocaleString()} credits</span>
+              <span className="text-sm text-gray-600">Unlock price:</span>
+              <span className="text-sm font-medium text-red-500">-{unlockPrice.toLocaleString()} credits</span>
             </div>
             <div className="border-t border-gray-200 pt-1 mt-1">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-700">New balance:</span>
-                <span className="text-sm font-medium">{(credits - totalCost).toLocaleString()} credits</span>
+                <span className="text-sm font-medium">{(credits - unlockPrice).toLocaleString()} credits</span>
               </div>
             </div>
           </div>
           
-          {costBreakdown && (
-            <div className="mb-3">
-              <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Cost Breakdown:</h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Base model cost:</span>
-                  <span>{costBreakdown.inferenceCost.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Platform fee:</span>
-                  <span>{costBreakdown.platformFee.toLocaleString()}</span>
-                </div>
-                {costBreakdown.creatorFee > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Creator fee:</span>
-                    <span>{costBreakdown.creatorFee.toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          <div className="mb-4">
+            <h4 className="text-xs font-medium text-gray-500 uppercase mb-1">Benefits:</h4>
+            <ul className="list-disc pl-5 text-sm text-gray-600 space-y-1">
+              <li>Run this flow as many times as you want (regular run costs still apply)</li>
+              <li>Clone this flow to make your own version</li>
+              <li>Modify any aspect of the flow to suit your needs</li>
+              <li>Use it as a template for creating similar flows</li>
+            </ul>
+          </div>
           
-          {credits < totalCost && (
+          {credits < unlockPrice && (
             <div className="text-red-500 text-sm flex items-center p-2 bg-red-50 rounded-md">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -137,8 +125,8 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
             Cancel
           </Button>
           <Button
-            onClick={handleConfirm}
-            disabled={credits < totalCost || isSubmitting}
+            onClick={handleUnlock}
+            disabled={credits < unlockPrice || isSubmitting}
           >
             {isSubmitting ? (
               <span className="flex items-center">
@@ -146,7 +134,7 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
                 Processing...
               </span>
             ) : (
-              'Continue'
+              `Unlock for ${unlockPrice.toLocaleString()} credits`
             )}
           </Button>
         </DialogFooter>
@@ -155,4 +143,4 @@ const CreditConfirmationDialog: React.FC<CreditConfirmationDialogProps> = ({
   );
 };
 
-export default CreditConfirmationDialog;
+export default FlowUnlockDialog;
