@@ -1,5 +1,9 @@
+/**
+ * API route for getting user's credit balance and breakdown
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { 
   getUserTotalCredits, 
@@ -7,14 +11,9 @@ import {
   getUserCreditHistory 
 } from '@/lib/credits';
 
-/**
- * GET /api/credits
- * 
- * Get credit information for the current user
- */
 export async function GET(req: NextRequest) {
   try {
-    // Get session and verify authentication
+    // Check authentication
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -23,24 +22,25 @@ export async function GET(req: NextRequest) {
     
     const userId = session.user.id;
     
-    // Get total credits
+    // Get user's total credits
     const totalCredits = await getUserTotalCredits(userId);
     
-    // Get credit breakdown
+    // Get credit breakdown by bucket type
     const creditBreakdown = await getUserCreditBreakdown(userId);
     
-    // Get recent transactions (last 5)
-    const recentTransactions = await getUserCreditHistory(userId, 5);
+    // Get recent transactions
+    const recentTransactions = await getUserCreditHistory(userId, 5, 0);
     
     return NextResponse.json({
+      success: true,
       totalCredits,
       creditBreakdown,
-      recentTransactions
+      recentTransactions,
     });
   } catch (error) {
-    console.error('Error fetching credits:', error);
+    console.error('Error getting credit balance:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch credit information' },
+      { error: 'Failed to get credit balance' },
       { status: 500 }
     );
   }

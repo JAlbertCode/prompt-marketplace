@@ -1,77 +1,96 @@
+/**
+ * API route for purchasing credits
+ * 
+ * This endpoint initiates the credit purchase flow by creating a
+ * Stripe checkout session.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { addCredits } from '@/utils/creditManager';
-import { PrismaClient, TransactionType } from '@prisma/client';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { createCheckoutSession } from '@/lib/payments/stripe';
+import { getCreditBundles } from '@/lib/credits';
+import { z } from 'zod';
 
-const prisma = new PrismaClient();
-
-// Credit package options
-const CREDIT_PACKAGES = [
-  { id: 'basic', name: 'Basic', amount: 1000000, price: 1.00 },   // 1,000,000 credits = $1.00
-  { id: 'standard', name: 'Standard', amount: 5000000, price: 5.00 },   // 5,000,000 credits = $5.00
-  { id: 'premium', name: 'Premium', amount: 20000000, price: 20.00 },   // 20,000,000 credits = $20.00
-  { id: 'pro', name: 'Professional', amount: 100000000, price: 100.00 },   // 100,000,000 credits = $100.00
-];
+// Define the request schema
+const PurchaseSchema = z.object({
+  bundleId: z.string().min(1),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    // Get the authenticated user
+    // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const userId = session.user.id;
+    
+    // Parse request body
     const body = await req.json();
-    const { packageId } = body;
     
-    // Find the credit package
-    const creditPackage = CREDIT_PACKAGES.find(pkg => pkg.id === packageId);
-    if (!creditPackage) {
+    // Validate request data
+    let validationResult;
+    try {
+      validationResult = PurchaseSchema.parse(body);
+    } catch (error) {
       return NextResponse.json(
-        { error: 'Credit package not found' },
-        { status: 404 }
+        { error: 'Invalid request data', details: error },
+        { status: 400 }
       );
     }
-
-    // In a real implementation, we would:
-    // 1. Create a Stripe checkout session
-    // 2. Return the checkout URL to redirect the user
     
-    // For this mock implementation, we'll just add the credits directly
-    const description = `Credit purchase: ${creditPackage.name} package`;
-    const updatedBalance = await addCredits(
-      userId,
-      creditPackage.amount,
-      description,
-      'PURCHASE'
-    );
+    const { bundleId } = validationResult;
     
-    // Record the purchase
-    await prisma.creditPurchase.create({
-      data: {
-        userId,
-        amount: creditPackage.amount,
-        cost: creditPackage.price,
-        packageId: creditPackage.id,
-        status: 'COMPLETED',
-      },
-    });
+    // Get the bundle info to validate it exists
+    const bundles = getCreditBundles();
+    const bundle = bundles.find(b => b.id === bundleId);
     
-    return NextResponse.json({
-      success: true,
-      credits: creditPackage.amount,
-      updatedBalance,
-      mockPurchase: true, // Flag to indicate this is a mock purchase
-    });
+    if (!bundle) {
+      return NextResponse.json(
+        { error: 'Invalid bundle ID' },
+        { status: 400 }
+      );
+    }
+    
+    // For enterprise bundles, check monthly burn requirements
+    if (bundle.id === 'enterprise' && bundle.requiresMonthlyBurn) {
+      // This would check the user's monthly burn from transactions
+      // For now, we'll skip this check as it requires a more complex query
+      // In a real implementation, this should be properly checked
+    }
+    
+    // Define success and cancel URLs
+    const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const successUrl = `${origin}/dashboard/credits/success`;
+    const cancelUrl = `${origin}/dashboard/credits`;
+    
+    try {
+      // Create a Stripe checkout session
+      const sessionId = await createCheckoutSession(
+        session.user.id,
+        bundleId,
+        successUrl,
+        cancelUrl
+      );
+      
+      // Return the session ID to the client for redirect
+      return NextResponse.json({
+        success: true,
+        sessionId,
+        redirectUrl: successUrl,
+      });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      return NextResponse.json(
+        { error: 'Failed to create checkout session' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error processing credit purchase:', error);
+    console.error('Error processing request:', error);
     return NextResponse.json(
-      { error: 'Failed to process credit purchase' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

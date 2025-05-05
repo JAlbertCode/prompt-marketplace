@@ -1,78 +1,88 @@
+/**
+ * API route for adding credits to user accounts
+ * 
+ * This endpoint is used by the credit purchasing system.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { addCredits, getUserTotalCredits, CreditBucketType } from '@/lib/credits';
+import { addCredits } from '@/lib/credits';
 import { z } from 'zod';
 
-// Validate request body
-const addCreditsSchema = z.object({
+// Define the request schema
+const AddCreditsSchema = z.object({
   amount: z.number().positive(),
-  type: z.enum(['purchased', 'bonus', 'referral']).default('purchased'),
-  source: z.string().default('manual_addition'),
-  expiryDays: z.number().nullable().default(null),
-  userId: z.string().optional(), // Only for admin usage
+  type: z.enum(['purchased', 'bonus', 'referral']),
+  source: z.string().min(1),
+  expiryDays: z.number().nullable().optional(),
+  userId: z.string().optional(), // Only admin can set this
 });
 
-/**
- * POST /api/credits/add
- * 
- * Add credits to a user's account
- * Only admin users can add credits to other users
- */
 export async function POST(req: NextRequest) {
   try {
-    // Get session and verify authentication
+    // Check authentication
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const currentUserId = session.user.id;
-    const isAdmin = session.user.role === 'admin';
-    
-    // Parse and validate request body
+    // Parse request body
     const body = await req.json();
-    const validation = addCreditsSchema.safeParse(body);
     
-    if (!validation.success) {
-      return NextResponse.json({ 
-        error: 'Invalid request', 
-        details: validation.error.format() 
-      }, { status: 400 });
+    // Validate request data
+    let validationResult;
+    try {
+      validationResult = AddCreditsSchema.parse(body);
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error },
+        { status: 400 }
+      );
     }
     
-    const { amount, type, source, expiryDays, userId } = validation.data;
+    const { amount, type, source, expiryDays } = validationResult;
     
-    // If userId is provided, ensure the current user is an admin
-    if (userId && userId !== currentUserId && !isAdmin) {
-      return NextResponse.json({ 
-        error: 'Unauthorized. Only admins can add credits to other users'
-      }, { status: 403 });
+    // If userId is provided, check if the current user has admin privileges
+    let targetUserId = session.user.id;
+    
+    if (body.userId && body.userId !== session.user.id) {
+      // Only admins can add credits to other users
+      if (session.user.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Not authorized to add credits to other users' },
+          { status: 403 }
+        );
+      }
+      targetUserId = body.userId;
     }
     
-    // Determine which user to add credits to
-    const targetUserId = userId || currentUserId;
-    
-    // Add credits
-    await addCredits(
-      targetUserId,
-      amount,
-      type as CreditBucketType,
-      source,
-      expiryDays
-    );
-    
-    // Return success response with updated credit balance
-    return NextResponse.json({
-      success: true,
-      added: amount,
-      total: await getUserTotalCredits(targetUserId)
-    });
+    // Add credits to the user's account
+    try {
+      const creditBucket = await addCredits(
+        targetUserId,
+        amount,
+        type,
+        source,
+        expiryDays ?? null
+      );
+      
+      return NextResponse.json({
+        success: true,
+        creditBucket,
+      });
+    } catch (error) {
+      console.error('Error adding credits:', error);
+      return NextResponse.json(
+        { error: 'Failed to add credits' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Error adding credits:', error);
+    console.error('Error processing request:', error);
     return NextResponse.json(
-      { error: 'Failed to add credits' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

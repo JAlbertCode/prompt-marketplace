@@ -1,20 +1,13 @@
-/**
- * Payment Success Page
- * 
- * This page is shown after a successful credit purchase via Stripe
- * It processes the payment and adds credits to the user's account
- */
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
+import { useCreditStore } from '@/store/useCreditStore';
 
 interface PaymentResult {
   success: boolean;
-  userId: string;
   bundle: {
     id: string;
     name: string;
@@ -29,7 +22,8 @@ export default function PaymentSuccessPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<PaymentResult | null>(null);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const { fetchCredits } = useCreditStore();
   
   useEffect(() => {
     const processPayment = async () => {
@@ -42,7 +36,9 @@ export default function PaymentSuccessPage() {
           return;
         }
         
-        // Process the payment through our API
+        toast.loading('Processing your payment...');
+        
+        // Call API to process payment
         const response = await fetch(`/api/payments/stripe/success?session_id=${sessionId}`);
         
         if (!response.ok) {
@@ -51,143 +47,110 @@ export default function PaymentSuccessPage() {
         }
         
         const data = await response.json();
-        setResult(data);
+        setPaymentResult(data);
         
-        // Show success message
+        // Refresh credit balance
+        await fetchCredits();
+        
+        toast.dismiss();
         toast.success('Payment successful! Credits added to your account.');
-      } catch (err) {
-        console.error('Error processing payment:', err);
-        setError((err as Error).message || 'Failed to process payment');
+      } catch (error) {
+        console.error('Error processing payment:', error);
+        toast.dismiss();
         toast.error('There was an error processing your payment.');
+        setError((error as Error).message || 'Failed to process payment');
       } finally {
         setLoading(false);
       }
     };
     
     processPayment();
-  }, [searchParams, router]);
+  }, [searchParams, fetchCredits]);
   
-  // Format large numbers
+  // Format large numbers with commas
   const formatNumber = (num: number) => {
-    return num.toLocaleString();
+    return num?.toLocaleString() || '0';
   };
   
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-16">
-      <div className="bg-white shadow-md rounded-lg p-8 text-center">
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="bg-white rounded-lg shadow-md p-8">
         {loading ? (
-          <div className="py-8">
-            <svg
-              className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            <p className="text-gray-600">Processing your payment...</p>
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+            <h2 className="text-2xl font-bold mb-2">Processing Your Payment</h2>
+            <p className="text-gray-600">Please wait while we confirm your purchase...</p>
           </div>
         ) : error ? (
-          <div className="py-8">
-            <svg
-              className="h-16 w-16 text-red-500 mx-auto mb-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Payment Error</h2>
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Payment Error</h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <Link
+            <Link 
               href="/dashboard/credits"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md transition-colors"
+              className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
             >
-              Back to Credits
+              Return to Credits Page
             </Link>
           </div>
-        ) : result ? (
-          <div className="py-4">
-            <div className="mb-6">
-              <svg
-                className="h-16 w-16 text-green-500 mx-auto mb-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
+        ) : paymentResult ? (
+          <div className="text-center py-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Payment Successful!</h2>
-              <p className="text-gray-600">
-                Your credits have been added to your account.
-              </p>
             </div>
+            <h2 className="text-2xl font-bold mb-2">Payment Successful!</h2>
+            <p className="text-gray-600 mb-8">Your credits have been added to your account.</p>
             
-            <div className="bg-gray-50 rounded-lg p-6 mb-8">
-              <h3 className="text-lg font-bold mb-4">Purchase Summary</h3>
-              
-              <div className="space-y-2 text-left">
+            <div className="max-w-md mx-auto bg-gray-50 rounded-lg p-6 mb-8">
+              <h3 className="text-lg font-semibold mb-4">Purchase Summary</h3>
+              <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Package:</span>
-                  <span className="font-medium">{result.bundle.name}</span>
+                  <span className="font-medium">{paymentResult.bundle.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Base Credits:</span>
-                  <span className="font-medium">{formatNumber(result.bundle.baseCredits)}</span>
+                  <span className="font-medium">{formatNumber(paymentResult.bundle.baseCredits)}</span>
                 </div>
-                {result.bundle.bonusCredits > 0 && (
+                {paymentResult.bundle.bonusCredits > 0 && (
                   <div className="flex justify-between">
                     <span className="text-green-600">Bonus Credits:</span>
-                    <span className="font-medium text-green-600">
-                      +{formatNumber(result.bundle.bonusCredits)}
-                    </span>
+                    <span className="font-medium text-green-600">+{formatNumber(paymentResult.bundle.bonusCredits)}</span>
                   </div>
                 )}
                 <div className="flex justify-between pt-2 border-t font-semibold">
-                  <span>Total Credits Added:</span>
-                  <span>{formatNumber(result.bundle.totalCredits)}</span>
+                  <span>Total Credits:</span>
+                  <span>{formatNumber(paymentResult.bundle.totalCredits)}</span>
                 </div>
               </div>
             </div>
             
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link
+              <Link 
                 href="/dashboard/credits"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md transition-colors"
+                className="px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors"
               >
                 View Credit Balance
               </Link>
-              <Link
+              <Link 
                 href="/dashboard"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium px-6 py-2 rounded-md transition-colors"
+                className="px-6 py-3 bg-gray-200 text-gray-800 font-medium rounded-md hover:bg-gray-300 transition-colors"
               >
                 Go to Dashboard
               </Link>
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="text-center py-8">
+            <p>No payment data found.</p>
+          </div>
+        )}
       </div>
     </div>
   );

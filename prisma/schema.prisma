@@ -58,7 +58,7 @@ model User {
   emailVerified     DateTime?
   image             String?
   role              UserRole          @default(USER)
-  credits           Int               @default(1000)    // User's credit balance
+  credits           Int               @default(1000)    // Legacy field (will be migrated)
   accounts          Account[]
   sessions          Session[]
   prompts           Prompt[]
@@ -67,9 +67,12 @@ model User {
   createdPrompts    Prompt[]          @relation("CreatedPrompts")
   createdFlows      PromptFlow[]      @relation("CreatedFlows")
   creditTransactions CreditTransaction[] // Relation to credit transactions
-  unlockedFlows     UnlockedFlow[]    // Relation to unlocked flows
-  userCredits       UserCredits?      // Relation to user credits
+  flowUnlocks       FlowUnlock[]      // Relation to unlocked flows
   promptRuns        PromptRun[]       // Relation to prompt runs
+  creditBuckets     CreditBucket[]    // Relation to credit buckets
+  creditBonuses     CreditBonus[]     // Relation to credit bonuses
+  creatorTransactions CreditTransaction[] @relation("CreatorTransactions") // Transactions where user is the creator
+  lastLogin         DateTime?         // Track last login time
 }
 
 model Prompt {
@@ -112,7 +115,7 @@ model PromptFlow {
   unlockPrice      Int                @default(0)     // Price in credits to unlock this flow
   creatorId        String?            // The user who created this flow
   creator          User?              @relation("CreatedFlows", fields: [creatorId], references: [id], onDelete: SetNull)
-  unlockedBy       UnlockedFlow[]     // Relation to track which users have unlocked this flow
+  unlockedBy       FlowUnlock[]     // Relation to track which users have unlocked this flow
   favorites        Favorite[]
   isPrivate        Boolean            @default(false) // Whether the flow is private
   unlockFee        Int?               // Optional fee to unlock (null means free)
@@ -144,46 +147,76 @@ model Favorite {
   @@unique([userId, promptId, flowId])
 }
 
-// Transaction type enum for different credit operations
-enum TransactionType {
-  CREDIT_PURCHASE  // Adding credits (purchased)
-  PROMPT_RUN       // Running a prompt
-  FLOW_RUN         // Running a flow
-  FLOW_UNLOCK      // Unlocking a flow
-  CREATOR_PAYMENT  // Payment to creator
-  REFUND           // Refunding credits
+// Credit bucket type for different credit sources
+enum CreditBucketType {
+  PURCHASED
+  BONUS
+  REFERRAL
 }
 
-// Model to track user credits (replaced the credits field in User)
-model UserCredits {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balance   Int      @default(0)
-  updatedAt DateTime @updatedAt
+// Model to store credit buckets with different sources and expiry
+model CreditBucket {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String          // 'purchased', 'bonus', 'referral'
+  amount    Int            // Total amount of credits in this bucket
+  remaining Int            // Remaining credits in this bucket
+  source    String          // Where these credits came from (e.g., 'stripe_payment:id', 'referral:userId')
+  expiresAt DateTime?      // When these credits expire (null = never)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([type])
 }
+
+// Model to track automation bonuses
+model CreditBonus {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int      // Amount of bonus credits
+  reason      String   // Reason for bonus (e.g., 'automation_monthly')
+  monthlyBurn Int      // Monthly burn that triggered this bonus
+  createdAt   DateTime @default(now())
+}
+
 
 // Model to track credit transactions with typed reasons
 model CreditTransaction {
-  id          String          @id @default(cuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount      Int             // Can be positive (add) or negative (deduct)
-  description String          // Human-readable description
-  type        TransactionType // Type of transaction
-  createdAt   DateTime        @default(now())
-  promptId    String?         // ID of related prompt
-  flowId      String?         // ID of related flow
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount              Int      // Can be positive (add) or negative (deduct)
+  description         String   // Human-readable description
+  type                String   // Type of transaction
+  createdAt           DateTime @default(now())
+  promptId            String?  // ID of related prompt
+  flowId              String?  // ID of related flow
+  modelId             String?  // ID of the model used
+  creatorId           String?  // ID of the creator (if applicable)
+  creatorFeePercentage Int?    @default(0) // Creator fee percentage
+  itemType            String?  @default("completion") // Type of item (prompt, flow, etc.)
+  itemId              String?  // ID of the related item
+  creditsUsed         Int?     @default(0) // Credits used in this transaction
+  promptLength        String?  @default("medium") // Length of the prompt
+  
+  creator             User?    @relation("CreatorTransactions", fields: [creatorId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([creatorId])
 }
 
 // Model to track unlocked flows
-model UnlockedFlow {
+model FlowUnlock {
   id         String     @id @default(cuid())
   userId     String
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   flowId     String
   flow       PromptFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  unlockedAt DateTime   @default(now())
+  credits    Int        // Credits spent to unlock
+  createdAt  DateTime   @default(now())
 
   @@unique([userId, flowId])
 }

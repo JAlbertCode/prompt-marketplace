@@ -39,26 +39,63 @@ const CreditPurchase: React.FC<CreditPurchaseProps> = ({
       if (!bundle) {
         throw new Error('Invalid bundle selected');
       }
+
+      // Call Stripe checkout endpoint
+      const response = await fetch('/api/payments/stripe/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ bundleId: selectedBundle })
+      });
       
-      // In a real implementation, this would redirect to Stripe or other payment provider
-      // For demonstration, we'll simulate a successful purchase by directly adding credits
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { sessionId } = await response.json();
       
-      // Add the credits to the user's account
-      await addCredits(bundle.totalCredits, 'purchase');
+      // For development/testing purposes, allow direct credit addition if enabled
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const skipStripe = process.env.NEXT_PUBLIC_SKIP_STRIPE === 'true';
       
-      setShowSuccess(true);
-      
-      // Hide success message after 3 seconds
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
-      
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess();
+      if (isDevelopment && skipStripe) {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Add the credits to the user's account directly
+        await addCredits(bundle.totalCredits, 'development_purchase');
+        
+        setShowSuccess(true);
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        // Redirect to Stripe Checkout
+        // Load Stripe dynamically to avoid issues during SSR
+        const { loadStripe } = await import('@stripe/stripe-js');
+        const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+        
+        if (!stripePublishableKey) {
+          throw new Error('Stripe publishable key is not configured');
+        }
+        
+        const stripe = await loadStripe(stripePublishableKey);
+        
+        if (!stripe) {
+          throw new Error('Failed to load Stripe');
+        }
+        
+        // Redirect to Stripe Checkout
+        await stripe.redirectToCheckout({ sessionId });
       }
     } catch (error) {
       console.error('Error purchasing credits:', error);
