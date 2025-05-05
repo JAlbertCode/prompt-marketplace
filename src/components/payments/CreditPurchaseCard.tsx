@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Credit Purchase Card component
  * 
