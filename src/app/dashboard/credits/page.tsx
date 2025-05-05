@@ -14,7 +14,7 @@ import PageHeader from '@/components/layout/system/PageHeader';
 import ContentCard from '@/components/layout/system/ContentCard';
 import { formatCredits } from '@/lib/creditHelpers';
 import { prisma } from '@/lib/db';
-import { ArrowRight, CreditCard, History, TrendingUp } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = {
@@ -27,19 +27,24 @@ async function getMonthlyBurn(userId: string): Promise<number> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
-  const transactions = await prisma.creditTransaction.findMany({
-    where: {
-      userId,
-      createdAt: {
-        gte: thirtyDaysAgo,
+  try {
+    const transactions = await prisma.creditTransaction.findMany({
+      where: {
+        userId,
+        createdAt: {
+          gte: thirtyDaysAgo,
+        },
       },
-    },
-  });
-  
-  // Sum all credits used in the last 30 days
-  return transactions.reduce((total, transaction) => {
-    return total + transaction.creditsUsed;
-  }, 0);
+    });
+    
+    // Sum all credits used in the last 30 days
+    return transactions.reduce((total, transaction) => {
+      return total + transaction.creditsUsed;
+    }, 0);
+  } catch (error) {
+    console.error("Error calculating monthly burn:", error);
+    return 0; // Default to 0 if there's an error
+  }
 }
 
 export default async function CreditsPage() {
@@ -68,11 +73,11 @@ export default async function CreditsPage() {
     }).format(date);
   };
   
-  // Define credit tabs
+  // Define credit tabs - use string identifiers instead of component references
   const creditTabs = [
-    { href: '/dashboard/credits', label: 'Purchase Credits', icon: CreditCard },
-    { href: '/dashboard/credits/history', label: 'Transaction History', icon: History },
-    { href: '/dashboard/credits/usage', label: 'Usage Analytics', icon: TrendingUp },
+    { href: '/dashboard/credits', label: 'Purchase Credits', iconName: 'credit-card' },
+    { href: '/dashboard/credits/history', label: 'Transaction History', iconName: 'history' },
+    { href: '/dashboard/credits/usage', label: 'Usage Analytics', iconName: 'trending-up' },
   ];
   
   // Create credit display component for the page header

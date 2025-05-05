@@ -3,11 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { CreditCard, History, TrendingUp } from 'lucide-react';
 
 interface TabItem {
   href: string;
   label: string;
   icon?: React.ElementType;
+  iconName?: string; // Added icon name option
 }
 
 interface PageHeaderProps {
@@ -24,6 +26,20 @@ export default function PageHeader({
   rightContent 
 }: PageHeaderProps) {
   const pathname = usePathname();
+  
+  // Helper to render icon from string name
+  const renderIcon = (iconName: string, className: string) => {
+    switch (iconName) {
+      case 'credit-card':
+        return <CreditCard className={className} />;
+      case 'history':
+        return <History className={className} />;
+      case 'trending-up':
+        return <TrendingUp className={className} />;
+      default:
+        return null;
+    }
+  };
   
   return (
     <div className="mb-8">
@@ -48,6 +64,7 @@ export default function PageHeader({
           {tabs.map((tab) => {
             const isActive = pathname === tab.href;
             const Icon = tab.icon;
+            const iconClass = `mr-2 h-4 w-4 ${isActive ? 'text-blue-500' : 'text-gray-400'}`;
             
             return (
               <Link
@@ -60,7 +77,8 @@ export default function PageHeader({
                   }
                 `}
               >
-                {Icon && <Icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />}
+                {Icon && <Icon className={iconClass} />}
+                {tab.iconName && !Icon && renderIcon(tab.iconName, iconClass)}
                 {tab.label}
               </Link>
             );

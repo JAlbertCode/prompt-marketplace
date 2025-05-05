@@ -28,24 +28,38 @@ export default function CreditPageHeader({
     ? `$${(credits * 0.000001).toFixed(6)} USD` 
     : '...';
   
-  // Define navigation links for credit pages
+  // Define navigation links for credit pages with rendered icons instead of component references
   const links = [
     { 
       href: '/dashboard/credits', 
       label: 'Purchase Credits',
-      icon: CreditCard
+      iconName: 'credit-card'
     },
     { 
       href: '/dashboard/credits/history', 
       label: 'Transaction History',
-      icon: History
+      iconName: 'history'
     },
     { 
       href: '/dashboard/credits/usage', 
       label: 'Usage Analytics',
-      icon: TrendingUp
+      iconName: 'trending-up'
     }
   ];
+  
+  // Function to render the appropriate icon based on string name
+  const renderIcon = (iconName: string, className: string) => {
+    switch (iconName) {
+      case 'credit-card':
+        return <CreditCard className={className} />;
+      case 'history':
+        return <History className={className} />;
+      case 'trending-up':
+        return <TrendingUp className={className} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="mb-8">
@@ -67,6 +81,8 @@ export default function CreditPageHeader({
       <div className="flex overflow-x-auto pb-2 border-b">
         {links.map((link) => {
           const isActive = pathname === link.href;
+          const iconClass = `mr-2 h-4 w-4 ${isActive ? 'text-blue-500' : 'text-gray-400'}`;
+          
           return (
             <Link
               key={link.href}
@@ -78,7 +94,7 @@ export default function CreditPageHeader({
                 }
               `}
             >
-              <link.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-500' : 'text-gray-400'}`} />
+              {renderIcon(link.iconName, iconClass)}
               {link.label}
             </Link>
           );
