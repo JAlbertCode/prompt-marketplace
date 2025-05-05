@@ -278,6 +278,12 @@ export default function DevUtilsPage() {
             >
               Create Flow
             </a>
+            <a
+              href="/dev-utils/database-test"
+              className="px-4 py-3 bg-yellow-100 hover:bg-yellow-200 rounded-md text-center font-medium transition-colors sm:col-span-2"
+            >
+              Database Connection Test
+            </a>
           </div>
         </div>
         
