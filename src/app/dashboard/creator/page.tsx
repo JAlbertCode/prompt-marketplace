@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import PageHeader from '@/components/layout/system/PageHeader';
+import ContentCard from '@/components/layout/system/ContentCard';
+import { TrendingUp, Book, Zap } from 'lucide-react';
 
 interface EarningMetrics {
   totalEarnings: number;
@@ -52,7 +55,7 @@ export default function CreatorDashboardPage() {
   // Format credits as dollar amount
   const formatCreditsToUsd = (credits: number) => {
     const usd = credits * 0.000001;
-    return `$${usd.toFixed(6)}`;
+    return `${usd.toFixed(6)}`;
   };
 
   // Format large numbers with commas
@@ -62,25 +65,29 @@ export default function CreatorDashboardPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
+      <div className="p-8 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
+  
+  // Define creator navigation tabs
+  const creatorTabs = [
+    { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
+    { href: '/dashboard/creator/prompts', label: 'My Prompts', icon: Book },
+    { href: '/dashboard/creator/flows', label: 'My Flows', icon: Zap },
+  ];
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Creator Dashboard</h1>
-        <p className="text-gray-600">
-          Track your earnings and prompt/flow usage metrics
-        </p>
-      </div>
+    <div>
+      <PageHeader 
+        title="Creator Dashboard"
+        description="Track your earnings and prompt/flow usage metrics"
+        tabs={creatorTabs}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white shadow-sm rounded-lg p-6">
+        <ContentCard>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Total Earnings</h2>
           <p className="text-3xl font-bold text-blue-600">
             {formatNumber(metrics.totalEarnings)} credits
@@ -88,9 +95,9 @@ export default function CreatorDashboardPage() {
           <p className="text-sm text-gray-500">
             = {formatCreditsToUsd(metrics.totalEarnings)} USD
           </p>
-        </div>
+        </ContentCard>
 
-        <div className="bg-white shadow-sm rounded-lg p-6">
+        <ContentCard>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">This Month</h2>
           <p className="text-3xl font-bold text-blue-600">
             {formatNumber(metrics.monthlyEarnings)} credits
@@ -98,9 +105,9 @@ export default function CreatorDashboardPage() {
           <p className="text-sm text-gray-500">
             = {formatCreditsToUsd(metrics.monthlyEarnings)} USD
           </p>
-        </div>
+        </ContentCard>
 
-        <div className="bg-white shadow-sm rounded-lg p-6">
+        <ContentCard>
           <h2 className="text-lg font-semibold text-gray-700 mb-2">Usage Stats</h2>
           <p className="text-xl font-medium">
             {formatNumber(metrics.totalPromptUses)} prompt uses
@@ -111,11 +118,10 @@ export default function CreatorDashboardPage() {
           <p className="text-xl font-medium">
             {formatNumber(metrics.totalFlowUnlocks)} flow unlocks
           </p>
-        </div>
+        </ContentCard>
       </div>
 
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Your Content</h2>
+      <ContentCard title="Your Content" className="mb-8">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="w-full md:w-1/2">
             <h3 className="text-lg font-medium mb-3">Your Prompts</h3>
@@ -142,17 +148,16 @@ export default function CreatorDashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </ContentCard>
 
-      <div className="bg-white shadow-sm rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-4">Recent Earnings</h2>
+      <ContentCard title="Recent Earnings">
         <div className="bg-gray-50 border rounded-lg p-8 text-center">
           <p className="text-gray-500">No recent earnings to display</p>
           <p className="text-sm text-gray-500 mt-2">
             Earnings will appear here when users run your prompts or unlock your flows
           </p>
         </div>
-      </div>
+      </ContentCard>
     </div>
   );
 }

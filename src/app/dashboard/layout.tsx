@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import DashboardNav from '@/components/layout/DashboardNav';
+import AppShell from '@/components/layout/system/AppShell';
 
 export const metadata: Metadata = {
   title: 'Dashboard - PromptFlow',
@@ -13,9 +13,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardNav />
-      <main>{children}</main>
-    </div>
+    <AppShell>
+      {children}
+    </AppShell>
   );
 }

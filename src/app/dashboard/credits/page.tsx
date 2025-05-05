@@ -10,11 +10,12 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getUserTotalCredits, getUserCreditHistory } from '@/lib/credits';
 import CreditBundlesGrid from '@/components/payments/CreditBundlesGrid';
-import CreditPageHeader from '@/components/credits/CreditPageHeader';
+import PageHeader from '@/components/layout/system/PageHeader';
+import ContentCard from '@/components/layout/system/ContentCard';
 import { formatCredits } from '@/lib/creditHelpers';
 import { prisma } from '@/lib/db';
+import { ArrowRight, CreditCard, History, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
 
 export const metadata = {
   title: 'Purchase Credits - PromptFlow',
@@ -67,17 +68,35 @@ export default async function CreditsPage() {
     }).format(date);
   };
   
+  // Define credit tabs
+  const creditTabs = [
+    { href: '/dashboard/credits', label: 'Purchase Credits', icon: CreditCard },
+    { href: '/dashboard/credits/history', label: 'Transaction History', icon: History },
+    { href: '/dashboard/credits/usage', label: 'Usage Analytics', icon: TrendingUp },
+  ];
+  
+  // Create credit display component for the page header
+  const creditDisplay = (
+    <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+      <div className="text-sm text-gray-500">Available Credits</div>
+      <div className="text-2xl font-bold text-blue-600">{formatCredits(creditBalance)}</div>
+      <div className="text-xs text-gray-500">= ${(creditBalance * 0.000001).toFixed(6)} USD</div>
+    </div>
+  );
+  
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      {/* Use the new CreditPageHeader component */}
-      <CreditPageHeader 
-        title="Purchase Credits" 
+    <div>
+      <PageHeader 
+        title="Purchase Credits"
         description="Purchase credits to run prompts and flows. 1 credit = $0.000001 USD."
-        credits={creditBalance}
+        tabs={creditTabs}
+        rightContent={creditDisplay}
       />
       
-      <div className="bg-white shadow-sm rounded-lg p-6 mb-8">
-        <h3 className="text-lg font-medium mb-2">Monthly Usage</h3>
+      <ContentCard 
+        title="Monthly Usage"
+        className="mb-8"
+      >
         <p className="text-gray-700 mb-1">
           Credits used in the last 30 days: <span className="font-medium">{monthlyBurn.toLocaleString()}</span>
         </p>
@@ -93,24 +112,14 @@ export default async function CreditsPage() {
             View detailed usage analytics <ArrowRight className="ml-1 h-4 w-4" />
           </Link>
         </div>
-      </div>
+      </ContentCard>
       
       <div className="mb-12">
         <h2 className="text-2xl font-bold mb-6">Available Credit Packages</h2>
         <CreditBundlesGrid monthlyBurn={monthlyBurn} />
       </div>
       
-      <div className="bg-white shadow-sm rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Recent Transactions</h2>
-          <Link 
-            href="/dashboard/credits/history" 
-            className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center"
-          >
-            View All <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </div>
-        
+      <ContentCard title="Recent Transactions">
         {recentTransactions.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -152,7 +161,16 @@ export default async function CreditsPage() {
             </p>
           </div>
         )}
-      </div>
+        
+        <div className="mt-4 text-center">
+          <Link 
+            href="/dashboard/credits/history" 
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            View Full Transaction History
+          </Link>
+        </div>
+      </ContentCard>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import Link from "next/link";
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFlowStore } from '@/store/useFlowStore'; 
 import { useFavoriteStore } from '@/store/useFavoriteStore';
+import PageHeader from '@/components/layout/system/PageHeader';
+import ContentCard from '@/components/layout/system/ContentCard';
 
 export default function DashboardPage({ searchParams }: { searchParams?: { tab?: string } }) {
   const { data: session, status } = useSession();
@@ -60,72 +62,69 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
   const renderPromptsList = (prompts, isOwner) => {
     if (prompts.length === 0) {
       return (
-        <div className="p-8 text-center">
-          <p className="text-gray-500">No prompts found.</p>
-          {isOwner && (
-            <Link
-            href="/create?tab=prompt"
-            className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-            >
-            Create Your First Prompt
-            </Link>
-          )}
-        </div>
+        <ContentCard>
+          <div className="p-8 text-center">
+            <p className="text-gray-500">No prompts found.</p>
+            {isOwner && (
+              <Link
+              href="/create?tab=prompt"
+              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+              >
+              Create Your First Prompt
+              </Link>
+            )}
+          </div>
+        </ContentCard>
       );
     }
 
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {prompts.map((prompt) => (
-          <div
-            key={prompt.id}
-            className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow"
-          >
-            <div className="p-5">
-              <h3 className="text-lg font-medium text-gray-900">
-                {prompt.title}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Model: {prompt.model}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                Created: {new Date(prompt.createdAt).toLocaleDateString()}
-              </p>
-              <div className="mt-4 flex space-x-3">
-                <Link
-                  href={`/prompt/${prompt.id}`}
-                  className="rounded-md bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
-                >
-                  View
-                </Link>
-                {isOwner && (
-                  <>
-                    <Link
-                      href={`/create?tab=prompt&edit=${prompt.id}`}
-                      className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          <ContentCard key={prompt.id}>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {prompt.title}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Model: {prompt.model}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Created: {new Date(prompt.createdAt).toLocaleDateString()}
+            </p>
+            <div className="mt-4 flex space-x-3">
+              <Link
+                href={`/prompt/${prompt.id}`}
+                className="rounded-md bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
+              >
+                View
+              </Link>
+              {isOwner && (
+                <>
+                  <Link
+                    href={`/create?tab=prompt&edit=${prompt.id}`}
+                    className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                  >
+                    Edit
+                  </Link>
+                  {!prompt.isPublished ? (
+                    <button
+                      className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-100"
+                      onClick={() => {
+                        // Implement publish functionality
+                        toast.success("Published successfully!");
+                      }}
                     >
-                      Edit
-                    </Link>
-                    {!prompt.isPublished ? (
-                      <button
-                        className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-100"
-                        onClick={() => {
-                          // Implement publish functionality
-                          toast.success("Published successfully!");
-                        }}
-                      >
-                        Publish
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
-                        Published
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
+                      Publish
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
+                      Published
+                    </span>
+                  )}
+                </>
+              )}
             </div>
-          </div>
+          </ContentCard>
         ))}
       </div>
     );
@@ -134,136 +133,94 @@ export default function DashboardPage({ searchParams }: { searchParams?: { tab?:
   const renderFlowsList = (flows, isOwner) => {
     if (flows.length === 0) {
       return (
-        <div className="p-8 text-center">
-          <p className="text-gray-500">No flows found.</p>
-          {isOwner && (
-            <Link
-            href="/create?tab=flow"
-            className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
-            >
-            Create Your First Flow
-            </Link>
-          )}
-        </div>
+        <ContentCard>
+          <div className="p-8 text-center">
+            <p className="text-gray-500">No flows found.</p>
+            {isOwner && (
+              <Link
+              href="/create?tab=flow"
+              className="mt-4 inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white"
+              >
+              Create Your First Flow
+              </Link>
+            )}
+          </div>
+        </ContentCard>
       );
     }
 
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {flows.map((flow) => (
-          <div
-            key={flow.id}
-            className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow"
-          >
-            <div className="p-5">
-              <h3 className="text-lg font-medium text-gray-900">
-                {flow.title}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {flow.unlockPrice === null || flow.unlockPrice === 0
-                  ? "Free to use"
-                  : `Unlock fee: ${flow.unlockPrice} credits`}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                Created: {new Date(flow.createdAt).toLocaleDateString()}
-              </p>
-              <div className="mt-4 flex space-x-3">
-                <Link
-                  href={`/flow/${flow.id}`}
-                  className="rounded-md bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
-                >
-                  View
-                </Link>
-                {isOwner && (
-                  <>
-                    <Link
-                      href={`/create?tab=flow&edit=${flow.id}`}
-                      className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          <ContentCard key={flow.id}>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {flow.title}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {flow.unlockPrice === null || flow.unlockPrice === 0
+                ? "Free to use"
+                : `Unlock fee: ${flow.unlockPrice} credits`}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Created: {new Date(flow.createdAt).toLocaleDateString()}
+            </p>
+            <div className="mt-4 flex space-x-3">
+              <Link
+                href={`/flow/${flow.id}`}
+                className="rounded-md bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100"
+              >
+                View
+              </Link>
+              {isOwner && (
+                <>
+                  <Link
+                    href={`/create?tab=flow&edit=${flow.id}`}
+                    className="rounded-md bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                  >
+                    Edit
+                  </Link>
+                  {!flow.isPublished ? (
+                    <button
+                      className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-100"
+                      onClick={() => {
+                        // Implement publish functionality
+                        toast.success("Published successfully!");
+                      }}
                     >
-                      Edit
-                    </Link>
-                    {!flow.isPublished ? (
-                      <button
-                        className="rounded-md bg-green-50 px-3 py-2 text-sm font-medium text-green-600 hover:bg-green-100"
-                        onClick={() => {
-                          // Implement publish functionality
-                          toast.success("Published successfully!");
-                        }}
-                      >
-                        Publish
-                      </button>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
-                        Published
-                      </span>
-                    )}
-                  </>
-                )}
-              </div>
+                      Publish
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
+                      Published
+                    </span>
+                  )}
+                </>
+              )}
             </div>
-          </div>
+          </ContentCard>
         ))}
       </div>
     );
   };
 
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">My Dashboard</h1>
-        {session?.user && (
-          <p className="text-gray-600 mt-2">
-            Welcome back, {session.user.name}
-          </p>
-        )}
-      </div>
+  // Create tabs for the page header
+  const tabs = [
+    { href: '?tab=myPrompts', label: 'My Prompts' },
+    { href: '?tab=myFlows', label: 'My Flows' },
+    { href: '?tab=favoritePrompts', label: 'Favorite Prompts' },
+    { href: '?tab=favoriteFlows', label: 'Favorite Flows' },
+  ];
 
-      <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab("myPrompts")}
-              className={`${
-                activeTab === "myPrompts"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
-            >
-              My Prompts
-            </button>
-            <button
-              onClick={() => setActiveTab("myFlows")}
-              className={`${
-                activeTab === "myFlows"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
-            >
-              My Flows
-            </button>
-            <button
-              onClick={() => setActiveTab("favoritePrompts")}
-              className={`${
-                activeTab === "favoritePrompts"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
-            >
-              Favorite Prompts
-            </button>
-            <button
-              onClick={() => setActiveTab("favoriteFlows")}
-              className={`${
-                activeTab === "favoriteFlows"
-                  ? "border-indigo-500 text-indigo-600"
-                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-              } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium`}
-            >
-              Favorite Flows
-            </button>
-          </nav>
-        </div>
-      </div>
+  return (
+    <div>
+      <PageHeader 
+        title="My Dashboard"
+        description={session?.user ? `Welcome back, ${session.user.name}` : undefined}
+        tabs={tabs.map(tab => ({
+          ...tab,
+          href: `/dashboard${tab.href}`,
+        }))}
+      />
 
       <div>{renderContent()}</div>
     </div>
