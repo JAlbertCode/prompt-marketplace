@@ -6,7 +6,7 @@
  * Displays all available credit bundles for purchase
  */
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import CreditPurchaseCard from './CreditPurchaseCard';
 import { getCreditBundles } from '@/lib/credits';
 
