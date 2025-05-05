@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { addCredits } from '@/lib/credits';
+import { prisma } from '@/lib/db';
 import { z } from 'zod';
 
 // Define the request schema
@@ -58,19 +58,67 @@ export async function POST(req: NextRequest) {
       targetUserId = body.userId;
     }
     
-    // Add credits to the user's account
+    const expiresAt = expiryDays ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000) : null;
+    
+    // Add credits to the user's account by creating a credit bucket
     try {
-      const creditBucket = await addCredits(
-        targetUserId,
-        amount,
-        type,
-        source,
-        expiryDays ?? null
-      );
+      const creditBucket = await prisma.creditBucket.create({
+        data: {
+          userId: targetUserId,
+          type,
+          amount,
+          remaining: amount,
+          source,
+          expiresAt,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      
+      // Also update the user's legacy credits field for backward compatibility
+      const user = await prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: { id: true, credits: true }
+      });
+      
+      if (user) {
+        await prisma.user.update({
+          where: { id: targetUserId },
+          data: { credits: user.credits + amount }
+        });
+      }
+      
+      // Get total credits
+      const creditBuckets = await prisma.creditBucket.findMany({
+        where: {
+          userId: targetUserId,
+          remaining: { gt: 0 },
+          expiresAt: {
+            OR: [
+              { equals: null },
+              { gt: new Date() }
+            ]
+          }
+        }
+      });
+      
+      const total = creditBuckets.reduce((sum, bucket) => sum + bucket.remaining, 0);
+      
+      // Create a transaction record
+      await prisma.creditTransaction.create({
+        data: {
+          userId: targetUserId,
+          amount: amount,
+          description: `Added ${amount} credits (${type})`,
+          type: 'CREDIT_PURCHASE',
+          createdAt: new Date()
+        }
+      });
       
       return NextResponse.json({
         success: true,
         creditBucket,
+        total
       });
     } catch (error) {
       console.error('Error adding credits:', error);
