@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 import { chargeForPromptRun } from '@/utils/creditManager';
+import { getUserTotalCredits } from '@/lib/credits';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
     const body = await req.json();
-    const { promptId, modelId, promptTokens } = body;
+    const { promptId, modelId, promptText, promptLength } = body;
 
     // Validate required fields
     if (!promptId || !modelId) {
@@ -27,21 +28,34 @@ export async function POST(req: NextRequest) {
     }
 
     // Charge the user for running the prompt
-    const success = await chargeForPromptRun(
+    const result = await chargeForPromptRun(
       userId,
       promptId,
       modelId,
-      promptTokens
+      promptLength,
+      promptText
     );
 
-    if (!success) {
+    if (!result.success) {
+      // Get current balance to return to the client
+      const currentCredits = await getUserTotalCredits(userId);
+      
       return NextResponse.json(
-        { error: 'Insufficient credits' },
+        { 
+          error: 'Insufficient credits',
+          availableCredits: currentCredits,
+          requiredCredits: result.costBreakdown?.totalCost || 0
+        },
         { status: 402 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Return success response with cost breakdown
+    return NextResponse.json({
+      success: true,
+      costBreakdown: result.costBreakdown,
+      availableCredits: await getUserTotalCredits(userId)
+    });
   } catch (error) {
     console.error('Error charging for prompt run:', error);
     return NextResponse.json(

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getModelById, calculatePlatformMarkup } from '@/lib/models/modelRegistry';
-import { formatCreditsToDollars } from '@/lib/models/modelCosts';
+import { getModelById, getCostBreakdown, PromptLength, calculatePromptCreditCost } from '@/lib/models/modelRegistry';
 
 export async function POST(request: NextRequest) {
   try {
-    const { modelId, creatorFee } = await request.json();
+    const { modelId, promptLength = 'medium', creatorFeePercentage = 0, promptText } = await request.json();
     
     if (!modelId) {
       return NextResponse.json({ 
@@ -12,8 +11,6 @@ export async function POST(request: NextRequest) {
         message: 'Model ID is required' 
       }, { status: 400 });
     }
-    
-    const safeCreatorFee = creatorFee || 0;
     
     // Get the model information
     const model = getModelById(modelId);
@@ -25,33 +22,34 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Get the inference cost
-    const inferenceCost = model.baseCost;
+    // Determine prompt length if text was provided
+    let effectivePromptLength = promptLength as PromptLength;
     
-    // Calculate platform markup (only if no creator fee)
-    const platformMarkup = safeCreatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+    if (promptText) {
+      const charCount = promptText.length;
+      if (charCount < 1500) {
+        effectivePromptLength = 'short';
+      } else if (charCount < 6000) {
+        effectivePromptLength = 'medium';
+      } else {
+        effectivePromptLength = 'long';
+      }
+    }
     
-    // Calculate total cost
-    const totalCost = inferenceCost + safeCreatorFee + platformMarkup;
-    
-    // Format dollar cost
-    const dollarCost = formatCreditsToDollars(totalCost);
+    // Get the cost breakdown
+    const breakdown = getCostBreakdown(modelId, effectivePromptLength, creatorFeePercentage);
     
     return NextResponse.json({ 
       success: true, 
-      breakdown: {
-        inferenceCost,
-        platformMarkup,
-        creatorFee: safeCreatorFee,
-        totalCost,
-        dollarCost
-      }
+      breakdown,
+      promptLength: effectivePromptLength
     });
   } catch (error) {
     console.error('Error calculating cost:', error);
     return NextResponse.json({ 
       success: false, 
-      message: 'Failed to calculate cost' 
+      message: 'Failed to calculate cost',
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

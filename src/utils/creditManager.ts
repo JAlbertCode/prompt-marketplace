@@ -15,19 +15,17 @@ const prisma = new PrismaClient();
 /**
  * Calculate the platform markup based on the inference cost
  * @param inferenceCost Base inference cost in credits
+ * @param hasCreatorFee Whether there is a creator fee
  * @returns Platform markup in credits
  */
-export function calculatePlatformMarkup(inferenceCost: number): number {
-  if (inferenceCost < 10_000) {
-    // < $0.01
-    return Math.floor(inferenceCost * 0.20);
-  } else if (inferenceCost < 100_000) {
-    // < $0.10
-    return Math.floor(inferenceCost * 0.10);
-  } else {
-    // Flat fee for expensive operations
-    return 500; // $0.0005
+export function calculatePlatformMarkup(inferenceCost: number, hasCreatorFee: boolean = false): number {
+  // If there's a creator fee, platform gets 20% of that instead of markup
+  if (hasCreatorFee) {
+    return 0;
   }
+  
+  // Platform gets 10% markup on all model costs when there's no creator fee
+  return Math.floor(inferenceCost * 0.10);
 }
 
 /**
@@ -157,11 +155,15 @@ export async function deductCredits(
  * Calculate the cost of running a prompt
  * @param promptId Prompt ID
  * @param modelId Model ID
+ * @param promptLength Optional prompt length (short, medium, long)
+ * @param promptText Optional prompt text to estimate length if promptLength not provided
  * @returns Cost breakdown
  */
 export async function calculatePromptRunCost(
   promptId: string,
-  modelId: string
+  modelId: string,
+  promptLength?: 'short' | 'medium' | 'long',
+  promptText?: string
 ): Promise<{ inferenceCost: number; creatorFee: number; platformMarkup: number; totalCost: number }> {
   // Get creator fee
   const prompt = await prisma.prompt.findUnique({
@@ -171,6 +173,7 @@ export async function calculatePromptRunCost(
     select: {
       creatorFee: true,
       creatorId: true,
+      content: true,
     },
   });
 
@@ -178,12 +181,27 @@ export async function calculatePromptRunCost(
   
   // Get model info
   const model = getModelById(modelId);
+  if (!model) {
+    throw new Error(`Model ${modelId} not found`);
+  }
   
-  // System cost based on model - already in whole-number credits
-  const inferenceCost = model?.baseCost || 10000;
+  // Determine prompt length if not provided
+  let effectivePromptLength = promptLength || 'medium';
   
-  // Platform markup calculation - only apply if no creator fee
-  const platformMarkup = creatorFee > 0 ? 0 : calculatePlatformMarkup(inferenceCost);
+  if (!promptLength && promptText) {
+    // Estimate length from provided text
+    effectivePromptLength = estimatePromptLength(promptText);
+  } else if (!promptLength && prompt?.content) {
+    // Estimate length from prompt content
+    effectivePromptLength = estimatePromptLength(prompt.content);
+  }
+  
+  // Get inference cost based on prompt length from model cost table
+  const inferenceCost = model.cost[effectivePromptLength];
+  
+  // Calculate platform markup - only apply if no creator fee
+  const hasCreatorFee = creatorFee > 0;
+  const platformMarkup = calculatePlatformMarkup(inferenceCost, hasCreatorFee);
   
   // Total cost
   const totalCost = inferenceCost + creatorFee + platformMarkup;
@@ -197,62 +215,112 @@ export async function calculatePromptRunCost(
 }
 
 /**
+ * Estimate prompt length based on text content
+ * @param text The text content to analyze
+ * @returns The estimated prompt length category
+ */
+export function estimatePromptLength(text: string): 'short' | 'medium' | 'long' {
+  const charCount = text.length;
+  
+  if (charCount < 1500) {
+    return 'short';
+  } else if (charCount < 6000) {
+    return 'medium';
+  } else {
+    return 'long';
+  }
+}
+
+/**
  * Charge user for running a prompt and distribute fees
  * @param userId User ID
  * @param promptId Prompt ID
  * @param modelId Model ID
- * @returns Success status
+ * @param promptLength Optional prompt length (short, medium, long)
+ * @param promptText Optional prompt text to estimate length if promptLength not provided
+ * @returns Success status and cost breakdown
  */
 export async function chargeForPromptRun(
   userId: string,
   promptId: string,
-  modelId: string
-): Promise<boolean> {
-  const { inferenceCost, creatorFee, platformMarkup, totalCost } = await calculatePromptRunCost(
-    promptId,
-    modelId
-  );
+  modelId: string,
+  promptLength?: 'short' | 'medium' | 'long',
+  promptText?: string
+): Promise<{success: boolean, costBreakdown?: {inferenceCost: number, creatorFee: number, platformMarkup: number, totalCost: number}}> {
+  try {
+    const { inferenceCost, creatorFee, platformMarkup, totalCost } = await calculatePromptRunCost(
+      promptId,
+      modelId,
+      promptLength,
+      promptText
+    );
 
-  // Deduct credits from user
-  const remainingBalance = await deductCredits(
-    userId,
-    totalCost,
-    `Prompt run: ${promptId} using model: ${modelId}`,
-    "PROMPT_RUN"
-  );
+    // Deduct credits from user
+    const remainingBalance = await deductCredits(
+      userId,
+      totalCost,
+      `Prompt run: ${promptId} using model: ${modelId}`,
+      "PROMPT_RUN"
+    );
 
-  if (remainingBalance === null) {
-    return false; // Not enough credits
-  }
+    if (remainingBalance === null) {
+      return { success: false }; // Not enough credits
+    }
 
-  // If there's a creator fee, pay the creator (80% to creator, 20% to platform)
-  if (creatorFee > 0) {
-    const prompt = await prisma.prompt.findUnique({
-      where: {
-        id: promptId,
-      },
-      select: {
-        creatorId: true,
-        title: true,
-      },
+    // If there's a creator fee, pay the creator (80% to creator, 20% to platform)
+    if (creatorFee > 0) {
+      const prompt = await prisma.prompt.findUnique({
+        where: {
+          id: promptId,
+        },
+        select: {
+          creatorId: true,
+          title: true,
+        },
+      });
+
+      if (prompt) {
+        // Calculate creator portion (80% of the fee)
+        const creatorPortion = Math.floor(creatorFee * 0.8);
+        
+        await addCredits(
+          prompt.creatorId,
+          creatorPortion,
+          `Creator payment for prompt: ${prompt.title}`,
+          "CREATOR_PAYMENT"
+        );
+        
+        // The platform fee is already kept as part of the transaction
+      }
+    }
+
+    // Record the prompt run with cost details
+    await prisma.promptRun.create({
+      data: {
+        userId,
+        promptId,
+        model: modelId,
+        cost: totalCost,
+        inferenceCost,
+        creatorFee,
+        platformFee: platformMarkup,
+        promptLength: promptLength || estimatePromptLength(promptText || '')
+      }
     });
 
-    if (prompt) {
-      // Calculate creator portion (80% of the fee)
-      const creatorPortion = Math.floor(creatorFee * 0.8);
-      
-      await addCredits(
-        prompt.creatorId,
-        creatorPortion,
-        `Creator payment for prompt: ${prompt.title}`,
-        "CREATOR_PAYMENT"
-      );
-      
-      // The platform fee is already kept as part of the transaction
-    }
+    return { 
+      success: true, 
+      costBreakdown: {
+        inferenceCost,
+        creatorFee,
+        platformMarkup,
+        totalCost
+      } 
+    };
+  } catch (error) {
+    console.error('Error charging for prompt run:', error);
+    return { success: false };
   }
-
-  return true;
 }
 
 /**
