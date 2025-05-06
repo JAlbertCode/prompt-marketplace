@@ -74,8 +74,8 @@ export default function CreatorDashboardPage() {
   // Define creator navigation tabs
   const creatorTabs = [
     { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/creator/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/creator/flows', label: 'My Flows', icon: Zap },
+    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
+    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
   ];
 
   return (
@@ -128,7 +128,7 @@ export default function CreatorDashboardPage() {
             <div className="bg-gray-50 border rounded-lg p-8 text-center">
               <p className="text-gray-500 mb-4">No prompts created yet</p>
               <a
-                href="/create/prompt"
+                href="/create?tab=prompt"
                 className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Create a Prompt
@@ -140,7 +140,7 @@ export default function CreatorDashboardPage() {
             <div className="bg-gray-50 border rounded-lg p-8 text-center">
               <p className="text-gray-500 mb-4">No flows created yet</p>
               <a
-                href="/create/flow"
+                href="/create?tab=flow"
                 className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Create a Flow

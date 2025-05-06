@@ -65,8 +65,8 @@ export default function CreatorPromptsPage() {
   // Define creator navigation tabs
   const creatorTabs = [
     { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/creator/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/creator/flows', label: 'My Flows', icon: Zap },
+    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
+    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
   ];
 
   if (status === 'loading' || loading) {

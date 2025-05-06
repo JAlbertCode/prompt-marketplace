@@ -111,10 +111,10 @@ export default async function DashboardPage() {
           </div>
           
           <Link
-            href="/flow"
+            href="/dashboard/flows"
             className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
           >
-            Manage Flows <ArrowRight className="ml-1.5 h-4 w-4" />
+            View Flows <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         

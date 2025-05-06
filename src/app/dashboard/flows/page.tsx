@@ -1,50 +1,48 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import Button from '@/components/shared/Button';
-import PageHeader from '@/components/layout/system/PageHeader';
-import ContentCard from '@/components/layout/system/ContentCard';
-import { TrendingUp, Book, Zap } from 'lucide-react';
-import FlowCard from '@/components/dashboard/FlowCard';
-import PromptFilters from '@/components/dashboard/PromptFilters';
 import { getFlows } from '@/lib/flows';
 import { Flow } from '@/types/flow';
+import FlowCard from '@/components/dashboard/FlowCard';
+import PromptFilters from '@/components/dashboard/PromptFilters';
+import { toast } from 'react-hot-toast';
 
-export default function CreatorFlowsPage() {
+export default function FlowsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [flows, setFlows] = useState<Flow[]>([]);
-  const [filters, setFilters] = useState({ type: 'mine', search: '' });
+  const [filters, setFilters] = useState({ type: 'all', search: '' });
   const [sort, setSort] = useState('newest');
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     // Check if user is authenticated
     if (status === 'unauthenticated') {
-      router.replace('/login?returnUrl=/dashboard/creator/flows');
+      router.replace('/login?returnUrl=/dashboard/flows');
       return;
     }
 
-    // Fetch user's flows
-    if (status === 'authenticated') {
-      const fetchFlows = async () => {
-        try {
-          const flowsData = await getFlows({ type: 'mine' }, sort);
-          setFlows(flowsData);
-        } catch (error) {
-          console.error('Error fetching flows:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchFlows();
+    // Load flows
+    async function loadFlows() {
+      setLoading(true);
+      try {
+        const flowsData = await getFlows(filters, sort);
+        setFlows(flowsData);
+      } catch (error) {
+        console.error('Failed to load flows:', error);
+        toast.error('Failed to load flows');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [status, router, sort]);
+
+    loadFlows();
+  }, [filters, sort, status, router]);
 
   const handleCreateFlow = () => {
     router.push('/create?tab=flow');
@@ -62,13 +60,6 @@ export default function CreatorFlowsPage() {
     setView(newView);
   };
 
-  // Define creator navigation tabs
-  const creatorTabs = [
-    { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
-  ];
-
   if (status === 'loading' || loading) {
     return (
       <div className="p-8 flex justify-center items-center">
@@ -78,21 +69,15 @@ export default function CreatorFlowsPage() {
   }
 
   return (
-    <div>
-      <PageHeader 
-        title="My Flows"
-        description="Manage your created flows and create new ones"
-        tabs={creatorTabs}
-      />
-
+    <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">My Flows</h2>
-          <p className="text-gray-600 mt-1">Create and manage your flows</p>
-        </div>
-        <Button onClick={handleCreateFlow}>
-          <Plus className="mr-2" size={16} />
-          New Flow
+        <h1 className="text-2xl font-bold">My Flows</h1>
+        <Button 
+          className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded flex items-center gap-2"
+          onClick={handleCreateFlow}
+        >
+          <Plus size={16} />
+          Create New Flow
         </Button>
       </div>
 
@@ -104,13 +89,16 @@ export default function CreatorFlowsPage() {
       />
 
       {flows.length === 0 ? (
-        <ContentCard className="text-center py-12">
-          <p className="text-gray-500 mb-4">You haven't created any flows yet.</p>
-          <Button onClick={handleCreateFlow} variant="outline">
-            <Plus className="mr-2" size={16} />
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center mt-6">
+          <p className="text-gray-500 mb-4">You don't have any flows yet.</p>
+          <Button 
+            className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded flex items-center gap-2 mx-auto"
+            onClick={handleCreateFlow}
+          >
+            <Plus size={16} />
             Create Your First Flow
           </Button>
-        </ContentCard>
+        </div>
       ) : (
         <div className={`mt-6 ${view === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}`}>
           {flows.map((flow) => (

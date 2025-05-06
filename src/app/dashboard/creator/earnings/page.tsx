@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, Book, Zap, ArrowDown, ArrowUp } from 'lucide-react';
 import PageHeader from '@/components/layout/system/PageHeader';
 import ContentCard from '@/components/layout/system/ContentCard';
+import { toast } from 'react-hot-toast';
 
 // Sample data for earnings chart
 const earningsData = [
@@ -64,8 +64,8 @@ export default function CreatorEarningsPage() {
   // Define creator navigation tabs
   const creatorTabs = [
     { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/creator/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/creator/flows', label: 'My Flows', icon: Zap },
+    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
+    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
   ];
 
   if (status === 'loading' || loading) {
@@ -129,26 +129,21 @@ export default function CreatorEarningsPage() {
       </div>
 
       <ContentCard title="Monthly Earnings" className="mb-8">
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={earningsData}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value) => [`${formatCredits(value as number)} credits`, 'Earnings']}
-              />
-              <Bar dataKey="credits" fill="#3b82f6" />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="py-4">
+          <div className="flex items-end justify-between h-64 gap-4">
+            {earningsData.map((data) => (
+              <div key={data.month} className="flex flex-col items-center flex-1">
+                <div 
+                  className="bg-blue-500 w-full rounded-t-md transition-all duration-500 ease-in-out"
+                  style={{ 
+                    height: `${(data.credits / Math.max(...earningsData.map(d => d.credits))) * 200}px` 
+                  }}
+                ></div>
+                <div className="mt-2 text-sm font-medium">{data.month}</div>
+                <div className="text-xs text-gray-500">{formatCredits(data.credits)}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </ContentCard>
 
