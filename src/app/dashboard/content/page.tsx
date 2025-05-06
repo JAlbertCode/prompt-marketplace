@@ -251,9 +251,6 @@ export default function ContentPage() {
               if (combinedItem.itemType === 'prompt') {
                 return (
                   <div key={combinedItem.id} className="relative">
-                    <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full z-10">
-                      Prompt
-                    </div>
                     <PromptCard
                       id={combinedItem.id}
                       title={combinedItem.title}
@@ -268,9 +265,6 @@ export default function ContentPage() {
               } else {
                 return (
                   <div key={combinedItem.id} className="relative">
-                    <div className="absolute top-2 right-2 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded-full z-10">
-                      Flow
-                    </div>
                     <FlowCard
                       id={combinedItem.id}
                       title={combinedItem.title}
