@@ -64,8 +64,7 @@ export default function CreatorEarningsPage() {
   // Define creator navigation tabs
   const creatorTabs = [
     { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
+    { href: '/dashboard/content', label: 'My Content', icon: Book },
   ];
 
   if (status === 'loading' || loading) {

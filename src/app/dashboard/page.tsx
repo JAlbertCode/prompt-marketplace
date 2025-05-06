@@ -92,10 +92,10 @@ export default async function DashboardPage() {
           </div>
           
           <Link
-            href="/dashboard/prompts"
+            href="/dashboard/content"
             className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
-            View Prompts <ArrowRight className="ml-1.5 h-4 w-4" />
+            View My Content <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         
@@ -105,8 +105,8 @@ export default async function DashboardPage() {
               <ListTodo className="h-5 w-5" />
             </div>
             <div className="ml-4">
-              <h3 className="font-semibold text-gray-900">Prompt Flows</h3>
-              <p className="text-sm text-gray-500">Chain prompts together</p>
+              <h3 className="font-semibold text-gray-900">Automations</h3>
+              <p className="text-sm text-gray-500">Run workflows and automate tasks</p>
             </div>
           </div>
           
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
             href="/dashboard/flows"
             className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
           >
-            View Flows <ArrowRight className="ml-1.5 h-4 w-4" />
+            Run Automations <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         

@@ -74,8 +74,7 @@ export default function CreatorDashboardPage() {
   // Define creator navigation tabs
   const creatorTabs = [
     { href: '/dashboard/creator', label: 'Overview', icon: TrendingUp },
-    { href: '/dashboard/prompts', label: 'My Prompts', icon: Book },
-    { href: '/dashboard/flows', label: 'My Flows', icon: Zap },
+    { href: '/dashboard/content', label: 'My Content', icon: Book },
   ];
 
   return (
@@ -123,28 +122,24 @@ export default function CreatorDashboardPage() {
 
       <ContentCard title="Your Content" className="mb-8">
         <div className="flex flex-col md:flex-row gap-6">
-          <div className="w-full md:w-1/2">
-            <h3 className="text-lg font-medium mb-3">Your Prompts</h3>
+          <div className="w-full">
+            <h3 className="text-lg font-medium mb-3">Your Content</h3>
             <div className="bg-gray-50 border rounded-lg p-8 text-center">
-              <p className="text-gray-500 mb-4">No prompts created yet</p>
-              <a
-                href="/create?tab=prompt"
-                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Create a Prompt
-              </a>
-            </div>
-          </div>
-          <div className="w-full md:w-1/2">
-            <h3 className="text-lg font-medium mb-3">Your Flows</h3>
-            <div className="bg-gray-50 border rounded-lg p-8 text-center">
-              <p className="text-gray-500 mb-4">No flows created yet</p>
-              <a
-                href="/create?tab=flow"
-                className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Create a Flow
-              </a>
+              <p className="text-gray-500 mb-4">No content created yet</p>
+              <div className="flex gap-4 justify-center">
+                <a
+                  href="/create?tab=prompt"
+                  className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Create a Prompt
+                </a>
+                <a
+                  href="/create?tab=flow"
+                  className="inline-block px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                >
+                  Create a Flow
+                </a>
+              </div>
             </div>
           </div>
         </div>
