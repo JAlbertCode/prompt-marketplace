@@ -1,76 +1,40 @@
-"use client";
+import React from 'react';
+import { Metadata } from 'next';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import SettingsSidebar from '@/components/layout/settings/SettingsSidebar';
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { User, Settings, Shield, CreditCard } from 'lucide-react';
-import { getUserTotalCredits } from '@/lib/credits';
-import AppShell from '@/components/layout/system/AppShell';
-import Sidebar from '@/components/layout/system/Sidebar';
+export const metadata: Metadata = {
+  title: 'Settings - PromptFlow',
+  description: 'Manage your account settings and preferences',
+};
 
-interface SettingsLayoutProps {
+export default async function SettingsLayout({
+  children,
+}: {
   children: React.ReactNode;
-}
-
-export default function SettingsLayout({ children }: SettingsLayoutProps) {
-  const { data: session, status } = useSession();
-  const [credits, setCredits] = useState<number | undefined>(undefined);
+}) {
+  // Check authentication
+  const session = await getServerSession(authOptions);
   
-  // Fetch user's credits
-  useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
-      const fetchCredits = async () => {
-        try {
-          const totalCredits = await getUserTotalCredits(session.user.id);
-          setCredits(totalCredits);
-        } catch (error) {
-          console.error('Error fetching credits:', error);
-        }
-      };
-      
-      fetchCredits();
-    }
-  }, [status, session?.user?.id]);
+  if (!session?.user) {
+    redirect('/login?returnUrl=/settings');
+  }
   
-  // Define sidebar navigation items
-  const sidebarItems = [
-    { 
-      href: '/settings/profile', 
-      label: 'Profile', 
-      icon: User,
-    },
-    { 
-      href: '/settings/account', 
-      label: 'Account', 
-      icon: Settings,
-    },
-    { 
-      href: '/settings/security', 
-      label: 'Security', 
-      icon: Shield,
-    },
-    {
-      href: '/dashboard/credits',
-      label: 'Credits',
-      icon: CreditCard,
-    }
-  ];
-  
-  const settingsSidebar = (
-    <Sidebar
-      items={sidebarItems}
-      showUserProfile={true}
-      showCredits={true}
-      credits={credits}
-    />
-  );
-
   return (
-    <AppShell
-      sidebar={settingsSidebar}
-    >
-      <div className="bg-white rounded-lg shadow p-6">
-        {children}
+    <div className="flex flex-col md:flex-row gap-6 p-6">
+      {/* Settings sidebar */}
+      <div className="w-full md:w-80 flex-shrink-0 mb-6 md:mb-0">
+        <SettingsSidebar />
       </div>
-    </AppShell>
+      
+      {/* Main content */}
+      <div className="flex-1">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
