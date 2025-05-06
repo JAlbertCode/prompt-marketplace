@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Button from '@/components/shared/Button';
 import PageHeader from '@/components/layout/system/PageHeader';
 import ContentCard from '@/components/layout/system/ContentCard';
 import { TrendingUp, Book, Zap } from 'lucide-react';

@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { X, ArrowLeft } from 'lucide-react';
 import { createPrompt } from '@/lib/prompts';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 export default function NewPromptPage() {
   const router = useRouter();

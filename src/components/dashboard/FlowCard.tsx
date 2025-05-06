@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import Button from "@/components/shared/Button";
 import { Heart, Edit, Play } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import { toggleFavoriteFlow } from '@/lib/flows';
-import { toast } from 'sonner';
+import { toast } from 'react-hot-toast';
 
 interface FlowCardProps {
   id: string;
@@ -60,26 +59,26 @@ export default function FlowCard({
   };
 
   return (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
+    <div 
+      className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={handleCardClick}
     >
-      <CardHeader className="pb-2">
+      <div className="p-4 pb-2">
         <div className="flex justify-between items-start">
           <h3 className="font-medium text-lg truncate">{title}</h3>
           <Button 
             variant="ghost" 
-            size="icon" 
-            className={`${favorite ? 'text-red-500' : 'text-gray-400'}`}
+            className={`p-1 ${favorite ? 'text-red-500' : 'text-gray-400'}`}
             onClick={handleFavorite}
             disabled={isLoading}
           >
             <Heart className={`${favorite ? 'fill-current' : ''}`} size={18} />
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">{author}</p>
-      </CardHeader>
-      <CardContent>
+        <p className="text-sm text-gray-500">{author}</p>
+      </div>
+      
+      <div className="px-4 py-2">
         <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
         <div className="mt-3">
           <p className="text-xs font-medium text-gray-500 mb-1">Steps: {steps.length}</p>
@@ -94,8 +93,9 @@ export default function FlowCard({
             )}
           </ul>
         </div>
-      </CardContent>
-      <CardFooter className="pt-2 flex justify-between">
+      </div>
+      
+      <div className="px-4 py-3 border-t border-gray-100 flex justify-between items-center">
         <span className="text-xs text-gray-500">{createdAt}</span>
         <div className="flex gap-2">
           <Button 
@@ -112,11 +112,11 @@ export default function FlowCard({
             size="sm"
             onClick={handleEdit}
           >
-            <Edit className="mr-2" size={14} />
+            <Edit className="mr-1" size={14} />
             Edit
           </Button>
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

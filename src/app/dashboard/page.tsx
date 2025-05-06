@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       
       {/* Quick action cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col h-full">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
               <FileText className="h-5 w-5" />
@@ -93,13 +93,13 @@ export default async function DashboardPage() {
           
           <Link
             href="/dashboard/prompts"
-            className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
             View Prompts <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col h-full">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-purple-100 text-purple-600 rounded-full">
               <ListTodo className="h-5 w-5" />
@@ -112,13 +112,13 @@ export default async function DashboardPage() {
           
           <Link
             href="/flow"
-            className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+            className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
           >
             Manage Flows <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
+        <div className="bg-white rounded-lg border border-gray-200 p-5 flex flex-col h-full">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
               <Sparkles className="h-5 w-5" />
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
           
           <Link
             href="/dashboard/creator"
-            className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+            className="mt-auto w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
           >
             Creator Dashboard <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
