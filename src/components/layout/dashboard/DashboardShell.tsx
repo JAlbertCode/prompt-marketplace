@@ -7,10 +7,9 @@ import {
   CreditCard, 
   LayoutDashboard, 
   Settings, 
-  Zap, 
-  History,
-  TrendingUp,
-  Sparkles
+  Sparkles,
+  User,
+  FileText
 } from 'lucide-react';
 import CreditsSidebar from './CreditsSidebar';
 
@@ -29,14 +28,19 @@ export default function DashboardShell({ children }: DashboardShellProps) {
       icon: <LayoutDashboard className="h-5 w-5" /> 
     },
     { 
-      label: 'Credits', 
-      href: '/dashboard/credits', 
-      icon: <CreditCard className="h-5 w-5" /> 
+      label: 'Prompts', 
+      href: '/dashboard/prompts', 
+      icon: <FileText className="h-5 w-5" /> 
     },
     { 
       label: 'Creator Tools', 
       href: '/dashboard/creator', 
       icon: <Sparkles className="h-5 w-5" /> 
+    },
+    { 
+      label: 'Credits', 
+      href: '/dashboard/credits', 
+      icon: <CreditCard className="h-5 w-5" /> 
     },
     { 
       label: 'Settings', 
@@ -47,6 +51,9 @@ export default function DashboardShell({ children }: DashboardShellProps) {
   
   // Determine if we're in the credits section
   const isCreditsSection = pathname?.startsWith('/dashboard/credits');
+  
+  // Determine if we're in the settings section
+  const isSettingsSection = pathname?.startsWith('/settings');
   
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -60,6 +67,10 @@ export default function DashboardShell({ children }: DashboardShellProps) {
           
           <nav className="flex-1 p-4 space-y-1">
             {mainNavItems.map((item) => {
+              // Consider a nav item active if:
+              // 1. It's the exact path, or
+              // 2. It's a section root (like /dashboard) and the path starts with it, or
+              // 3. It's a section (like /settings) and the path starts with it
               const isActive = 
                 item.href === pathname || 
                 (item.href !== '/dashboard' && pathname?.startsWith(item.href));
@@ -83,14 +94,19 @@ export default function DashboardShell({ children }: DashboardShellProps) {
             })}
           </nav>
           
-          {/* Quick run button */}
+          {/* User profile section */}
           <div className="p-4 border-t border-gray-200">
             <Link
-              href="/run"
-              className="flex items-center justify-center w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+              href="/settings/profile"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
             >
-              <Zap className="h-5 w-5 mr-2" />
-              <span className="font-medium">Run Prompt</span>
+              <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                <User className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-sm font-medium text-gray-900">Profile</div>
+                <div className="text-xs text-gray-500">Edit account settings</div>
+              </div>
             </Link>
           </div>
         </div>
@@ -107,19 +123,9 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         </div>
         
         {/* Content area */}
-        <div className="flex-1 flex flex-col md:flex-row">
-          {/* Credits sidebar - Only visible when in credits section */}
-          {isCreditsSection && (
-            <div className="w-full md:w-64 p-4 md:border-r md:border-gray-200">
-              <CreditsSidebar />
-            </div>
-          )}
-          
-          {/* Main content */}
-          <main className={`flex-1 p-4 md:p-6 ${isCreditsSection ? 'md:ml-0' : ''}`}>
-            {children}
-          </main>
-        </div>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );

@@ -1,16 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Legend
-} from 'recharts';
 import { Calendar, Filter } from 'lucide-react';
 import { formatCredits } from '@/lib/creditHelpers';
 
@@ -126,30 +116,6 @@ export default function CreditsOverviewChart({
     return num.toLocaleString();
   };
   
-  // Custom tooltip for chart
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-gray-200 shadow-md rounded-md">
-          <p className="font-medium text-gray-900">{label}</p>
-          <div className="space-y-1 mt-2">
-            {payload.map((entry: any) => (
-              <div key={entry.dataKey} className="flex items-center">
-                <div 
-                  className="w-3 h-3 rounded-full mr-2" 
-                  style={{ backgroundColor: entry.color }}
-                ></div>
-                <span className="text-gray-600">{entry.name}: </span>
-                <span className="font-medium ml-1">{formatCredits(entry.value)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-  
   // Toggle transaction type selection
   const toggleType = (typeId: string) => {
     if (selectedTypes.includes(typeId)) {
@@ -244,84 +210,71 @@ export default function CreditsOverviewChart({
         </div>
       )}
       
-      {/* Chart */}
+      {/* Chart - Simple bar chart implementation without recharts */}
       <div className="p-4">
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis 
-                dataKey="date" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fontSize: 12, fill: '#6b7280' }}
-                tickFormatter={(value) => formatCredits(value)}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend 
-                verticalAlign="top" 
-                height={36}
-                formatter={(value, entry, index) => {
-                  const type = transactionTypes.find(t => t.id === value);
-                  return type ? type.name : value;
-                }}
-              />
+        <div className="h-80 relative">
+          <div className="absolute inset-0 flex items-end">
+            {data.map((day, index) => {
+              // Calculate total height for this day's data
+              const total = selectedTypes.reduce((sum, type) => {
+                return sum + (day[type as keyof typeof day] as number || 0);
+              }, 0);
               
-              {/* Render bars for selected types */}
-              {selectedTypes.includes('prompt') && (
-                <Bar 
-                  dataKey="prompt" 
-                  name="Prompt Usage"
-                  stackId="a"
-                  fill={transactionTypes.find(t => t.id === 'prompt')?.color} 
-                />
-              )}
+              // Get max value for scaling
+              const maxValue = Math.max(
+                ...data.map(d => 
+                  selectedTypes.reduce((sum, type) => {
+                    return sum + (d[type as keyof typeof d] as number || 0);
+                  }, 0)
+                )
+              );
               
-              {selectedTypes.includes('completion') && (
-                <Bar 
-                  dataKey="completion" 
-                  name="Completion Usage"
-                  stackId="a"
-                  fill={transactionTypes.find(t => t.id === 'completion')?.color} 
-                />
-              )}
+              // Calculate percentage height based on max value
+              const heightPercentage = (total / maxValue) * 100;
               
-              {selectedTypes.includes('flow') && (
-                <Bar 
-                  dataKey="flow" 
-                  name="Flow Usage"
-                  stackId="a"
-                  fill={transactionTypes.find(t => t.id === 'flow')?.color} 
-                />
-              )}
-              
-              {selectedTypes.includes('purchased') && (
-                <Bar 
-                  dataKey="purchased" 
-                  name="Credits Purchased"
-                  stackId="b"
-                  fill={transactionTypes.find(t => t.id === 'purchased')?.color} 
-                />
-              )}
-              
-              {selectedTypes.includes('bonus') && (
-                <Bar 
-                  dataKey="bonus" 
-                  name="Bonus Credits"
-                  stackId="b"
-                  fill={transactionTypes.find(t => t.id === 'bonus')?.color} 
-                />
-              )}
-            </BarChart>
-          </ResponsiveContainer>
+              return (
+                <div
+                  key={day.date}
+                  className="flex-1 mx-px flex flex-col justify-end"
+                >
+                  {/* Stacked bars for selected types */}
+                  <div className="flex flex-col-reverse w-full">
+                    {selectedTypes.map(type => {
+                      const value = day[type as keyof typeof day] as number || 0;
+                      if (value === 0) return null;
+                      
+                      const typeHeight = (value / maxValue) * 100;
+                      const typeColor = transactionTypes.find(t => t.id === type)?.color || '#gray';
+                      
+                      return (
+                        <div
+                          key={`${day.date}-${type}`}
+                          className="w-full transition-all rounded-t hover:opacity-80"
+                          style={{
+                            height: `${typeHeight}%`,
+                            backgroundColor: typeColor
+                          }}
+                          title={`${day.date}: ${formatCredits(value)} ${type} credits`}
+                        ></div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* X-axis labels */}
+                  <div className="text-xs text-gray-500 text-center mt-2 truncate">
+                    {day.date}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Y-axis lines (grid) */}
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} className="border-t border-gray-200 w-full h-0"></div>
+            ))}
+          </div>
         </div>
       </div>
       

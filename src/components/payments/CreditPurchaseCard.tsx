@@ -90,6 +90,7 @@ export default function CreditPurchaseCard({
   return (
     <div className={`
       border rounded-lg p-6 shadow-sm transition-all 
+      flex flex-col h-full
       ${featured ? 'bg-gradient-to-b from-blue-50 to-white border-blue-200 shadow-md scale-105' : 'bg-white'}
       ${!isEligible ? 'opacity-60' : 'hover:shadow-md'}
     `}>
@@ -130,21 +131,23 @@ export default function CreditPurchaseCard({
         </div>
       )}
       
-      <button
-        onClick={handlePurchase}
-        disabled={!isEligible}
-        className={`
-          w-full py-2 rounded-md font-medium transition-colors
-          ${isEligible
-            ? featured
-              ? 'bg-blue-600 text-white hover:bg-blue-700'
-              : 'bg-gray-800 text-white hover:bg-gray-900'
-            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }
-        `}
-      >
-        {isEligible ? 'Purchase Now' : 'Not Eligible'}
-      </button>
+      <div className="mt-auto">
+        <button
+          onClick={handlePurchase}
+          disabled={!isEligible}
+          className={`
+            w-full py-2 rounded-md font-medium transition-colors
+            ${isEligible
+              ? featured
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-800 text-white hover:bg-gray-900'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }
+          `}
+        >
+          {isEligible ? 'Purchase Now' : 'Not Eligible'}
+        </button>
+      </div>
       
       {!isEligible && requiresMonthlyBurn && (
         <p className="text-xs text-gray-500 mt-2 text-center">

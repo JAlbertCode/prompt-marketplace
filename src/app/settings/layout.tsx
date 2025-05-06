@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import DashboardShell from '@/components/layout/dashboard/DashboardShell';
 import SettingsSidebar from '@/components/layout/settings/SettingsSidebar';
 
 export const metadata: Metadata = {
@@ -23,18 +24,20 @@ export default async function SettingsLayout({
   }
   
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-6">
-      {/* Settings sidebar */}
-      <div className="w-full md:w-80 flex-shrink-0 mb-6 md:mb-0">
-        <SettingsSidebar />
-      </div>
-      
-      {/* Main content */}
-      <div className="flex-1">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          {children}
+    <DashboardShell>
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Settings sidebar */}
+        <div className="w-full md:w-80 flex-shrink-0 mb-6 md:mb-0">
+          <SettingsSidebar />
+        </div>
+        
+        {/* Main content */}
+        <div className="flex-1">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </DashboardShell>
   );
 }

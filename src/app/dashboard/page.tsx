@@ -7,10 +7,10 @@ import Link from 'next/link';
 import { 
   CreditCard, 
   ArrowRight, 
-  Zap, 
   Sparkles, 
   ListTodo,
-  TrendingUp
+  TrendingUp,
+  FileText
 } from 'lucide-react';
 import { formatCredits } from '@/lib/creditHelpers';
 
@@ -83,19 +83,19 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="flex items-center mb-4">
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
-              <Zap className="h-5 w-5" />
+              <FileText className="h-5 w-5" />
             </div>
             <div className="ml-4">
-              <h3 className="font-semibold text-gray-900">Run Prompt</h3>
-              <p className="text-sm text-gray-500">Execute a new or saved prompt</p>
+              <h3 className="font-semibold text-gray-900">My Prompts</h3>
+              <p className="text-sm text-gray-500">Create and manage your prompts</p>
             </div>
           </div>
           
           <Link
-            href="/run"
+            href="/dashboard/prompts"
             className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
           >
-            Run Now <ArrowRight className="ml-1.5 h-4 w-4" />
+            View Prompts <ArrowRight className="ml-1.5 h-4 w-4" />
           </Link>
         </div>
         
@@ -106,12 +106,12 @@ export default async function DashboardPage() {
             </div>
             <div className="ml-4">
               <h3 className="font-semibold text-gray-900">Prompt Flows</h3>
-              <p className="text-sm text-gray-500">Create or run prompt chains</p>
+              <p className="text-sm text-gray-500">Chain prompts together</p>
             </div>
           </div>
           
           <Link
-            href="/flows"
+            href="/flow"
             className="mt-2 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
           >
             Manage Flows <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
                         activity.type === 'flow' ? 'bg-purple-100 text-purple-600' :
                         'bg-amber-100 text-amber-600'
                       }`}>
-                        {activity.type === 'prompt' ? <Zap className="h-4 w-4" /> :
+                        {activity.type === 'prompt' ? <FileText className="h-4 w-4" /> :
                          activity.type === 'flow' ? <ListTodo className="h-4 w-4" /> :
                          <CreditCard className="h-4 w-4" />}
                       </div>
