@@ -1,113 +1,121 @@
 /**
- * Utilities for credit management
+ * Helper functions for working with credits
  */
-
-import { SonarModel, ImageModel } from '@/types';
 
 /**
- * Get the baseline cost for a specific model
- * @param model The model to get the baseline cost for
- * @returns The baseline cost in credits
+ * Format a credit amount with appropriate abbreviations
+ * @param credits The number of credits to format
+ * @returns Formatted string representation
  */
-export function getBaselineCost(model: SonarModel | ImageModel): number {
-  const costMap: Record<string, number> = {
-    // Text models
-    'sonar-small-online': 15,
-    'sonar-small-chat': 15,
-    'sonar-medium-online': 25,
-    'sonar-medium-chat': 25,
-    'sonar-large-online': 40,
-    'sonar': 25, // Default model
-    'llama-3.1-sonar-small-128k-online': 20,
-    
-    // Image models
-    'dall-e-2': 50,
-    'dall-e-3': 100,
-    'stable-diffusion-xl': 80,
-    'stability-xl-turbo': 60,
-    'stability-xl-ultra': 120,
-    'sdxl': 80,
-    'sd3': 90
-  };
-  
-  return costMap[model] || 25; // Default to 25 credits if model not found
-}
-
-/**
- * Check if a credit cost is valid for a specific model
- * @param cost The cost to check
- * @param model The model to check against
- * @returns True if the cost is valid, false otherwise
- */
-export function isValidCreditCost(cost: number, model: SonarModel | ImageModel): boolean {
-  // Get the baseline cost for the model
-  const baselineCost = getBaselineCost(model);
-  
-  // Cost must be at least the baseline
-  return cost >= baselineCost;
-}
-
-/**
- * Calculate combined cost for text and image generation
- * @param textModel The text model
- * @param imageModel The image model
- * @returns The combined cost
- */
-export function calculateCombinedCost(
-  textModel?: SonarModel,
-  imageModel?: ImageModel
-): number {
-  let totalCost = 0;
-  
-  // Add text model cost if provided
-  if (textModel) {
-    totalCost += getBaselineCost(textModel);
+export function formatCredits(credits: number): string {
+  if (credits >= 1_000_000_000) {
+    return `${(credits / 1_000_000_000).toFixed(1)}B`;
+  } else if (credits >= 1_000_000) {
+    return `${(credits / 1_000_000).toFixed(1)}M`;
+  } else if (credits >= 1_000) {
+    return `${(credits / 1_000).toFixed(1)}K`;
   }
-  
-  // Add image model cost if provided
-  if (imageModel) {
-    totalCost += getBaselineCost(imageModel);
-  }
-  
-  return totalCost;
+  return credits.toLocaleString();
 }
 
 /**
- * Get warning level based on credit balance
- * @param credits Current credit balance
- * @returns Warning level
+ * Calculate tier recommendation based on monthly burn
+ * @param monthlyBurn Monthly credit burn rate
+ * @returns Recommended credit package
  */
-export function getCreditWarningLevel(credits: number): 'none' | 'low' | 'critical' {
-  if (credits <= 50) {
-    return 'critical';
-  } else if (credits <= 200) {
-    return 'low';
-  } else {
-    return 'none';
-  }
+export function getRecommendedPackage(monthlyBurn: number): string {
+  if (monthlyBurn >= 1_400_000) return 'enterprise';
+  if (monthlyBurn >= 600_000) return '100m';
+  if (monthlyBurn >= 300_000) return '50m';
+  if (monthlyBurn >= 100_000) return '25m';
+  return '10m';
 }
 
 /**
- * Format credit amount with symbol
- * @param amount Credit amount
- * @returns Formatted credit string
+ * Calculate monthly credit bonus based on usage
+ * @param monthlyBurn Monthly credit burn rate
+ * @returns Bonus credit amount
  */
-export function formatCredits(amount: number): string {
-  return `💎 ${amount.toLocaleString()}`;
+export function getMonthlyBonus(monthlyBurn: number): number {
+  if (monthlyBurn >= 1_400_000) return 400_000;
+  if (monthlyBurn >= 600_000) return 100_000;
+  if (monthlyBurn >= 300_000) return 40_000;
+  if (monthlyBurn >= 100_000) return 10_000;
+  return 0;
 }
 
 /**
- * Calculate discount for bulk credit purchase
- * @param amount Base credit amount
- * @returns Discount percentage
+ * Determine if a user is eligible for enterprise tier
+ * @param monthlyBurn Monthly credit burn rate
+ * @returns Boolean indicating eligibility
  */
-export function getBulkDiscount(amount: number): number {
-  if (amount >= 10000) {
-    return 0.15; // 15% discount
-  } else if (amount >= 5000) {
-    return 0.10; // 10% discount
-  } else if (amount >= 1000) {
-    return 0.05; // 5% discount
-  }
-  return 0; // No discount
+export function isEnterpriseEligible(monthlyBurn: number): boolean {
+  return monthlyBurn >= 1_400_000;
 }
+
+/**
+ * Convert credits to USD value
+ * 1 credit = $0.000001 USD
+ * @param credits Number of credits
+ * @returns USD value as a floating point number
+ */
+export function creditsToUSD(credits: number): number {
+  return credits * 0.000001;
+}
+
+/**
+ * Convert USD to credits
+ * $1 USD = 1,000,000 credits
+ * @param usd USD amount
+ * @returns Number of credits
+ */
+export function usdToCredits(usd: number): number {
+  return usd * 1_000_000;
+}
+
+/**
+ * Credit packages configuration
+ */
+export const creditPackages = [
+  {
+    id: '10m',
+    name: 'Starter',
+    baseAmount: 10_000_000,
+    bonusAmount: 0,
+    price: 10,
+    description: 'Basic package for occasional use'
+  },
+  {
+    id: '25m',
+    name: 'Professional',
+    baseAmount: 25_000_000,
+    bonusAmount: 2_500_000,
+    price: 25,
+    description: 'Popular choice for regular users'
+  },
+  {
+    id: '50m',
+    name: 'Business',
+    baseAmount: 50_000_000,
+    bonusAmount: 7_500_000,
+    price: 50,
+    description: 'For teams and power users'
+  },
+  {
+    id: '100m',
+    name: 'Premium',
+    baseAmount: 100_000_000,
+    bonusAmount: 20_000_000,
+    price: 100,
+    description: 'Best value for high-volume usage'
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    baseAmount: 100_000_000,
+    bonusAmount: 40_000_000,
+    price: 100,
+    description: 'For organizations with very high usage',
+    requiresApproval: true
+  }
+];

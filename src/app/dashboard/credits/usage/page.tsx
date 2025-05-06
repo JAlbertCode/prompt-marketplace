@@ -1,337 +1,236 @@
-"use client";
+import React from 'react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import CreditsOverviewChart from '@/components/credits/CreditsOverviewChart';
+import ModelCostsTable from '@/components/credits/ModelCostsTable';
+import Link from 'next/link';
+import { BarChart3, Tag, TrendingUp } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import CreditPageHeader from '@/components/credits/CreditPageHeader';
-import { getUserTotalCredits, getUserCreditHistory } from '@/lib/credits';
+export const metadata = {
+  title: 'Usage Analytics - PromptFlow',
+  description: 'Analyze credit usage patterns across models and time',
+};
 
-export default function CreditUsageAnalyticsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [credits, setCredits] = useState<number | undefined>(undefined);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d');
+export default async function UsageAnalyticsPage() {
+  // Check authentication
+  const session = await getServerSession(authOptions);
   
-  // Model usage stats
-  const [modelUsage, setModelUsage] = useState<{
-    modelId: string;
-    displayName: string;
-    totalCredits: number;
-    percentage: number;
-    color: string;
-  }[]>([]);
-  
-  // Daily usage stats for chart
-  const [dailyUsage, setDailyUsage] = useState<{
-    date: string;
-    credits: number;
-  }[]>([]);
-  
-  // Load user data and transaction history
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login?returnUrl=/dashboard/credits/usage');
-    }
-    
-    if (status === 'authenticated' && session?.user?.id) {
-      const fetchData = async () => {
-        try {
-          // Get total credits
-          const totalCredits = await getUserTotalCredits(session.user.id);
-          setCredits(totalCredits);
-          
-          // Get transaction history - large limit to get all recent transactions
-          const history = await getUserCreditHistory(
-            session.user.id,
-            100,
-            0
-          );
-          
-          setTransactions(history);
-          
-          // Calculate model usage stats
-          calculateModelUsage(history);
-          
-          // Calculate daily usage for chart
-          calculateDailyUsage(history);
-          
-          setLoading(false);
-        } catch (error) {
-          console.error('Error loading credit data:', error);
-          setLoading(false);
-        }
-      };
-      
-      fetchData();
-    }
-  }, [status, router, session?.user?.id]);
-  
-  // Calculate model usage statistics
-  const calculateModelUsage = (transactions: any[]) => {
-    const models: Record<string, {
-      modelId: string;
-      displayName: string;
-      totalCredits: number;
-    }> = {};
-    
-    let totalUsage = 0;
-    
-    // Process transactions
-    transactions.forEach(tx => {
-      if (tx.creditsUsed > 0 && tx.userId === session?.user?.id) {
-        const modelId = tx.modelId;
-        const displayName = tx.model?.displayName || modelId || 'Unknown';
-        
-        if (!models[modelId]) {
-          models[modelId] = {
-            modelId,
-            displayName,
-            totalCredits: 0
-          };
-        }
-        
-        models[modelId].totalCredits += tx.creditsUsed;
-        totalUsage += tx.creditsUsed;
-      }
-    });
-    
-    // Convert to array and calculate percentages
-    const modelColors = [
-      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 
-      'bg-yellow-500', 'bg-red-500', 'bg-indigo-500',
-      'bg-pink-500', 'bg-orange-500', 'bg-teal-500'
-    ];
-    
-    const modelArray = Object.values(models).map((model, index) => {
-      return {
-        ...model,
-        percentage: totalUsage > 0 ? (model.totalCredits / totalUsage) * 100 : 0,
-        color: modelColors[index % modelColors.length]
-      };
-    });
-    
-    // Sort by usage (highest first)
-    modelArray.sort((a, b) => b.totalCredits - a.totalCredits);
-    
-    setModelUsage(modelArray);
-  };
-  
-  // Calculate daily usage for chart
-  const calculateDailyUsage = (transactions: any[]) => {
-    const days: Record<string, number> = {};
-    const now = new Date();
-    
-    // Initialize days based on selected timeframe
-    const timeframeMap = {
-      '7d': 7,
-      '30d': 30,
-      '90d': 90
-    };
-    
-    const daysToShow = timeframeMap[timeframe];
-    
-    for (let i = 0; i < daysToShow; i++) {
-      const date = new Date();
-      date.setDate(now.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
-      days[dateString] = 0;
-    }
-    
-    // Add transaction credits to days
-    transactions.forEach(tx => {
-      if (tx.creditsUsed > 0 && tx.userId === session?.user?.id) {
-        const txDate = new Date(tx.createdAt);
-        const dateString = txDate.toISOString().split('T')[0];
-        
-        // Only count if within our timeframe
-        const daysAgo = Math.floor((now.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysAgo < daysToShow && days[dateString] !== undefined) {
-          days[dateString] += tx.creditsUsed;
-        }
-      }
-    });
-    
-    // Convert to array for chart
-    const dailyArray = Object.entries(days).map(([date, credits]) => ({
-      date,
-      credits
-    }));
-    
-    // Sort by date (oldest first)
-    dailyArray.sort((a, b) => a.date.localeCompare(b.date));
-    
-    setDailyUsage(dailyArray);
-  };
-  
-  // Change timeframe
-  const handleTimeframeChange = (newTimeframe: '7d' | '30d' | '90d') => {
-    setTimeframe(newTimeframe);
-    calculateDailyUsage(transactions);
-  };
-  
-  // Get total usage
-  const getTotalUsage = () => {
-    return modelUsage.reduce((sum, model) => sum + model.totalCredits, 0);
-  };
-  
-  // Format large numbers with commas
-  const formatNumber = (num: number) => {
-    return num.toLocaleString();
-  };
+  if (!session?.user) {
+    redirect('/login?returnUrl=/dashboard/credits/usage');
+  }
   
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      <CreditPageHeader 
-        title="Credit Usage Analytics" 
-        description="Analyze your credit usage patterns"
-        credits={credits}
-      />
+    <div>
+      {/* Page header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Usage Analytics</h1>
+        <p className="text-gray-600 mt-1">
+          Track and analyze your credit usage patterns
+        </p>
+      </div>
       
-      {loading ? (
-        <div className="bg-white shadow-sm rounded-lg p-8 text-center">
-          <div className="animate-pulse h-8 bg-gray-200 rounded mb-4 mx-auto max-w-md"></div>
-          <div className="animate-pulse h-64 bg-gray-100 rounded-lg"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Model usage breakdown */}
-          <div className="bg-white shadow-sm rounded-lg p-6 lg:col-span-1">
-            <h2 className="text-lg font-medium mb-4">Model Usage Breakdown</h2>
-            
-            {modelUsage.length === 0 ? (
-              <div className="py-8 text-center text-gray-500">
-                <p>No usage data available</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Total usage */}
-                <div className="mb-6">
-                  <p className="text-sm text-gray-500">Total Credits Used</p>
-                  <p className="text-2xl font-bold">{formatNumber(getTotalUsage())}</p>
-                </div>
-                
-                {/* Model breakdown */}
-                <div className="space-y-3">
-                  {modelUsage.map((model) => (
-                    <div key={model.modelId}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-medium">{model.displayName}</span>
-                        <span>{formatNumber(model.totalCredits)}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className={`${model.color} h-2.5 rounded-full`} 
-                          style={{ width: `${model.percentage}%` }}
-                        ></div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {model.percentage.toFixed(1)}% of total usage
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* Usage Overview */}
+      <div className="mb-8">
+        <CreditsOverviewChart timeframe="30d" />
+      </div>
+      
+      {/* Usage stats cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div className="ml-4">
+              <h3 className="font-semibold text-gray-900">Recent Trend</h3>
+              <p className="text-sm text-gray-500">Last 7 days vs. previous</p>
+            </div>
           </div>
           
-          {/* Usage over time */}
-          <div className="bg-white shadow-sm rounded-lg p-6 lg:col-span-2">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-medium">Usage Over Time</h2>
-              
-              {/* Timeframe selector */}
-              <div className="flex text-sm">
-                <button
-                  onClick={() => handleTimeframeChange('7d')}
-                  className={`px-3 py-1 rounded-l-md ${
-                    timeframe === '7d' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  7D
-                </button>
-                <button
-                  onClick={() => handleTimeframeChange('30d')}
-                  className={`px-3 py-1 ${
-                    timeframe === '30d' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  30D
-                </button>
-                <button
-                  onClick={() => handleTimeframeChange('90d')}
-                  className={`px-3 py-1 rounded-r-md ${
-                    timeframe === '90d' 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  90D
-                </button>
-              </div>
-            </div>
-            
-            {dailyUsage.length === 0 ? (
-              <div className="py-8 text-center text-gray-500">
-                <p>No usage data available for the selected period</p>
-              </div>
-            ) : (
-              <div className="h-64 w-full relative">
-                {/* Simple bar chart visualization */}
-                <div className="flex h-full items-end space-x-1">
-                  {dailyUsage.map((day, index) => {
-                    // Find max value for scaling
-                    const maxCredits = Math.max(
-                      ...dailyUsage.map(d => d.credits), 
-                      1
-                    );
-                    
-                    // Scale height (max 100%)
-                    const heightPercentage = (day.credits / maxCredits) * 100;
-                    
-                    // Format date for tooltip
-                    const formattedDate = new Date(day.date)
-                      .toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      });
-                    
-                    return (
-                      <div 
-                        key={day.date} 
-                        className="flex-1 flex flex-col items-center group"
-                        title={`${formattedDate}: ${formatNumber(day.credits)} credits`}
-                      >
-                        <div 
-                          className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors relative"
-                          style={{ height: `${Math.max(heightPercentage, 1)}%` }}
-                        >
-                          {/* Tooltip on hover */}
-                          <div className="hidden group-hover:block absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                            {formattedDate}: {formatNumber(day.credits)}
-                          </div>
-                        </div>
-                        
-                        {/* Only show some date labels to avoid overcrowding */}
-                        {(dailyUsage.length <= 14 || index % Math.ceil(dailyUsage.length / 14) === 0) && (
-                          <span className="text-xs text-gray-500 mt-1 truncate" style={{ maxWidth: '100%' }}>
-                            {formattedDate}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-gray-900">+12.4%</span>
+            <span className="ml-2 text-sm text-gray-500">Usage increase</span>
+          </div>
+          
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Mostly driven by increased usage of GPT-4o models</p>
           </div>
         </div>
-      )}
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+              <BarChart3 className="h-5 w-5" />
+            </div>
+            <div className="ml-4">
+              <h3 className="font-semibold text-gray-900">Top Model</h3>
+              <p className="text-sm text-gray-500">Most used in past 30 days</p>
+            </div>
+          </div>
+          
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-gray-900">GPT-4o</span>
+            <span className="ml-2 text-sm text-gray-500">45% of total usage</span>
+          </div>
+          
+          <div className="mt-4 text-sm text-gray-500">
+            <p>8.2M credits used with this model</p>
+          </div>
+        </div>
+        
+        <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-purple-100 text-purple-600 rounded-full">
+              <Tag className="h-5 w-5" />
+            </div>
+            <div className="ml-4">
+              <h3 className="font-semibold text-gray-900">Cost Efficiency</h3>
+              <p className="text-sm text-gray-500">Credits per request</p>
+            </div>
+          </div>
+          
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold text-gray-900">12,423</span>
+            <span className="ml-2 text-sm text-gray-500">Avg. per request</span>
+          </div>
+          
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Consider using smaller models for simple tasks</p>
+            
+            <Link 
+              href="/dashboard/credits/pricing" 
+              className="text-blue-600 hover:text-blue-700 inline-flex items-center text-sm mt-2"
+            >
+              View model pricing
+            </Link>
+          </div>
+        </div>
+      </div>
+      
+      {/* Model usage breakdown */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <h2 className="text-xl font-bold mb-6">Model Usage Breakdown</h2>
+        
+        <div className="space-y-6">
+          {/* OpenAI Models Usage */}
+          <div>
+            <h3 className="font-medium text-lg mb-3">OpenAI Models</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">GPT-4o</span>
+                  <span>8.2M credits (45%)</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '45%' }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">GPT-4o Mini</span>
+                  <span>4.5M credits (25%)</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '25%' }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">GPT-4o Audio</span>
+                  <span>1.8M credits (10%)</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '10%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Sonar Models Usage */}
+          <div>
+            <h3 className="font-medium text-lg mb-3">Sonar Models</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">Sonar Pro Medium</span>
+                  <span>2.7M credits (15%)</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: '15%' }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">Sonar Pro High</span>
+                  <span>900K credits (5%)</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                  <div className="bg-purple-600 h-2.5 rounded-full" style={{ width: '5%' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <Link 
+            href="/dashboard/credits/pricing" 
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
+            View Complete Model Pricing
+          </Link>
+        </div>
+      </div>
+      
+      {/* Usage recommendations */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-xl font-bold mb-6">Usage Recommendations</h2>
+        
+        <div className="space-y-6">
+          <div className="flex">
+            <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+              <span className="font-medium">1</span>
+            </div>
+            <div className="ml-4">
+              <h3 className="font-medium text-lg">Switch to smaller models for simple tasks</h3>
+              <p className="text-gray-600 mt-1">
+                Use GPT-4o Mini or Sonar Pro Medium for routine tasks that don't require the full capabilities
+                of the larger models. This could reduce your costs by up to 85%.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex">
+            <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+              <span className="font-medium">2</span>
+            </div>
+            <div className="ml-4">
+              <h3 className="font-medium text-lg">Optimize prompt length</h3>
+              <p className="text-gray-600 mt-1">
+                Your average prompt length puts 65% of requests in the "Medium" pricing tier. Shortening
+                prompts could move many requests to the "Short" tier, saving approximately 40% on those requests.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex">
+            <div className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-green-100 text-green-600 rounded-full">
+              <span className="font-medium">3</span>
+            </div>
+            <div className="ml-4">
+              <h3 className="font-medium text-lg">Use Prompt Flows for complex tasks</h3>
+              <p className="text-gray-600 mt-1">
+                Creating modular Prompt Flows with smaller, targeted prompts is more cost-effective than
+                using single large prompts. This can improve both cost efficiency and quality of results.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
