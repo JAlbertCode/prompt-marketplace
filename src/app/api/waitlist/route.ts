@@ -59,7 +59,7 @@ function addToWaitlist(entry) {
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
+    const { email, firstName, lastName } = await request.json();
 
     // Validate email
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -87,6 +87,8 @@ export async function POST(request: Request) {
     // Add to waitlist file
     const waitlistEntry = {
       email,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
       joinedAt: new Date().toISOString(),
       ipAddress: clientIp,
       source: source,
@@ -101,6 +103,8 @@ export async function POST(request: Request) {
     const brevoResult = await addContactToBrevo(
       email,
       {
+        FIRSTNAME: firstName || '',
+        LASTNAME: lastName || '',
         SOURCE: source,
         IP: clientIp,
         SIGNUP_DATE: new Date().toISOString(),
@@ -115,6 +119,8 @@ export async function POST(request: Request) {
       
       // Try to send welcome email
       const emailResult = await sendWaitlistWelcomeEmail(email, {
+        FIRST_NAME: firstName || '',
+        LAST_NAME: lastName || '',
         SOURCE: source,
         IP_ADDRESS: clientIp,
       });

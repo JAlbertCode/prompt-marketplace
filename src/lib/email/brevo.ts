@@ -60,6 +60,12 @@ export async function addContactToBrevo(
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Brevo API error:', errorData);
+      
+      // If contact already exists, try to update their list membership
+      if (errorData.code === 'duplicate_parameter') {
+        return await addExistingContactToLists(email, listIds);
+      }
+      
       return { success: false, message: errorData.message || 'Unknown error' };
     }
     
@@ -150,6 +156,113 @@ export async function sendTransactionalEmail(params: {
   }
 }
 
+/**
+ * Add an existing contact to specified lists
+ * @param email Contact's email address
+ * @param listIds List IDs to add the contact to
+ * @returns Promise with API response
+ */
+async function addExistingContactToLists(
+  email: string,
+  listIds: number[] = []
+): Promise<any> {
+  if (!listIds.length) {
+    return { success: true, message: 'No lists to add contact to' };
+  }
+  
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    return { success: false, message: 'API key not configured' };
+  }
+  
+  try {
+    // First get the contact info by email
+    const contactResponse = await fetch(`${BREVO_CONTACTS_API}/email/${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'api-key': apiKey,
+      },
+    });
+    
+    if (!contactResponse.ok) {
+      const errorData = await contactResponse.json();
+      return { success: false, message: errorData.message || 'Unknown error' };
+    }
+    
+    const contactData = await contactResponse.json();
+    const contactId = contactData.id;
+    
+    // Now add the contact to each list
+    const listPromises = listIds.map(async (listId) => {
+      const listResponse = await fetch(`${BREVO_API_BASE}/contacts/lists/${listId}/contacts/add`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'api-key': apiKey,
+        },
+        body: JSON.stringify({
+          emails: [email],
+        }),
+      });
+      
+      return listResponse.ok;
+    });
+    
+    const results = await Promise.all(listPromises);
+    const allSucceeded = results.every(result => result);
+    
+    return {
+      success: allSucceeded,
+      message: allSucceeded ? 'Contact added to all lists' : 'Failed to add contact to some lists',
+    };
+  } catch (error) {
+    console.error('Error adding existing contact to lists:', error);
+    return { success: false, message: 'Error adding contact to lists' };
+  }
+}
+
+/**
+ * Get contact by email
+ * @param email Contact's email address
+ * @returns Promise with contact data
+ */
+export async function getContactByEmail(email: string): Promise<any> {
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    return { success: false, message: 'API key not configured' };
+  }
+  
+  try {
+    const response = await fetch(`${BREVO_CONTACTS_API}/email/${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'api-key': apiKey,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      return { success: false, message: errorData.message || 'Unknown error' };
+    }
+    
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error getting contact from Brevo:', error);
+    return { success: false, message: 'Error retrieving contact' };
+  }
+}
+
 // Default waitlist list ID
 // This should be set to your actual waitlist ID in Brevo
 export const DEFAULT_WAITLIST_LIST_ID = parseInt(process.env.BREVO_WAITLIST_LIST_ID || '0', 10);
+
+// Helper function to check if an email is valid
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}

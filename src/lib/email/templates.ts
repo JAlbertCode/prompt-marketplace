@@ -25,6 +25,7 @@ export async function sendWaitlistWelcomeEmail(
   // Default parameters
   const defaultParams = {
     SIGNUP_DATE: new Date().toLocaleDateString(),
+    PRODUCT_NAME: process.env.NEXT_PUBLIC_PRODUCT_NAME || 'PromptFlow',
     ...params,
   };
   
@@ -33,14 +34,14 @@ export async function sendWaitlistWelcomeEmail(
     // Send a basic welcome email instead
     return sendTransactionalEmail({
       to: [{ email }],
-      subject: 'Welcome to the AI Marketplace Waitlist',
+      subject: `Welcome to the ${defaultParams.PRODUCT_NAME} Waitlist`,
       htmlContent: `
         <html>
           <body>
-            <h1>Welcome to the AI Marketplace!</h1>
-            <p>Thank you for joining our waitlist. We're excited to have you on board.</p>
+            <h1>Welcome ${defaultParams.FIRST_NAME ? `${defaultParams.FIRST_NAME}` : ''}!</h1>
+            <p>Thank you for joining our ${defaultParams.PRODUCT_NAME} waitlist. We're excited to have you on board.</p>
             <p>We'll keep you updated on our progress and let you know when we launch.</p>
-            <p>Best regards,<br>The AI Marketplace Team</p>
+            <p>Best regards,<br>The ${defaultParams.PRODUCT_NAME} Team</p>
           </body>
         </html>
       `,
@@ -66,6 +67,13 @@ export async function sendWaitlistLaunchEmail(
   emails: string[],
   params: Record<string, any> = {}
 ): Promise<any> {
+  const defaultParams = {
+    LAUNCH_DATE: new Date().toLocaleDateString(),
+    PRODUCT_NAME: process.env.NEXT_PUBLIC_PRODUCT_NAME || 'PromptFlow',
+    PRODUCT_URL: process.env.NEXT_PUBLIC_URL || 'https://promptflow.io',
+    ...params,
+  };
+  
   // If no template ID is set, use a basic email
   if (!EMAIL_TEMPLATES.WAITLIST_LAUNCH) {
     // Use basic HTML email
@@ -73,10 +81,10 @@ export async function sendWaitlistLaunchEmail(
       <html>
         <body>
           <h1>We've Launched!</h1>
-          <p>We're excited to announce that the AI Marketplace is now live!</p>
-          <p>You can now access the platform at <a href="https://aimarketplace.com">aimarketplace.com</a>.</p>
+          <p>We're excited to announce that ${defaultParams.PRODUCT_NAME} is now live!</p>
+          <p>You can now access the platform at <a href="${defaultParams.PRODUCT_URL}">${defaultParams.PRODUCT_URL}</a>.</p>
           <p>Thank you for your patience and support.</p>
-          <p>Best regards,<br>The AI Marketplace Team</p>
+          <p>Best regards,<br>The ${defaultParams.PRODUCT_NAME} Team</p>
         </body>
       </html>
     `;
@@ -93,9 +101,9 @@ export async function sendWaitlistLaunchEmail(
       const batchPromises = batch.map(email => 
         sendTransactionalEmail({
           to: [{ email }],
-          subject: 'We\'ve Launched! The AI Marketplace is Live',
+          subject: `We've Launched! ${defaultParams.PRODUCT_NAME} is Live`,
           htmlContent,
-          params,
+          params: defaultParams,
         })
       );
       
@@ -116,7 +124,7 @@ export async function sendWaitlistLaunchEmail(
       sendTransactionalEmail({
         to: [{ email }],
         templateId: EMAIL_TEMPLATES.WAITLIST_LAUNCH,
-        params,
+        params: defaultParams,
       })
     );
     
@@ -138,35 +146,36 @@ export async function sendUserWelcomeEmail(
   name: string,
   params: Record<string, any> = {}
 ): Promise<any> {
+  const defaultParams = {
+    FIRST_NAME: name.split(' ')[0],
+    PRODUCT_NAME: process.env.NEXT_PUBLIC_PRODUCT_NAME || 'PromptFlow',
+    PRODUCT_URL: process.env.NEXT_PUBLIC_URL || 'https://promptflow.io',
+    ...params,
+  };
+  
   // If no template ID is set, use a basic email
   if (!EMAIL_TEMPLATES.USER_WELCOME) {
     return sendTransactionalEmail({
       to: [{ email, name }],
-      subject: 'Welcome to the AI Marketplace',
+      subject: `Welcome to ${defaultParams.PRODUCT_NAME}`,
       htmlContent: `
         <html>
           <body>
-            <h1>Welcome, ${name}!</h1>
-            <p>Thank you for joining the AI Marketplace. We're excited to have you on board.</p>
+            <h1>Welcome, ${defaultParams.FIRST_NAME}!</h1>
+            <p>Thank you for joining ${defaultParams.PRODUCT_NAME}. We're excited to have you on board.</p>
             <p>You can now start using our platform to discover and create AI workflows.</p>
-            <p>Best regards,<br>The AI Marketplace Team</p>
+            <p>Best regards,<br>The ${defaultParams.PRODUCT_NAME} Team</p>
           </body>
         </html>
       `,
-      params: {
-        FIRST_NAME: name.split(' ')[0],
-        ...params,
-      },
+      params: defaultParams,
     });
   }
   
   return sendTransactionalEmail({
     to: [{ email, name }],
     templateId: EMAIL_TEMPLATES.USER_WELCOME,
-    params: {
-      FIRST_NAME: name.split(' ')[0],
-      ...params,
-    },
+    params: defaultParams,
   });
 }
 
@@ -190,51 +199,46 @@ export async function sendCreditPurchaseEmail(
   amountPaid: number,
   params: Record<string, any> = {}
 ): Promise<any> {
+  const defaultParams = {
+    FIRST_NAME: name.split(' ')[0],
+    PURCHASE_DATE: new Date().toLocaleDateString(),
+    CREDIT_AMOUNT: amount.toLocaleString(),
+    BONUS_AMOUNT: bonusAmount.toLocaleString(),
+    TOTAL_AMOUNT: totalAmount.toLocaleString(),
+    AMOUNT_PAID: amountPaid.toFixed(2),
+    PRODUCT_NAME: process.env.NEXT_PUBLIC_PRODUCT_NAME || 'PromptFlow',
+    ...params,
+  };
+  
   // If no template ID is set, use a basic email
   if (!EMAIL_TEMPLATES.CREDIT_PURCHASE) {
     return sendTransactionalEmail({
       to: [{ email, name }],
-      subject: 'Credit Purchase Confirmation',
+      subject: `${defaultParams.PRODUCT_NAME} - Credit Purchase Confirmation`,
       htmlContent: `
         <html>
           <body>
             <h1>Purchase Confirmation</h1>
-            <p>Thank you for your purchase, ${name.split(' ')[0]}!</p>
+            <p>Thank you for your purchase, ${defaultParams.FIRST_NAME}!</p>
             <p>Here's a summary of your purchase:</p>
             <ul>
-              <li>Base credits: ${amount.toLocaleString()}</li>
-              <li>Bonus credits: ${bonusAmount.toLocaleString()}</li>
-              <li>Total credits: ${totalAmount.toLocaleString()}</li>
-              <li>Amount paid: $${amountPaid.toFixed(2)}</li>
+              <li>Base credits: ${defaultParams.CREDIT_AMOUNT}</li>
+              <li>Bonus credits: ${defaultParams.BONUS_AMOUNT}</li>
+              <li>Total credits: ${defaultParams.TOTAL_AMOUNT}</li>
+              <li>Amount paid: $${defaultParams.AMOUNT_PAID}</li>
             </ul>
             <p>Your credits have been added to your account.</p>
-            <p>Best regards,<br>The AI Marketplace Team</p>
+            <p>Best regards,<br>The ${defaultParams.PRODUCT_NAME} Team</p>
           </body>
         </html>
       `,
-      params: {
-        FIRST_NAME: name.split(' ')[0],
-        PURCHASE_DATE: new Date().toLocaleDateString(),
-        CREDIT_AMOUNT: amount.toLocaleString(),
-        BONUS_AMOUNT: bonusAmount.toLocaleString(),
-        TOTAL_AMOUNT: totalAmount.toLocaleString(),
-        AMOUNT_PAID: amountPaid.toFixed(2),
-        ...params,
-      },
+      params: defaultParams,
     });
   }
   
   return sendTransactionalEmail({
     to: [{ email, name }],
     templateId: EMAIL_TEMPLATES.CREDIT_PURCHASE,
-    params: {
-      FIRST_NAME: name.split(' ')[0],
-      PURCHASE_DATE: new Date().toLocaleDateString(),
-      CREDIT_AMOUNT: amount.toLocaleString(),
-      BONUS_AMOUNT: bonusAmount.toLocaleString(),
-      TOTAL_AMOUNT: totalAmount.toLocaleString(),
-      AMOUNT_PAID: amountPaid.toFixed(2),
-      ...params,
-    },
+    params: defaultParams
   });
 }
