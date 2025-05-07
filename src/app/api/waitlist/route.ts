@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
+import { addContact, sendTransactionalEmail } from '@/lib/email/brevo';
+
+// List IDs in Brevo - use environment variables if available, or defaults
+const WAITLIST_LIST_ID = parseInt(process.env.BREVO_LIST_ID_WAITLIST || '1'); 
+const WAITLIST_TEMPLATE_ID = parseInt(process.env.BREVO_TEMPLATE_ID_WELCOME || '1');
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,8 +21,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
     
+    // Get the source and IP for analytics
+    const source = req.headers.get('referer') || 'direct';
+    const ipAddress = req.headers.get('x-forwarded-for') || req.ip || '';
+    
     // Check if email already exists in waitlist
-    const existingEmail = await db.waitlist.findUnique({
+    const existingEmail = await prisma.waitlist.findUnique({
       where: { email },
     });
     
@@ -26,12 +35,46 @@ export async function POST(req: NextRequest) {
     }
     
     // Add email to waitlist
-    await db.waitlist.create({
+    await prisma.waitlist.create({
       data: {
         email,
         joinedAt: new Date(),
+        source,
+        ipAddress,
       },
     });
+
+    // Only attempt to send emails if Brevo is configured
+    if (process.env.BREVO_API_KEY) {
+      try {
+        // Add to Brevo contact list for email automation
+        await addContact(
+          email, 
+          undefined, 
+          undefined,
+          [WAITLIST_LIST_ID], 
+          {
+            SOURCE: source,
+            SIGNUP_DATE: new Date().toISOString(),
+            IP_ADDRESS: ipAddress
+          }
+        );
+        
+        // Send welcome email using Brevo template
+        await sendTransactionalEmail(
+          email,
+          WAITLIST_TEMPLATE_ID,
+          {
+            SIGNUP_DATE: new Date().toLocaleDateString()
+          },
+          undefined,
+          ['waitlist', 'welcome']
+        );
+      } catch (emailError) {
+        // Log but don't fail the request if email sending fails
+        console.error('Error with email processing:', emailError);
+      }
+    }
     
     return NextResponse.json({ 
       success: true,

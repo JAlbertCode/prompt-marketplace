@@ -1,9 +1,10 @@
 // src/lib/flows.ts
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { Flow } from '@/types/flow';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Session } from 'next-auth';
+import { trackUserFlowCreation } from '@/lib/credits/emailEvents';
 
 /**
  * Get all flows with filtering options
@@ -30,7 +31,7 @@ export async function getFavoriteFlows(session?: Session | null): Promise<Flow[]
   const userId = session.user.id;
   
   // Get favorites using the Prisma client
-  const favorites = await db.favorite.findMany({
+  const favorites = await prisma.favorite.findMany({
     where: {
       userId,
       flowId: { not: null }, // Only get flow favorites
@@ -81,7 +82,7 @@ export async function toggleFavoriteFlow(flowId: string): Promise<{ isFavorite: 
   const userId = session.user.id;
   
   // Check if favorite already exists
-  const existingFavorite = await db.favorite.findFirst({
+  const existingFavorite = await prisma.favorite.findFirst({
     where: {
       userId,
       flowId,
@@ -91,7 +92,7 @@ export async function toggleFavoriteFlow(flowId: string): Promise<{ isFavorite: 
   // Toggle favorite
   if (existingFavorite) {
     // Remove favorite
-    await db.favorite.delete({
+    await prisma.favorite.delete({
       where: {
         id: existingFavorite.id,
       },
@@ -100,7 +101,7 @@ export async function toggleFavoriteFlow(flowId: string): Promise<{ isFavorite: 
     return { isFavorite: false };
   } else {
     // Add favorite
-    await db.favorite.create({
+    await prisma.favorite.create({
       data: {
         userId,
         flowId,
@@ -108,5 +109,136 @@ export async function toggleFavoriteFlow(flowId: string): Promise<{ isFavorite: 
     });
     
     return { isFavorite: true };
+  }
+}
+
+/**
+ * Create a new flow with email event tracking
+ */
+export async function createFlow(flowData: any, userId: string) {
+  // Create the flow in the database
+  const flow = await prisma.promptFlow.create({
+    data: {
+      ...flowData,
+      userId,
+      creatorId: userId // Set as both the creator and owner
+    }
+  });
+  
+  // Track the flow creation event for email automation
+  // Only do this if we have a valid flow and it was successfully created
+  if (flow && flow.id && process.env.BREVO_API_KEY) {
+    try {
+      await trackUserFlowCreation(
+        userId,
+        flow.id,
+        flow.title
+      );
+    } catch (error) {
+      console.error('Error tracking flow creation:', error);
+      // Don't throw error - this is a non-critical operation
+    }
+  }
+  
+  return flow;
+}
+
+/**
+ * Update an existing flow
+ */
+export async function updateFlow(flowId: string, flowData: any) {
+  return await prisma.promptFlow.update({
+    where: { id: flowId },
+    data: flowData
+  });
+}
+
+/**
+ * Delete a flow
+ */
+export async function deleteFlow(flowId: string) {
+  return await prisma.promptFlow.delete({
+    where: { id: flowId }
+  });
+}
+
+/**
+ * Get a specific flow by ID
+ */
+export async function getFlowById(flowId: string) {
+  return await prisma.promptFlow.findUnique({
+    where: { id: flowId },
+    include: {
+      creator: { select: { id: true, name: true, image: true } },
+      steps: {
+        include: {
+          prompt: true
+        },
+        orderBy: {
+          order: 'asc'
+        }
+      }
+    }
+  });
+}
+
+/**
+ * Check if a user has unlocked a specific flow
+ */
+export async function hasUnlockedFlow(flowId: string, userId: string): Promise<boolean> {
+  const unlock = await prisma.flowUnlock.findFirst({
+    where: {
+      flowId,
+      userId
+    }
+  });
+  
+  return !!unlock;
+}
+
+/**
+ * Unlock a flow for a user (by purchasing it)
+ */
+export async function unlockFlow(flowId: string, userId: string, creditCost: number): Promise<boolean> {
+  // First check if the user has already unlocked this flow
+  const existingUnlock = await prisma.flowUnlock.findFirst({
+    where: {
+      flowId,
+      userId
+    }
+  });
+  
+  if (existingUnlock) {
+    // Already unlocked, no need to pay again
+    return true;
+  }
+  
+  // Create the unlock record
+  try {
+    await prisma.flowUnlock.create({
+      data: {
+        userId,
+        flowId,
+        credits: creditCost
+      }
+    });
+    
+    // Record the credit transaction
+    await prisma.creditTransaction.create({
+      data: {
+        userId,
+        amount: -creditCost, // Negative amount for a deduction
+        description: `Unlocked flow: ${flowId}`,
+        type: 'flow_unlock',
+        flowId,
+        itemType: 'flow',
+        itemId: flowId
+      }
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error unlocking flow:', error);
+    return false;
   }
 }

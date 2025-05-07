@@ -5,6 +5,7 @@
  * - Creating Stripe Checkout sessions
  * - Managing successful/cancelled payments
  * - Adding purchased credits to user accounts
+ * - Tracking email events for marketing automation
  * 
  * Credit bundles from instructions:
  * Price    Base      Bonus     Total
@@ -20,6 +21,8 @@
 
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { getCreditBundles, addCredits } from '@/lib/credits';
+import { trackEvent } from '@/lib/email/brevo';
+import { prisma } from '@/lib/db';
 
 // Use environment variable for Stripe publishable key
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -136,6 +139,7 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
     }
     
     const { userId, bundleId, baseCredits, bonusCredits } = session.metadata;
+    const totalCredits = parseInt(baseCredits, 10) + parseInt(bonusCredits, 10);
     
     // Get the bundle info
     const allBundles = getCreditBundles();
@@ -165,6 +169,34 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
       );
     }
     
+    // Track credit purchase event for email marketing
+    // Get the user email
+    if (process.env.BREVO_API_KEY) {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+        
+        if (user?.email) {
+          await trackEvent(user.email, 'credits_purchased', {
+            BUNDLE_ID: bundleId,
+            BUNDLE_NAME: bundle.name,
+            PRICE: bundle.price,
+            BASE_CREDITS: parseInt(baseCredits, 10),
+            BONUS_CREDITS: parseInt(bonusCredits, 10),
+            TOTAL_CREDITS: totalCredits,
+            PURCHASE_DATE: new Date().toISOString(),
+            TRANSACTION_ID: sessionId
+          });
+          
+          console.log(`Credit purchase event tracked for user ${userId}`);
+        }
+      } catch (emailError) {
+        // Log but don't fail if email tracking fails
+        console.error('Error tracking credit purchase event:', emailError);
+      }
+    }
+    
     // Return success and transaction details
     return {
       success: true,
@@ -174,12 +206,54 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
         name: bundle.name,
         baseCredits: parseInt(baseCredits, 10),
         bonusCredits: parseInt(bonusCredits, 10),
-        totalCredits: parseInt(baseCredits, 10) + parseInt(bonusCredits, 10),
+        totalCredits: totalCredits,
       },
     };
   } catch (error) {
     console.error('Error handling successful payment:', error);
     throw new Error('Failed to process payment');
+  }
+}
+
+/**
+ * Track when a user views a credit purchase page
+ * Important for email remarketing campaigns
+ */
+export async function trackCreditViewEvent(userId: string, bundleId: string): Promise<boolean> {
+  try {
+    // Only track if Brevo is configured
+    if (!process.env.BREVO_API_KEY) {
+      return false;
+    }
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (!user?.email) {
+      return false;
+    }
+    
+    // Get bundle info
+    const allBundles = getCreditBundles();
+    const bundle = allBundles.find(b => b.id === bundleId);
+    
+    if (!bundle) {
+      return false;
+    }
+    
+    await trackEvent(user.email, 'credit_page_viewed', {
+      BUNDLE_ID: bundleId,
+      BUNDLE_NAME: bundle.name,
+      PRICE: bundle.price,
+      TOTAL_CREDITS: bundle.totalCredits,
+      VIEW_DATE: new Date().toISOString()
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error tracking credit view event:', error);
+    return false;
   }
 }
 

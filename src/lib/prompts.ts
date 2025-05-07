@@ -1,9 +1,10 @@
 // src/lib/prompts.ts
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { Prompt } from '@/types/prompt';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Session } from 'next-auth';
+import { trackUserPromptCreation } from '@/lib/credits/emailEvents';
 
 /**
  * Get all prompts with filtering options
@@ -30,7 +31,7 @@ export async function getFavoritePrompts(session?: Session | null): Promise<Prom
   const userId = session.user.id;
   
   // Get favorites using the Prisma client
-  const favorites = await db.favorite.findMany({
+  const favorites = await prisma.favorite.findMany({
     where: {
       userId,
       promptId: { not: null }, // Only get prompt favorites
@@ -78,7 +79,7 @@ export async function toggleFavoritePrompt(promptId: string): Promise<{ isFavori
   const userId = session.user.id;
   
   // Check if favorite already exists
-  const existingFavorite = await db.favorite.findFirst({
+  const existingFavorite = await prisma.favorite.findFirst({
     where: {
       userId,
       promptId,
@@ -88,7 +89,7 @@ export async function toggleFavoritePrompt(promptId: string): Promise<{ isFavori
   // Toggle favorite
   if (existingFavorite) {
     // Remove favorite
-    await db.favorite.delete({
+    await prisma.favorite.delete({
       where: {
         id: existingFavorite.id,
       },
@@ -97,7 +98,7 @@ export async function toggleFavoritePrompt(promptId: string): Promise<{ isFavori
     return { isFavorite: false };
   } else {
     // Add favorite
-    await db.favorite.create({
+    await prisma.favorite.create({
       data: {
         userId,
         promptId,
@@ -106,4 +107,80 @@ export async function toggleFavoritePrompt(promptId: string): Promise<{ isFavori
     
     return { isFavorite: true };
   }
+}
+
+/**
+ * Create a new prompt with email event tracking
+ */
+export async function createPrompt(promptData: any, userId: string) {
+  // Create the prompt in the database
+  const prompt = await prisma.prompt.create({
+    data: {
+      ...promptData,
+      userId,
+      creatorId: userId // Set as both the creator and owner
+    }
+  });
+  
+  // Track the prompt creation event for email automation
+  // Only do this if we have a valid prompt and it was successfully created
+  if (prompt && prompt.id && process.env.BREVO_API_KEY) {
+    try {
+      await trackUserPromptCreation(
+        userId,
+        prompt.id,
+        prompt.title
+      );
+    } catch (error) {
+      console.error('Error tracking prompt creation:', error);
+      // Don't throw error - this is a non-critical operation
+    }
+  }
+  
+  return prompt;
+}
+
+/**
+ * Update an existing prompt
+ */
+export async function updatePrompt(promptId: string, promptData: any) {
+  return await prisma.prompt.update({
+    where: { id: promptId },
+    data: promptData
+  });
+}
+
+/**
+ * Delete a prompt
+ */
+export async function deletePrompt(promptId: string) {
+  return await prisma.prompt.delete({
+    where: { id: promptId }
+  });
+}
+
+/**
+ * Get a specific prompt by ID
+ */
+export async function getPromptById(promptId: string) {
+  return await prisma.prompt.findUnique({
+    where: { id: promptId },
+    include: {
+      creator: { select: { id: true, name: true, image: true } }
+    }
+  });
+}
+
+/**
+ * Check if a prompt is favorited by a user
+ */
+export async function isPromptFavorited(promptId: string, userId: string): Promise<boolean> {
+  const favorite = await prisma.favorite.findFirst({
+    where: {
+      promptId,
+      userId
+    }
+  });
+  
+  return !!favorite;
 }

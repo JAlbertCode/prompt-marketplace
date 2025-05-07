@@ -10,7 +10,8 @@
     "postinstall": "prisma generate",
     "db-push": "node db-push.js",
     "setup": "node setup-db.js",
-    "seed:credits": "node scripts/seed-credits.js"
+    "seed:credits": "node scripts/seed-credits.js",
+    "setup:email": "node scripts/install-email-dependencies.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^1.6.0",
@@ -27,6 +28,7 @@
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
+    "sib-api-v3-sdk": "^8.5.0",
     "stripe": "^14.25.0",
     "tailwind-merge": "^3.2.0",
     "uuid": "^11.1.0",
