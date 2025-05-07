@@ -53,17 +53,19 @@ The platform implements a comprehensive event-based email marketing system using
 
 ### Implementation Details
 
-The system uses Brevo's API to:
-1. Track user events via webhooks
-2. Segment users based on behavior
-3. Trigger automated email sequences
-4. Manage email templates in a centralized location
+The system uses a custom Brevo API client (`src/lib/email/brevo.ts`) instead of the official SDK to avoid build errors with the `sib-api-v3-sdk` package. It implements:
+
+1. Contact management
+2. List management
+3. Transactional email sending
+
+This allows for reliable email functionality without the build-time issues of the official SDK.
 
 ### Setup Instructions
 
 1. Create a Brevo account at https://www.brevo.com/
 2. Set up contact lists:
-   - Waitlist
+   - Waitlist (capture the list ID for the BREVO_WAITLIST_LIST_ID env variable)
    - Registered Users
    - Credit Purchasers
    - Active Flow Users
@@ -71,11 +73,9 @@ The system uses Brevo's API to:
 4. Create automation workflows in Brevo's interface
 5. Configure environment variables:
    - `BREVO_API_KEY`: Your Brevo API key
+   - `BREVO_WAITLIST_LIST_ID`: The ID of your waitlist list in Brevo
 
-6. Install the Brevo SDK:
-   ```bash
-   npm install sib-api-v3-sdk
-   ```
+**Note**: The custom implementation does not require installing the Brevo SDK directly.
 
 ### Email Workflows To Create in Brevo
 
@@ -98,6 +98,21 @@ The system uses Brevo's API to:
    - Prompt creation follow-up
    - Flow creation tutorial
    - Inactive user re-engagement
+
+### Admin Notification System
+
+The platform includes a real-time notification system for administrators:
+
+- **Server-Sent Events (SSE)**: Real-time updates without polling
+- **Event Types**:
+  - Waitlist signups
+  - User registrations
+  - Credit purchases
+  - Prompt/Flow creations
+- **Admin Dashboard Integration**: Notifications appear in the admin interface
+- **Event History**: Recent events are stored in memory for new connections
+
+Administrators are automatically notified when new users join the waitlist, helping to track interest and engagement before launch.
 
 ### Important Note
 

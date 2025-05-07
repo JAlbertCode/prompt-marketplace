@@ -12,6 +12,8 @@ import {
   LogOut 
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
+import { logout } from '@/lib/auth/authHelpers';
+import { useRouter } from 'next/navigation';
 
 // Types for menu items
 interface MenuItem {
@@ -26,6 +28,7 @@ export default function UserMenu({ userName, userImage }: {
   userImage?: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   
   // Define menu items for consistent navigation
   const menuItems: MenuItem[] = [
@@ -63,7 +66,18 @@ export default function UserMenu({ userName, userImage }: {
 
   // Handle logout
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/' });
+    // Handle both next-auth and our custom password auth
+    try {
+      // Clear our custom auth
+      logout();
+      
+      // Try to sign out with next-auth
+      await signOut({ callbackUrl: '/waitlist' });
+    } catch (error) {
+      // If next-auth fails, just use our custom auth logout
+      logout();
+      router.push('/waitlist');
+    }
   };
 
   return (

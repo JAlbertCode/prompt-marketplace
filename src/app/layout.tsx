@@ -28,6 +28,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Add Material Icons for admin area */}
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <SessionProvider>
           <CreditProvider>

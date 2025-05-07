@@ -1,15 +1,28 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const router = useRouter();
+  
+  // Check if already authenticated
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+      if (isAuth) {
+        router.push('/');
+      }
+    }
+  }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -29,11 +42,12 @@ export default function WaitlistPage() {
         body: JSON.stringify({ email }),
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         setSubmitted(true);
         toast.success('Thank you! You\'ve been added to our waitlist.');
       } else {
-        const data = await response.json();
         throw new Error(data.message || 'Failed to join waitlist');
       }
     } catch (error) {
@@ -44,16 +58,38 @@ export default function WaitlistPage() {
     }
   };
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) {
+      toast.error('Please enter the access password');
+      return;
+    }
+    
+    // Simple hardcoded password verification
+    const correctPassword = 'promptflow'; // Using the value from your .env
+    
+    if (password === correctPassword) {
+      // Set cookies directly
+      document.cookie = 'auth=true; path=/; max-age=2592000'; // 30 days
+      localStorage.setItem('isAuthenticated', 'true');
+      
+      toast.success('Access granted!');
+      router.push('/');
+    } else {
+      toast.error('Invalid password');
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 z-50 overflow-auto">
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full">
           <div className="flex flex-col md:flex-row">
             {/* Image/Branding Side */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 md:w-1/2 p-8 text-white flex flex-col justify-center">
               <div className="mb-6">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">PromptFlow</h1>
-                <p className="text-blue-100">AI Prompt Marketplace & Automation Platform</p>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">AI Marketplace</h1>
+                <p className="text-blue-100">Something exciting is coming soon</p>
               </div>
               
               <div className="space-y-4">
@@ -64,8 +100,8 @@ export default function WaitlistPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Run prompts with real models</h3>
-                    <p className="text-sm text-blue-100">Access to OpenAI, Sonar, and more</p>
+                    <h3 className="font-semibold">Exclusive early access</h3>
+                    <p className="text-sm text-blue-100">Be among the first to try it</p>
                   </div>
                 </div>
                 
@@ -76,8 +112,8 @@ export default function WaitlistPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Chain prompts with Flow</h3>
-                    <p className="text-sm text-blue-100">Create complex automations easily</p>
+                    <h3 className="font-semibold">Limited spots available</h3>
+                    <p className="text-sm text-blue-100">Join now before it fills up</p>
                   </div>
                 </div>
                 
@@ -88,8 +124,8 @@ export default function WaitlistPage() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold">Monetize your prompts</h3>
-                    <p className="text-sm text-blue-100">Earn from your best AI workflows</p>
+                    <h3 className="font-semibold">Special launch benefits</h3>
+                    <p className="text-sm text-blue-100">Waitlist members get bonus features</p>
                   </div>
                 </div>
               </div>
@@ -99,7 +135,7 @@ export default function WaitlistPage() {
             <div className="p-8 md:w-1/2">
               <div className="max-w-md mx-auto">
                 <h2 className="text-2xl font-bold mb-2 text-gray-800">Join the Waitlist</h2>
-                <p className="text-gray-600 mb-6">Be the first to know when PromptFlow launches. Early access for waitlist members.</p>
+                <p className="text-gray-600 mb-6">Be first in line for this exciting new AI platform. Reserved for early adopters only.</p>
                 
                 {submitted ? (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
@@ -107,10 +143,10 @@ export default function WaitlistPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <h3 className="text-lg font-semibold text-gray-800">Thank You!</h3>
-                    <p className="text-gray-600">You're on the list! We'll notify you when PromptFlow launches.</p>
+                    <p className="text-gray-600">You're on the list! We'll notify you when we launch.</p>
                   </div>
                 ) : (
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  <form onSubmit={handleWaitlistSubmit} className="space-y-4">
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                       <input
@@ -137,11 +173,71 @@ export default function WaitlistPage() {
                     </button>
                     
                     <p className="text-xs text-gray-500 text-center mt-4">
-                      We'll only use your email to send updates about PromptFlow.
+                      We'll only use your email to send updates about our platform launch.
                       <br />
                       No spam, we promise.
                     </p>
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-700 text-center mb-2">
+                        Already have access?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswordForm(true)}
+                        className="w-full py-2 px-4 border border-blue-600 rounded-lg text-blue-600 font-medium hover:bg-blue-50 focus:ring-4 focus:ring-blue-100"
+                      >
+                        Enter Access Password
+                      </button>
+                    </div>
                   </form>
+                )}
+                
+                {/* Password Form */}
+                {showPasswordForm && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md w-full">
+                      <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white flex flex-col justify-center">
+                        <h3 className="text-xl font-bold mb-1">Enter Access Password</h3>
+                        <p className="text-blue-100 text-sm">Get instant access</p>
+                      </div>
+                      
+                      <form onSubmit={handlePasswordSubmit}>
+                        <div className="p-6">
+                          <div className="mb-4">
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <div className="text-xs text-gray-500 mb-2">Enter the access password you received</div>
+                            <input
+                              id="password"
+                              type="password"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Enter access password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              required
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between p-4 bg-gray-50 border-t border-gray-100">
+                          <button
+                            type="button"
+                            onClick={() => setShowPasswordForm(false)}
+                            className="py-2 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                          
+                          <button
+                            type="submit"
+                            className="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium focus:ring-4 focus:ring-blue-300"
+                          >
+                            Access Site
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -151,7 +247,7 @@ export default function WaitlistPage() {
       
       <footer className="bg-white py-4">
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          &copy; {new Date().getFullYear()} PromptFlow. All rights reserved.
+          &copy; {new Date().getFullYear()} AI Platform. All rights reserved.
         </div>
       </footer>
     </div>

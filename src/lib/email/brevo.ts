@@ -1,117 +1,155 @@
-// src/lib/email/brevo.ts
-import * as SibApiV3Sdk from 'sib-api-v3-sdk';
+/**
+ * Brevo API client
+ * Direct API integration with Brevo (formerly SendInBlue)
+ */
 
-// Initialize Brevo client
-const defaultClient = SibApiV3Sdk.ApiClient.instance;
-const apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
+// Base URLs for Brevo API
+const BREVO_API_BASE = 'https://api.brevo.com/v3';
+const BREVO_CONTACTS_API = `${BREVO_API_BASE}/contacts`;
 
-const apiInstance = new SibApiV3Sdk.ContactsApi();
-const emailInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+// Brevo Contact Interface
+interface BrevoContact {
+  email: string;
+  attributes?: Record<string, any>;
+  listIds?: number[];
+  updateEnabled?: boolean;
+}
 
 /**
- * Add a contact to Brevo
+ * Add or update a contact in Brevo
+ * @param email Contact's email address
+ * @param attributes Additional information about the contact
+ * @param listIds List IDs to add the contact to
+ * @returns Promise with API response
  */
-export async function addContact(
+export async function addContactToBrevo(
   email: string, 
-  firstName?: string, 
-  lastName?: string,
-  listIds: number[] = [],
-  attributes: Record<string, any> = {}
-): Promise<boolean> {
+  attributes: Record<string, any> = {}, 
+  listIds: number[] = []
+): Promise<any> {
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    console.error('BREVO_API_KEY is not set. Email functionality will not work.');
+    return { success: false, message: 'API key not configured' };
+  }
+  
+  const contact: BrevoContact = {
+    email,
+    attributes,
+    listIds,
+    updateEnabled: true, // Update contact if it already exists
+  };
+  
   try {
-    const createContact = new SibApiV3Sdk.CreateContact();
+    const response = await fetch(BREVO_CONTACTS_API, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': apiKey,
+      },
+      body: JSON.stringify(contact),
+    });
     
-    createContact.email = email;
-    createContact.listIds = listIds;
-    createContact.attributes = {
-      FIRSTNAME: firstName || '',
-      LASTNAME: lastName || '',
-      ...attributes
-    };
+    // For successful responses with no content
+    if (response.status === 204 || response.status === 201) {
+      return { success: true };
+    }
     
-    await apiInstance.createContact(createContact);
-    return true;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Brevo API error:', errorData);
+      return { success: false, message: errorData.message || 'Unknown error' };
+    }
+    
+    return await response.json();
   } catch (error) {
     console.error('Error adding contact to Brevo:', error);
-    return false;
+    return { success: false, message: 'Error adding contact to Brevo' };
   }
 }
 
 /**
- * Send a transactional email
+ * Get Brevo contact lists
+ * @returns Promise with list of contact lists
  */
-export async function sendTransactionalEmail(
-  to: string | string[],
-  templateId: number,
-  params: Record<string, any> = {},
-  subject?: string,
-  tags: string[] = []
-): Promise<boolean> {
+export async function getBrevoLists(): Promise<any> {
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    console.error('BREVO_API_KEY is not set. Email functionality will not work.');
+    return { success: false, message: 'API key not configured' };
+  }
+  
   try {
-    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+    const response = await fetch(`${BREVO_API_BASE}/contacts/lists?limit=50`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'api-key': apiKey,
+      },
+    });
     
-    sendSmtpEmail.to = Array.isArray(to) 
-      ? to.map(email => ({ email })) 
-      : [{ email: to }];
-      
-    sendSmtpEmail.templateId = templateId;
-    sendSmtpEmail.params = params;
-    
-    if (subject) {
-      sendSmtpEmail.subject = subject;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Brevo API error:', errorData);
+      return { success: false, message: errorData.message || 'Unknown error' };
     }
     
-    if (tags.length > 0) {
-      sendSmtpEmail.tags = tags;
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching Brevo lists:', error);
+    return { success: false, message: 'Error fetching Brevo lists' };
+  }
+}
+
+/**
+ * Send a transactional email using Brevo
+ * @param params Email parameters
+ * @returns Promise with API response
+ */
+export async function sendTransactionalEmail(params: {
+  to: { email: string; name?: string }[];
+  templateId?: number;
+  params?: Record<string, any>;
+  subject?: string;
+  htmlContent?: string;
+  cc?: { email: string; name?: string }[];
+  bcc?: { email: string; name?: string }[];
+  replyTo?: { email: string; name?: string };
+}): Promise<any> {
+  const apiKey = process.env.BREVO_API_KEY;
+  
+  if (!apiKey) {
+    console.error('BREVO_API_KEY is not set. Email functionality will not work.');
+    return { success: false, message: 'API key not configured' };
+  }
+  
+  try {
+    const response = await fetch(`${BREVO_API_BASE}/smtp/email`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': apiKey,
+      },
+      body: JSON.stringify(params),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Brevo API error:', errorData);
+      return { success: false, message: errorData.message || 'Unknown error' };
     }
     
-    await emailInstance.sendTransacEmail(sendSmtpEmail);
-    return true;
+    return { success: true, data: await response.json() };
   } catch (error) {
     console.error('Error sending transactional email:', error);
-    return false;
+    return { success: false, message: 'Error sending email' };
   }
 }
 
-/**
- * Track a custom event for a contact
- */
-export async function trackEvent(
-  email: string,
-  eventName: string,
-  properties: Record<string, any> = {}
-): Promise<boolean> {
-  try {
-    const event = new SibApiV3Sdk.RequestContactsEvents();
-    
-    event.email = email;
-    event.eventName = eventName;
-    event.properties = properties;
-    
-    await apiInstance.createContactEvent(event);
-    return true;
-  } catch (error) {
-    console.error('Error tracking event in Brevo:', error);
-    return false;
-  }
-}
-
-/**
- * Add a contact to a specific list
- */
-export async function addContactToList(
-  email: string,
-  listId: number
-): Promise<boolean> {
-  try {
-    const addContactToList = new SibApiV3Sdk.AddContactToList();
-    addContactToList.emails = [email];
-    
-    await apiInstance.addContactToList(listId, addContactToList);
-    return true;
-  } catch (error) {
-    console.error('Error adding contact to list:', error);
-    return false;
-  }
-}
+// Default waitlist list ID
+// This should be set to your actual waitlist ID in Brevo
+export const DEFAULT_WAITLIST_LIST_ID = parseInt(process.env.BREVO_WAITLIST_LIST_ID || '0', 10);

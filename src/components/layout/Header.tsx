@@ -7,6 +7,8 @@ import { useCreditStore } from '@/store/useCreditStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
 import { toast } from 'react-hot-toast';
 import { useSession, signOut } from 'next-auth/react';
+import { logout as clearCustomAuth } from '@/lib/auth/authHelpers';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 const Header: React.FC = () => {
@@ -16,6 +18,7 @@ const Header: React.FC = () => {
   const isLowCredits = credits < 200;
   const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const router = useRouter();
   
   // Check if a navigation link is active
   const isActive = (path: string) => {
@@ -33,7 +36,17 @@ const Header: React.FC = () => {
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' });
+    // Clear custom auth first
+    clearCustomAuth();
+    
+    // Then try next-auth signout
+    try {
+      await signOut({ callbackUrl: '/waitlist' });
+    } catch (error) {
+      // If next-auth fails, just redirect manually
+      router.push('/waitlist');
+    }
+    
     toast.success('Signed out successfully');
   };
   
