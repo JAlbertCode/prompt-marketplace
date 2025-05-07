@@ -235,3 +235,14 @@ model PromptRun {
   createdAt     DateTime @default(now())
   success       Boolean  @default(true)
 }
+
+// Model to track waitlist signups
+model Waitlist {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  joinedAt    DateTime @default(now())
+  source      String?  // Where the signup came from
+  ipAddress   String?  // IP address (hashed)
+  isNotified  Boolean  @default(false) // Whether they've been notified about launch
+  notes       String?  // Admin notes
+}
