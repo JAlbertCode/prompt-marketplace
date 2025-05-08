@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
-import { getUserCredits, deductCredits, calculatePromptRunCost } from '@/utils/creditManager';
+import { getUserCredits, deductCredits, calculatePromptRunCost } from '@/utils/clientCreditManager';
 import { toast } from 'react-hot-toast';
 
 // This is a simplified mock of authentication

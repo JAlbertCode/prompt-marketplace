@@ -1,55 +1,74 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getModelById, getCostBreakdown, PromptLength, calculatePromptCreditCost } from '@/lib/models/modelRegistry';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { getModelById } from '@/lib/models/modelRegistry';
+import { calculatePlatformMarkup } from '@/utils/creditManager';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const { modelId, promptLength = 'medium', creatorFeePercentage = 0, promptText } = await request.json();
+    const url = new URL(request.url);
+    const promptId = url.searchParams.get('promptId');
+    const modelId = url.searchParams.get('modelId');
+    const promptLength = url.searchParams.get('promptLength') as 'short' | 'medium' | 'long' || 'medium';
     
-    if (!modelId) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Model ID is required' 
-      }, { status: 400 });
+    if (!promptId || !modelId) {
+      return NextResponse.json(
+        { error: 'Prompt ID and model ID are required' },
+        { status: 400 }
+      );
     }
+
+    // Get prompt to check for creator fee
+    const prompt = await prisma.prompt.findUnique({
+      where: {
+        id: promptId,
+      },
+      select: {
+        creatorFee: true,
+        creatorId: true,
+      },
+    });
     
-    // Get the model information
+    const creatorFee = prompt?.creatorFee || 0;
+
+    // Get model info
     const model = getModelById(modelId);
-    
     if (!model) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Invalid model ID' 
-      }, { status: 400 });
+      return NextResponse.json(
+        { error: `Model ${modelId} not found` },
+        { status: 404 }
+      );
     }
+
+    // Get inference cost from model
+    const inferenceCost = model.cost[promptLength];
     
-    // Determine prompt length if text was provided
-    let effectivePromptLength = promptLength as PromptLength;
+    // Calculate platform markup
+    const hasCreatorFee = creatorFee > 0;
+    const platformMarkup = calculatePlatformMarkup(inferenceCost, hasCreatorFee);
     
-    if (promptText) {
-      const charCount = promptText.length;
-      if (charCount < 1500) {
-        effectivePromptLength = 'short';
-      } else if (charCount < 6000) {
-        effectivePromptLength = 'medium';
-      } else {
-        effectivePromptLength = 'long';
-      }
-    }
-    
-    // Get the cost breakdown
-    const breakdown = getCostBreakdown(modelId, effectivePromptLength, creatorFeePercentage);
-    
-    return NextResponse.json({ 
-      success: true, 
-      breakdown,
-      promptLength: effectivePromptLength
+    // Calculate total cost
+    const totalCost = inferenceCost + creatorFee + platformMarkup;
+
+    return NextResponse.json({
+      inferenceCost,
+      creatorFee,
+      platformMarkup,
+      totalCost,
     });
   } catch (error) {
-    console.error('Error calculating cost:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Failed to calculate cost',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('Error calculating prompt cost:', error);
+    
+    // Default values for fallback
+    const fallbackCost = {
+      inferenceCost: 8500, // Medium GPT-4o cost
+      creatorFee: 0,
+      platformMarkup: 850, // 10% markup
+      totalCost: 9350,
+    };
+    
+    return NextResponse.json(
+      { ...fallbackCost, fallback: true, error: 'Using fallback cost calculation' },
+      { status: 200 } // Return 200 with fallback data
+    );
   }
 }

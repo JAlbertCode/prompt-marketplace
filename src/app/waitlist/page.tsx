@@ -41,7 +41,12 @@ export default function WaitlistPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, firstName, lastName }),
+        body: JSON.stringify({ 
+          email, 
+          firstName, 
+          lastName,
+          source: 'website_landing_page' 
+        }),
       });
       
       const data = await response.json();

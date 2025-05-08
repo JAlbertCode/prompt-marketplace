@@ -259,8 +259,8 @@ export async function getContactByEmail(email: string): Promise<any> {
 }
 
 // Default waitlist list ID
-// This should be set to your actual waitlist ID in Brevo
-export const DEFAULT_WAITLIST_LIST_ID = parseInt(process.env.BREVO_WAITLIST_LIST_ID || '0', 10);
+// This is set to list ID 3 for PromptFlow's waitlist in Brevo
+export const DEFAULT_WAITLIST_LIST_ID = parseInt(process.env.BREVO_WAITLIST_LIST_ID || '3', 10);
 
 // Helper function to check if an email is valid
 export function isValidEmail(email: string): boolean {

@@ -59,7 +59,7 @@ function addToWaitlist(entry) {
 
 export async function POST(request: Request) {
   try {
-    const { email, firstName, lastName } = await request.json();
+    const { email, firstName, lastName, source: clientSource } = await request.json();
 
     // Validate email
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -82,7 +82,8 @@ export async function POST(request: Request) {
 
     // Get client IP for tracking purposes
     const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
-    const source = request.headers.get('referer') || 'website';
+    // Use client-provided source if available, fallback to referer header
+    const source = clientSource || request.headers.get('referer') || 'website';
     
     // Add to waitlist file
     const waitlistEntry = {
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
     
     console.log(`Added to waitlist: ${email}`);
     
-    // Add to Brevo
+    // Add to Brevo with waitlist ID 3
     const brevoResult = await addContactToBrevo(
       email,
       {
@@ -108,8 +109,9 @@ export async function POST(request: Request) {
         SOURCE: source,
         IP: clientIp,
         SIGNUP_DATE: new Date().toISOString(),
+        PRODUCT: 'PromptFlow',
       },
-      DEFAULT_WAITLIST_LIST_ID ? [DEFAULT_WAITLIST_LIST_ID] : []
+      [DEFAULT_WAITLIST_LIST_ID] // Always use ID 3 for waitlist
     );
     
     if (brevoResult.success === false) {

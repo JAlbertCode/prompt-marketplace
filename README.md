@@ -65,7 +65,7 @@ This allows for reliable email functionality without the build-time issues of th
 
 1. Create a Brevo account at https://www.brevo.com/
 2. Set up contact lists:
-   - Waitlist (capture the list ID for the BREVO_WAITLIST_LIST_ID env variable)
+   - Waitlist (list ID 3 is used for PromptFlow waitlist)
    - Registered Users
    - Credit Purchasers
    - Active Flow Users
@@ -73,7 +73,7 @@ This allows for reliable email functionality without the build-time issues of th
 4. Create automation workflows in Brevo's interface
 5. Configure environment variables:
    - `BREVO_API_KEY`: Your Brevo API key
-   - `BREVO_WAITLIST_LIST_ID`: The ID of your waitlist list in Brevo
+   - `BREVO_WAITLIST_LIST_ID`: Set to 3 for PromptFlow's waitlist in Brevo
 
 **Note**: The custom implementation does not require installing the Brevo SDK directly.
 
@@ -118,13 +118,25 @@ Administrators are automatically notified when new users join the waitlist, help
 
 This implementation uses Brevo's cloud-based automation workflows rather than local cron jobs. All scheduled and recurring emails are configured directly in the Brevo dashboard, making it easy to manage without the need for hosting recurring jobs locally.
 
-## Development
+## Development Tips
+
+### Environment Setup
 
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Copy `.env.sample` to `.env.local` and fill in the values
 4. Run the development server: `npm run dev`
 5. Open [http://localhost:3000](http://localhost:3000)
+
+### Database Fallback Mode
+
+The application includes a database fallback mode to handle database connection issues:
+
+- If you encounter Prisma errors in the console, make sure your database is properly configured
+- By default, the application uses `USE_DB_FALLBACK=true` and can work without a real database
+- See [DATABASE_FALLBACK.md](DATABASE_FALLBACK.md) for more details on troubleshooting database issues
+
+> NOTE: The application uses client-safe API routes for database operations. All direct Prisma usage is kept server-side to prevent browser compatibility issues.
 
 ### Email Dependency Installation
 
