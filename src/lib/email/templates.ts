@@ -2,6 +2,7 @@
  * Email template utilities for sending emails via Brevo
  */
 import { sendTransactionalEmail } from './brevo';
+import { syncContactToLists } from './brevoSync';
 
 // Template IDs for different email types
 // These should be created in Brevo dashboard and their IDs set here

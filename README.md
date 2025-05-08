@@ -37,6 +37,12 @@ Burn priority: purchased → bonus → referral
 
 The platform implements a comprehensive event-based email marketing system using Brevo (formerly Sendinblue):
 
+### Key Integration Features
+
+- **Robust Contact Synchronization**: Uses multiple API synchronization methods to ensure contacts are properly added to lists
+- **Direct List Assignment**: Auto-adds new contacts to appropriate lists with fallback mechanisms
+- **Waitlist Management**: Automatically adds signups to List ID 3 for PromptFlow's waitlist
+
 ### Features
 
 - **Waitlist Management**: Capture and manage potential users before launch
@@ -53,13 +59,11 @@ The platform implements a comprehensive event-based email marketing system using
 
 ### Implementation Details
 
-The system uses a custom Brevo API client (`src/lib/email/brevo.ts`) instead of the official SDK to avoid build errors with the `sib-api-v3-sdk` package. It implements:
+The system uses custom Brevo API clients for maximum reliability:
 
-1. Contact management
-2. List management
-3. Transactional email sending
-
-This allows for reliable email functionality without the build-time issues of the official SDK.
+1. `src/lib/email/brevo.ts` - Base Brevo API client
+2. `src/lib/email/brevoSync.ts` - Enhanced contact synchronization using multiple API endpoints
+3. `src/lib/email/templates.ts` - Reusable email template system
 
 ### Setup Instructions
 

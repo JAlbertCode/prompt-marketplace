@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { addContactToBrevo, DEFAULT_WAITLIST_LIST_ID } from '@/lib/email/brevo';
+import { syncContactToLists } from '@/lib/email/brevoSync';
+import { DEFAULT_WAITLIST_LIST_ID } from '@/lib/email/brevo';
 import { sendWaitlistWelcomeEmail } from '@/lib/email/templates';
 import fs from 'fs';
 import path from 'path';
@@ -38,9 +39,24 @@ function addToWaitlist(entry) {
   try {
     const entries = getWaitlistEntries();
     
-    // Check if email already exists
-    const emailExists = entries.some(e => e.email === entry.email);
+    // Check if email already exists - case insensitive comparison
+    const normalizedNewEmail = entry.email.toLowerCase().trim();
+    console.log('Attempting to add email:', normalizedNewEmail);
+    
+    let emailExists = false;
+    // Manual comparison loop to ensure accuracy
+    for (const existingEntry of entries) {
+      const existingEmail = existingEntry.email.toLowerCase().trim();
+      console.log(`Comparing [${existingEmail}] with [${normalizedNewEmail}]`);
+      if (existingEmail === normalizedNewEmail) {
+        emailExists = true;
+        console.log('MATCH FOUND - emails are identical');
+        break;
+      }
+    }
+    
     if (emailExists) {
+      console.log(`Email ${entry.email} already exists in waitlist file - skipping local add`);
       return false;
     }
     
@@ -49,6 +65,7 @@ function addToWaitlist(entry) {
     
     // Save updated entries
     fs.writeFileSync(waitlistFilePath, JSON.stringify({ emails: entries }, null, 2), 'utf8');
+    console.log(`Added ${entry.email} to local waitlist file. Total entries: ${entries.length}`);
     
     return true;
   } catch (error) {
@@ -59,7 +76,9 @@ function addToWaitlist(entry) {
 
 export async function POST(request: Request) {
   try {
+    console.log('Waitlist API endpoint received request');
     const { email, firstName, lastName, source: clientSource } = await request.json();
+    console.log('Received data:', { email, firstName, lastName, source: clientSource });
 
     // Validate email
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -69,23 +88,12 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Check if email already exists
-    const entries = getWaitlistEntries();
-    const emailExists = entries.some(entry => entry.email === email);
-    
-    if (emailExists) {
-      return NextResponse.json({
-        success: true,
-        message: 'Email already on waitlist',
-      });
-    }
-
     // Get client IP for tracking purposes
     const clientIp = request.headers.get('x-forwarded-for') || 'unknown';
     // Use client-provided source if available, fallback to referer header
     const source = clientSource || request.headers.get('referer') || 'website';
     
-    // Add to waitlist file
+    // Create waitlist entry object
     const waitlistEntry = {
       email,
       firstName: firstName || undefined,
@@ -95,13 +103,9 @@ export async function POST(request: Request) {
       source: source,
     };
     
-    // Add to local storage
-    addToWaitlist(waitlistEntry);
-    
-    console.log(`Added to waitlist: ${email}`);
-    
-    // Add to Brevo with waitlist ID 3
-    const brevoResult = await addContactToBrevo(
+    // Add email to Brevo regardless of local status
+    // This ensures the contact is properly added to list ID 3
+    const brevoResult = await syncContactToLists(
       email,
       {
         FIRSTNAME: firstName || '',
@@ -114,10 +118,38 @@ export async function POST(request: Request) {
       [DEFAULT_WAITLIST_LIST_ID] // Always use ID 3 for waitlist
     );
     
-    if (brevoResult.success === false) {
-      console.log('Failed to add contact to Brevo:', brevoResult.message);
+    // Check if email already exists AFTER attempting Brevo sync
+    // This way, we always try to sync with Brevo first
+    const entries = getWaitlistEntries();
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    let emailExists = false;
+    // Manual comparison loop to ensure accuracy
+    for (const entry of entries) {
+      const entryEmail = entry.email.toLowerCase().trim();
+      if (entryEmail === normalizedEmail) {
+        emailExists = true;
+        console.log(`Match found: [${entryEmail}] equals [${normalizedEmail}]`);
+        break;
+      }
+    }
+    
+    console.log(`Email exists in waitlist file: ${emailExists}`);
+    console.log(`Total entries in waitlist file: ${entries.length}`);
+    
+    // If email doesn't exist locally, add it
+    if (!emailExists) {
+      // Add to local storage
+      addToWaitlist(waitlistEntry);
+      console.log(`Added to waitlist: ${email}`);
     } else {
-      console.log('Successfully added contact to Brevo');
+      console.log(`Email ${email} already in local waitlist, skipping local addition`);
+    }
+    
+    if (brevoResult.success === false) {
+      console.log('Failed to sync contact to Brevo:', brevoResult.message);
+    } else {
+      console.log(`Successfully synced contact ${email} to Brevo waitlist ${DEFAULT_WAITLIST_LIST_ID}`);
       
       // Try to send welcome email
       const emailResult = await sendWaitlistWelcomeEmail(email, {
@@ -136,7 +168,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Successfully added to waitlist',
+      message: 'Successfully synced email with Brevo',
+      emailAdded: !emailExists,
+      syncedToBrevo: brevoResult.success !== false
     });
   } catch (error) {
     console.error('Waitlist error:', error);

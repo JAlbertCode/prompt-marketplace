@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
 export default function WaitlistPage() {
@@ -12,6 +11,7 @@ export default function WaitlistPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
   const router = useRouter();
   
   // Check if already authenticated
@@ -24,15 +24,31 @@ export default function WaitlistPage() {
     }
   }, [router]);
 
+  // Show notification for a few seconds then hide it
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
+
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent submitting when already in progress
+    if (isSubmitting) {
+      return;
+    }
+    
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
-      toast.error('Please enter a valid email address');
+      showNotification('Please enter a valid email address', 'error');
       return;
     }
     
     setIsSubmitting(true);
+    console.log('Submitting waitlist form with email:', email);
     
     try {
       // API call to save email to waitlist
@@ -50,16 +66,26 @@ export default function WaitlistPage() {
       });
       
       const data = await response.json();
+      console.log('Waitlist response:', data);
       
       if (response.ok) {
         setSubmitted(true);
-        toast.success('Thank you! You\'ve been added to our waitlist.');
+        
+        // Always show successful submission message if Brevo sync worked
+        if (data.syncedToBrevo) {
+          showNotification('Thank you! Your email has been added to our waitlist.');
+          console.log('Email was successfully synced to Brevo');
+        } else {
+          // Only show the "already on waitlist" message if sync failed due to duplicate
+          showNotification('Your email has been added to our waitlist.');
+          console.log('Email sync to Brevo status:', data.syncedToBrevo);
+        }
       } else {
         throw new Error(data.message || 'Failed to join waitlist');
       }
     } catch (error) {
       console.error('Error joining waitlist:', error);
-      toast.error('Failed to join waitlist. Please try again later.');
+      showNotification('Failed to join waitlist. Please try again later.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +94,7 @@ export default function WaitlistPage() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
-      toast.error('Please enter the access password');
+      showNotification('Please enter the access password', 'error');
       return;
     }
     
@@ -80,15 +106,31 @@ export default function WaitlistPage() {
       document.cookie = 'auth=true; path=/; max-age=2592000'; // 30 days
       localStorage.setItem('isAuthenticated', 'true');
       
-      toast.success('Access granted!');
+      showNotification('Access granted!');
       router.push('/');
     } else {
-      toast.error('Invalid password');
+      showNotification('Invalid password', 'error');
     }
   };
 
   return (
     <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-blue-50 to-indigo-100 z-50 overflow-auto">
+      {notification.show && (
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-5 py-3 rounded-lg shadow-lg z-50 text-center font-medium transition-all duration-300 animate-fade-in ${notification.type === 'success' ? 'bg-blue-600 text-white' : 'bg-red-500 text-white'}`} style={{ minWidth: '280px', animation: 'fadeIn 0.3s ease-out' }}>
+          <div className="flex items-center justify-center">
+            {notification.type === 'success' ? (
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            {notification.message}
+          </div>
+        </div>
+      )}
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full">
           <div className="flex flex-col md:flex-row">
@@ -150,7 +192,7 @@ export default function WaitlistPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <h3 className="text-lg font-semibold text-gray-800">Thank You!</h3>
-                    <p className="text-gray-600">You're on the list! We'll notify you when we launch.</p>
+                    <p className="text-gray-600">Your email has been successfully added to our waitlist! We'll notify you when we launch.</p>
                   </div>
                 ) : (
                   <form onSubmit={handleWaitlistSubmit} className="space-y-4">
