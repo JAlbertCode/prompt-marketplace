@@ -1,92 +1,84 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 /**
- * Utility function to merge class names with Tailwind CSS
- * This is commonly used with shadcn/ui components
+ * Merges classes together accounting for Tailwind CSS specificity
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
- * Format a number as currency
+ * Format number as currency
  */
-export function formatCurrency(amount: number, currency = 'USD', locale = 'en-US'): string {
-  return new Intl.NumberFormat(locale, {
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6
+    currency: 'USD',
   }).format(amount);
 }
 
 /**
- * Format a large number with commas
+ * Format large numbers with K/M/B suffixes
  */
 export function formatNumber(num: number): string {
-  return num.toLocaleString();
+  if (num < 1000) return num.toString();
+  if (num < 1000000) return `${(num / 1000).toFixed(1)}K`;
+  if (num < 1000000000) return `${(num / 1000000).toFixed(1)}M`;
+  return `${(num / 1000000000).toFixed(1)}B`;
 }
 
 /**
- * Format a date string
+ * Convert credits to dollar equivalent
+ * 1 credit = $0.000001
  */
-export function formatDate(date: string | Date): string {
-  if (!date) return '';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
+export function creditsToUSD(credits: number): number {
+  return credits * 0.000001;
+}
+
+/**
+ * Convert dollars to credit equivalent
+ * $1 = 1,000,000 credits
+ */
+export function usdToCredits(usd: number): number {
+  return usd * 1000000;
+}
+
+/**
+ * Format a date to a friendly string
+ */
+export function formatDate(date: Date | string): string {
+  const d = new Date(date);
   return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
-}
-
-/**
- * Format a date with time
- */
-export function formatDateTime(date: string | Date): string {
-  if (!date) return '';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString('en-US', {
-    year: 'numeric',
     month: 'short',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+    year: 'numeric',
   });
 }
 
 /**
- * Generate a unique ID
+ * Get initials from a name
  */
-export function generateId(length = 10): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  
-  return result;
+export function getInitials(name: string): string {
+  if (!name) return '';
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase();
 }
 
 /**
  * Truncate text with ellipsis
  */
-export function truncateText(text: string, maxLength = 100): string {
+export function truncateText(text: string, maxLength: number): string {
   if (!text || text.length <= maxLength) return text;
   return `${text.substring(0, maxLength)}...`;
 }
 
 /**
- * Safely parse JSON
+ * Generate a random ID (for temporary client-side use)
  */
-export function safeJsonParse<T>(json: string, fallback: T): T {
-  try {
-    return JSON.parse(json) as T;
-  } catch (error) {
-    return fallback;
-  }
+export function generateId(prefix = ''): string {
+  return `${prefix}${Math.random().toString(36).substring(2, 9)}`;
 }
