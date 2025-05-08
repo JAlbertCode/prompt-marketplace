@@ -288,3 +288,13 @@ Set up the following environment variables in your Vercel project:
 4. Update AI model pricing when vendor prices change
 5. Review database performance and optimize queries
 6. Update dependencies and NextJS version
+
+## Bundle Analysis
+
+This project uses `@next/bundle-analyzer` to analyze the bundle size of the application. You can run the analysis with:
+
+```bash
+npm run analyze
+```
+
+This will generate bundle analysis reports in the `.next/analyze` directory.
