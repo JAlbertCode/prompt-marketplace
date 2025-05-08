@@ -147,3 +147,144 @@ The application includes a database fallback mode to handle database connection 
 ```bash
 npm run setup:email
 ```
+
+## Production Deployment Guide
+
+### Prerequisites
+
+1. Vercel account (https://vercel.com)
+2. PostgreSQL database (e.g., Supabase, Neon, Vercel Postgres)
+3. Stripe account for payments (https://stripe.com)
+4. Brevo account for email marketing (https://brevo.com)
+5. API keys for OpenAI and other AI providers
+
+### Environment Configuration
+
+Set up the following environment variables in your Vercel project:
+
+1. **Database Configuration**
+   - `DATABASE_URL` - PostgreSQL connection string (with SSL enabled and connection pooling)
+   - `USE_DB_FALLBACK` - Set to `false` in production
+
+2. **Authentication**
+   - `NEXTAUTH_URL` - Your production domain (e.g., https://promptflow.io)
+   - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
+   - `GITHUB_ID` and `GITHUB_SECRET` - OAuth credentials from GitHub
+   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` - OAuth credentials from Google
+
+3. **Payment Processing**
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key (starts with pk_live_)
+   - `STRIPE_SECRET_KEY` - Stripe secret key (starts with sk_live_)
+   - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret from Stripe
+   - Stripe product IDs for each credit bundle
+
+4. **Email Marketing**
+   - `BREVO_API_KEY` - API key from Brevo
+   - `BREVO_WAITLIST_LIST_ID` - List ID for waitlist (default: 3)
+   - Template IDs for various email notifications
+
+5. **AI Model Integration**
+   - `OPENAI_API_KEY` - OpenAI API key
+   - `SONAR_API_KEY` - Sonar API key
+   - Additional API keys for other providers
+
+6. **Rate Limiting & Security**
+   - `RATE_LIMIT_REQUESTS` - Requests per window (default: 100)
+   - `RATE_LIMIT_WINDOW` - Window in seconds (default: 60)
+
+7. **Application Settings**
+   - `NODE_ENV` - Set to `production`
+   - `NEXT_PUBLIC_PRODUCT_NAME` - Product name (default: PromptFlow)
+   - `NEXT_PUBLIC_URL` - Public URL (e.g., https://promptflow.io)
+
+### Deployment Steps
+
+1. **Database Setup**
+   - Create a PostgreSQL database in your preferred provider
+   - Run Prisma migrations: `npx prisma migrate deploy`
+
+2. **Vercel Deployment**
+   - Connect your GitHub repository to Vercel
+   - Configure environment variables in the Vercel dashboard
+   - Deploy the project
+
+3. **Stripe Configuration**
+   - Create products in Stripe dashboard for each credit bundle
+   - Set up webhook endpoints (pointing to `/api/webhooks/stripe`)
+   - Update the product IDs in your environment variables
+
+4. **Email Setup**
+   - Create contact lists and email templates in Brevo
+   - Set up automation workflows for different user actions
+
+5. **Monitoring Setup**
+   - Configure Vercel Analytics
+   - Set up health check monitoring (pointing to `/health` endpoint)
+   - Enable logging for API routes if needed
+
+### Post-Deployment Verification
+
+1. Test the login/signup flow with OAuth providers
+2. Verify credit purchase with Stripe integration
+3. Test prompt execution with different AI models
+4. Confirm email notifications are working properly
+5. Validate the credit system is tracking usage correctly
+
+### Security Considerations
+
+1. All API keys are server-side only (never exposed to the client)
+2. Rate limiting is enabled to prevent abuse
+3. Security headers are added to all responses
+4. All database queries use Prisma's parameterized queries to prevent SQL injection
+5. Authentication state is handled securely with NextAuth.js
+6. Stripe payments use webhooks with signature verification
+7. API routes are protected by middleware authentication checks
+
+### Scaling Considerations
+
+1. **Database Connection Pooling**
+   - Connection limits and timeouts are configured in the DATABASE_URL
+   - Prisma keeps connections alive with periodic pings
+
+2. **Edge Compute & CDN**
+   - Static assets are cached with proper headers
+   - Edge middleware handles rate limiting at the edge
+
+3. **Memory Management**
+   - In-memory stores (like rate limiting) reset on deployments
+   - For persistent rate limiting, consider implementing Redis
+
+4. **Pricing Optimization**
+   - Model tiers are configured for cost management
+   - Credit purchases include volume discounts
+   - Make sure to set profitable margins on model usage
+
+### Troubleshooting
+
+1. **Database Issues**
+   - Check connection strings and network access
+   - Verify Prisma migrations are deployed
+   - The health endpoint (`/health`) provides database status
+
+2. **Payment Processing**
+   - Check Stripe webhook logs for missed events
+   - Verify webhook signatures
+   - Test purchases with Stripe test mode
+
+3. **Email Delivery**
+   - Verify Brevo API key and permissions
+   - Check email templates and list IDs
+   - Monitor email deliverability in Brevo dashboard
+
+4. **API Rate Limiting**
+   - Adjust rate limits if needed based on usage patterns
+   - Implement tiered rate limits for different user types
+
+### Regular Maintenance Tasks
+
+1. Clean up expired credit buckets (handled by cron job)
+2. Award automation bonuses (handled by cron job)
+3. Monitor API usage and adjust rate limits
+4. Update AI model pricing when vendor prices change
+5. Review database performance and optimize queries
+6. Update dependencies and NextJS version
