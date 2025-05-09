@@ -24,4 +24,20 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   },
+  // Ensure use of secure cookies in production
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? `__Secure-next-auth.session-token` 
+        : `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    }
+  },
+  // Use JWT secret in production for edge compatibility
+  secret: process.env.NEXTAUTH_SECRET,
 }; 

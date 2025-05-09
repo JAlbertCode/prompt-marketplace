@@ -1,6 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
+// Helper function to generate a unique ID
+function generateUniqueId() {
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
 // List of connected admin clients
 const clients = new Set<{
   id: string;
@@ -63,7 +68,6 @@ eventEmitter.on('waitlist', (data: any) => {
 });
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
 
 export async function GET(request: NextRequest) {
   // Get server session for authentication check
@@ -79,7 +83,7 @@ export async function GET(request: NextRequest) {
   const writer = responseStream.writable.getWriter();
   
   // Generate a unique client ID
-  const clientId = crypto.randomUUID();
+  const clientId = generateUniqueId();
   
   // Add client to connected clients list
   const client = {
@@ -109,7 +113,7 @@ export async function GET(request: NextRequest) {
 // Helper function to send a waitlist notification
 export function notifyWaitlistSignup(email: string): void {
   eventEmitter.emit('waitlist', {
-    id: crypto.randomUUID(),
+    id: generateUniqueId(),
     type: 'success',
     message: `New waitlist signup: ${email}`,
   });

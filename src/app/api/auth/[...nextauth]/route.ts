@@ -8,6 +8,9 @@ interface ExtendedJWT extends JWT {
   credits?: number;
 }
 
+// Set runtime for nextauth handlers
+export const runtime = 'nodejs';
+
 // For development, we'll use JWT-only mode without a database adapter
 export const authOptions = {
   providers: [

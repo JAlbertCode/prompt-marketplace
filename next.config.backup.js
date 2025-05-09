@@ -12,6 +12,7 @@ const nextConfig = {
       'promptflow.io', // Our own domain for user uploads
       'storage.googleapis.com' // For GCS storage if used
     ],
+    unoptimized: process.env.NODE_ENV === 'development', // Only optimize in production
   },
   
   // Handle ESLint during builds
@@ -32,12 +33,7 @@ const nextConfig = {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       crypto: false,
-      fs: false,
-      path: false,
-      os: false,
-      net: false,
-      tls: false,
-      stream: false,
+      stream: false, 
       buffer: false,
     };
     
@@ -73,7 +69,14 @@ const nextConfig = {
   
   // Set up redirects
   async redirects() {
-    return [];
+    return [
+      // Redirect from old paths if needed
+      // {
+      //   source: '/old-path',
+      //   destination: '/new-path',
+      //   permanent: true,
+      // },
+    ];
   },
   
   // Configure powered by header
