@@ -5,6 +5,7 @@
 
 # testing
 /coverage
+/test-results
 
 # next.js
 /.next/
@@ -29,8 +30,10 @@ yarn-error.log*
 .env*.local
 .env
 .env.local
+.env.development
 .env.development.local
 .env.test.local
+.env.production
 .env.production.local
 
 # vercel
@@ -43,3 +46,41 @@ next-env.d.ts
 # IDE
 /.idea
 /.vscode
+
+# Analysis
+/analyze
+
+# Cache
+.cache/
+.eslintcache
+.stylelintcache
+
+# Logs
+/logs
+*.log
+
+# Temporary files
+/tmp
+/temp
+*.backup
+*.bak
+*.old
+
+# Generated files
+public/sitemap.xml
+public/robots.txt
+public/sw.js
+public/workbox-*.js
+
+# Secrets and credentials
+*.key
+*.pem
+*.crt
+*.cert
+*.p12
+*.pfx
+*.csr
+certificates/
+
+# Bundle analyzer reports
+/analyze/

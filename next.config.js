@@ -3,25 +3,81 @@ const nextConfig = {
   // Enable server components by default
   reactStrictMode: true,
   
-  // Configure image domains if we need to load images from Sonar
+  // Configure image domains for Sonar and OAuth providers
   images: {
-    domains: ['sonar.perplexity.ai'],
+    domains: [
+      'sonar.perplexity.ai',
+      'lh3.googleusercontent.com', // Google profile images
+      'avatars.githubusercontent.com', // GitHub profile images
+      'promptflow.io', // Our own domain for user uploads
+      'storage.googleapis.com' // For GCS storage if used
+    ],
   },
   
-  // Disable ESLint during builds
+  // Handle ESLint during builds
   eslint: {
+    // Ignore during builds to avoid ESLint errors
     ignoreDuringBuilds: true,
   },
   
-  // Disable TypeScript type checking during builds
+  // Handle TypeScript checking in builds
   typescript: {
+    // Ignore type checking during builds to avoid TS errors
     ignoreBuildErrors: true,
   },
   
   // Configure webpack to handle missing dependencies gracefully
   webpack: (config) => {
+    // Set fallbacks for Node.js core modules
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      crypto: false,
+      fs: false,
+      path: false,
+      os: false,
+      net: false,
+      tls: false,
+      stream: false,
+      buffer: false,
+    };
+    
     return config;
   },
+  
+  // Configure headers for security
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+    ];
+  },
+  
+  // Set up redirects
+  async redirects() {
+    return [];
+  },
+  
+  // Configure powered by header
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig;

@@ -7,21 +7,34 @@ export interface Prompt {
   id: string;
   title: string;
   description: string;
-  systemPrompt: string;
-  inputFields: InputField[];
+  systemPrompt?: string;    // New format
+  content?: string;        // Old format - equivalent to systemPrompt
+  inputFields?: InputField[];
   model: SonarModel | GPTModel;
   creditCost: number;
+  creatorFee: number; // Fee set by the creator
   createdAt: number;
   exampleOutput?: string;
   exampleImageUrl?: string;
   isPrivate?: boolean;
   ownerId?: string;
-  capabilities?: ('text' | 'image' | 'code' | 'transformation')[];
+  creatorId?: string;      // Creator identifier
+  creatorName?: string;    // Creator name
+  capabilities?: ('text' | 'image' | 'code')[];
   imageModel?: ImageModel;
   outputType?: 'text' | 'image';
   transformationType?: 'style' | 'character' | 'scene';
   presetStyles?: string[];
   allowCustomStyles?: boolean;
+  visibility?: string;     // 'public' or 'private'
+  price?: number;         // Price to unlock prompt
+  tags?: string[];        // Categories/tags
+  runCount?: number;      // Times prompt has been run
+  avgRating?: number;     // Average user rating
+  isPublished?: boolean;  // Draft or published
+  
+  // Backward compatibility function
+  getSystemPrompt?: () => string; // Returns systemPrompt || content
 }
 
 export interface PromptFlow {

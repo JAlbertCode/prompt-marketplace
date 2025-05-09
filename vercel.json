@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/waitlist-newsletter",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/credit-cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/automation-bonuses",
+      "schedule": "0 1 1 * *"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "regions": ["iad1"],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/ping",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/login",
+      "destination": "/api/auth/signin",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "destination": "/waitlist",
+      "has": [
+        {
+          "type": "cookie",
+          "key": "isAuthenticated",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/home",
+      "has": [
+        {
+          "type": "cookie",
+          "key": "isAuthenticated",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

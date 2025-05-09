@@ -1,78 +1,184 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import Link from 'next/link';
-import { usePromptStore } from '@/store/usePromptStore';
-import { useFavoriteStore } from '@/store/useFavoriteStore';
-import PromptCard from '@/components/ui/PromptCard';
+import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { Bookmark, Grid, List, Plus, SlidersHorizontal } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Button from '@/components/shared/Button';
+import { getFavoritePrompts } from '@/lib/prompts';
+import { getFavoriteFlows } from '@/lib/flows';
+import { Prompt } from '@/types/prompt';
+import { Flow } from '@/types/flow';
+import ItemCard from '@/components/ui/ItemCard';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+import EmptyState from '@/components/shared/EmptyState';
+import { toast } from 'react-hot-toast';
 
 export default function FavoritesPage() {
-  const { prompts } = usePromptStore();
-  const { favorites, clearFavorites } = useFavoriteStore();
-  
-  // Get favorite prompts
-  const favoritePrompts = useMemo(() => {
-    if (!Array.isArray(prompts) || !Array.isArray(favorites)) return [];
-    
-    return prompts.filter(prompt => favorites.includes(prompt.id));
-  }, [prompts, favorites]);
-  
-  const handleClearFavorites = () => {
-    if (window.confirm('Are you sure you want to clear all favorites?')) {
-      clearFavorites();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [flows, setFlows] = useState<Flow[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState('newest');
+
+  useEffect(() => {
+    // Check if user is authenticated
+    if (status === 'unauthenticated') {
+      router.replace('/login?returnUrl=/favorites');
+      return;
     }
+
+    // Load user's favorite content
+    async function loadFavorites() {
+      setLoading(true);
+      try {
+        // Load both prompts and flows
+        const promptsData = await getFavoritePrompts();
+        const flowsData = await getFavoriteFlows();
+        
+        setPrompts(promptsData);
+        setFlows(flowsData);
+      } catch (error) {
+        console.error('Failed to load favorites:', error);
+        toast.error('Failed to load your favorites');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFavorites();
+  }, [status, router]);
+
+  // Get visible items based on active tab and sort
+  const getVisibleItems = () => {
+    let items = [];
+    
+    if (activeTab === 'all' || activeTab === 'prompts') {
+      items = [...items, ...prompts.map(p => ({ ...p, itemType: 'prompt' as const }))];
+    }
+    
+    if (activeTab === 'all' || activeTab === 'flows') {
+      items = [...items, ...flows.map(f => ({ ...f, itemType: 'flow' as const }))];
+    }
+    
+    // Apply sorting
+    if (sortBy === 'oldest') {
+      items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    } else if (sortBy === 'name') {
+      items.sort((a, b) => a.title.localeCompare(b.title));
+    } else {
+      // Default: newest
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    
+    return items;
   };
-  
+
+  const visibleItems = getVisibleItems();
+
+  const handleSortChange = (sort: string) => {
+    setSortBy(sort);
+  };
+
+  const handleViewChange = (newView: 'grid' | 'list') => {
+    setView(newView);
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="container mx-auto py-8 flex justify-center items-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Your Favorite Prompts
-          </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Quick access to prompts you've favorited
-          </p>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
+          <Bookmark className="h-6 w-6 mr-2 text-blue-600" />
+          <h1 className="text-2xl font-bold">My Favorites</h1>
         </div>
         
-        <div className="flex space-x-2">
-          {favoritePrompts.length > 0 && (
-            <button 
-              onClick={handleClearFavorites}
-              className="text-xs text-red-600 hover:text-red-800 hover:underline"
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            className="px-2 py-1"
+            onClick={() => handleViewChange(view === 'grid' ? 'list' : 'grid')}
+          >
+            {view === 'grid' ? <List size={18} /> : <Grid size={18} />}
+          </Button>
+          
+          <div className="relative">
+            <Button
+              variant="outline"
+              className="px-2 py-1"
             >
-              Clear All
-            </button>
-          )}
-          <Link href="/">
-            <Button variant="outline">
-              Browse All Prompts
+              <SlidersHorizontal size={18} />
             </Button>
-          </Link>
+            
+            {/* Sort dropdown would go here */}
+          </div>
         </div>
       </div>
-      
-      {favoritePrompts.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">No favorites yet</h3>
-          <p className="text-gray-600 mb-4">Save your favorite prompts for quick access</p>
-          <Link href="/">
-            <Button>
-              Browse Prompts
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+        <TabsList className="bg-gray-100 p-1 rounded-lg">
+          <TabsTrigger 
+            value="all" 
+            className={`px-4 py-2 rounded-md ${activeTab === 'all' ? 'bg-white shadow-sm' : ''}`}
+          >
+            All
+          </TabsTrigger>
+          <TabsTrigger 
+            value="prompts" 
+            className={`px-4 py-2 rounded-md ${activeTab === 'prompts' ? 'bg-white shadow-sm' : ''}`}
+          >
+            Prompts
+          </TabsTrigger>
+          <TabsTrigger 
+            value="flows" 
+            className={`px-4 py-2 rounded-md ${activeTab === 'flows' ? 'bg-white shadow-sm' : ''}`}
+          >
+            Flows
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {visibleItems.length === 0 ? (
+        <EmptyState
+          title="No favorites yet"
+          description="When you favorite prompts and flows, they'll appear here for easy access."
+          icon={<Bookmark className="h-12 w-12 text-gray-400" />}
+          action={
+            <Button 
+              variant="primary"
+              onClick={() => router.push('/marketplace')}
+            >
+              Explore Marketplace
             </Button>
-          </Link>
-        </div>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {favoritePrompts.map((prompt) => (
-            <PromptCard 
-              key={prompt.id} 
-              prompt={prompt} 
-            />
+        <div className={view === 'grid' 
+          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
+          : 'space-y-4'
+        }>
+          {visibleItems.map((item) => (
+            <div key={`${item.itemType}-${item.id}`}>
+              <ItemCard
+                item={item}
+                itemType={item.itemType}
+              />
+            </div>
           ))}
         </div>
       )}

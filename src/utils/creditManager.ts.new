@@ -1,0 +1,316 @@
+import { PrismaClient, TransactionType } from "@prisma/client";
+import { getModelById } from "@/lib/models/modelRegistry";
+import { calculateTotalPromptCost, calculatePlatformFee } from "@/lib/models/modelCosts";
+
+const prisma = new PrismaClient();
+
+export async function getUserCredits(userId: string): Promise<number> {
+  const userCredits = await prisma.userCredits.findUnique({
+    where: {
+      userId,
+    },
+    select: {
+      balance: true,
+    },
+  });
+
+  return userCredits?.balance || 0;
+}
+
+export async function addCredits(
+  userId: string,
+  amount: number,
+  description: string,
+  type: TransactionType
+): Promise<number> {
+  // Find or create user credits
+  let userCredits = await prisma.userCredits.findUnique({
+    where: {
+      userId,
+    },
+  });
+
+  if (!userCredits) {
+    userCredits = await prisma.userCredits.create({
+      data: {
+        userId,
+        balance: 0,
+      },
+    });
+  }
+
+  // Update the balance
+  const updatedCredits = await prisma.userCredits.update({
+    where: {
+      userId,
+    },
+    data: {
+      balance: {
+        increment: amount,
+      },
+    },
+  });
+
+  // Record the transaction
+  await prisma.creditTransaction.create({
+    data: {
+      userId,
+      amount,
+      description,
+      type,
+    },
+  });
+
+  return updatedCredits.balance;
+}
+
+export async function deductCredits(
+  userId: string,
+  amount: number,
+  description: string,
+  type: TransactionType
+): Promise<number | null> {
+  // Find user credits
+  const userCredits = await prisma.userCredits.findUnique({
+    where: {
+      userId,
+    },
+  });
+
+  if (!userCredits || userCredits.balance < amount) {
+    return null; // Not enough credits
+  }
+
+  // Update the balance
+  const updatedCredits = await prisma.userCredits.update({
+    where: {
+      userId,
+    },
+    data: {
+      balance: {
+        decrement: amount,
+      },
+    },
+  });
+
+  // Record the transaction
+  await prisma.creditTransaction.create({
+    data: {
+      userId,
+      amount: -amount, // Negative amount for deduction
+      description,
+      type,
+    },
+  });
+
+  return updatedCredits.balance;
+}
+
+export async function calculatePromptRunCost(
+  promptId: string,
+  modelId: string
+): Promise<{ systemCost: number; creatorFee: number; platformFee: number; totalCost: number }> {
+  // Get creator fee
+  const prompt = await prisma.prompt.findUnique({
+    where: {
+      id: promptId,
+    },
+    select: {
+      creatorFee: true,
+      creatorId: true,
+    },
+  });
+
+  const creatorFee = prompt?.creatorFee || 0;
+  
+  // Get model info
+  const model = getModelById(modelId);
+  
+  // System cost based on model
+  const systemCost = model?.baseCost || 100;
+  
+  // Platform fee calculation
+  const platformFee = calculatePlatformFee(creatorFee);
+  
+  // Total cost
+  const totalCost = systemCost + creatorFee + platformFee;
+
+  return {
+    systemCost,
+    creatorFee,
+    platformFee,
+    totalCost,
+  };
+}
+
+export async function chargeForPromptRun(
+  userId: string,
+  promptId: string,
+  modelId: string
+): Promise<boolean> {
+  const { systemCost, creatorFee, platformFee, totalCost } = await calculatePromptRunCost(
+    promptId,
+    modelId
+  );
+
+  // Deduct credits from user
+  const remainingBalance = await deductCredits(
+    userId,
+    totalCost,
+    `Prompt run: ${promptId} using model: ${modelId}`,
+    "PROMPT_RUN"
+  );
+
+  if (remainingBalance === null) {
+    return false; // Not enough credits
+  }
+
+  // If there's a creator fee, pay the creator
+  if (creatorFee > 0) {
+    const prompt = await prisma.prompt.findUnique({
+      where: {
+        id: promptId,
+      },
+      select: {
+        creatorId: true,
+        title: true,
+      },
+    });
+
+    if (prompt) {
+      await addCredits(
+        prompt.creatorId,
+        creatorFee,
+        `Creator payment for prompt: ${prompt.title}`,
+        "CREATOR_PAYMENT"
+      );
+    }
+  }
+
+  return true;
+}
+
+export async function calculateFlowRunCost(
+  flowId: string
+): Promise<{ stepCosts: Array<{ stepId: string; cost: number }>; totalCost: number }> {
+  // Get flow details with steps
+  const flow = await prisma.flow.findUnique({
+    where: {
+      id: flowId,
+    },
+    include: {
+      steps: {
+        include: {
+          prompt: true,
+        },
+        orderBy: {
+          position: "asc",
+        },
+      },
+    },
+  });
+
+  if (!flow) {
+    return { stepCosts: [], totalCost: 0 };
+  }
+
+  const stepCosts = await Promise.all(
+    flow.steps.map(async (step) => {
+      // Calculate cost for each step
+      const { totalCost } = await calculatePromptRunCost(
+        step.promptId,
+        step.model || "gpt-4o" // Default to gpt-4o if not specified
+      );
+
+      return {
+        stepId: step.id,
+        cost: totalCost,
+      };
+    })
+  );
+
+  // Sum up all step costs
+  const totalCost = stepCosts.reduce((sum, step) => sum + step.cost, 0);
+
+  return {
+    stepCosts,
+    totalCost,
+  };
+}
+
+export async function chargeForFlowRun(
+  userId: string,
+  flowId: string
+): Promise<boolean> {
+  const { stepCosts, totalCost } = await calculateFlowRunCost(flowId);
+
+  if (totalCost === 0) {
+    return true; // No charge for empty flows
+  }
+
+  // Deduct total cost from user
+  const remainingBalance = await deductCredits(
+    userId,
+    totalCost,
+    `Flow run: ${flowId}`,
+    "FLOW_RUN"
+  );
+
+  if (remainingBalance === null) {
+    return false; // Not enough credits
+  }
+
+  // Process each step payment
+  for (const stepCost of stepCosts) {
+    const step = await prisma.flowStep.findUnique({
+      where: {
+        id: stepCost.stepId,
+      },
+      include: {
+        prompt: true,
+      },
+    });
+
+    if (step && step.prompt && step.prompt.creatorFee > 0) {
+      // Pay the creator their fee
+      await addCredits(
+        step.prompt.creatorId,
+        step.prompt.creatorFee,
+        `Creator payment for prompt used in flow step: ${step.id}`,
+        "CREATOR_PAYMENT"
+      );
+    }
+  }
+
+  return true;
+}
+
+export async function chargeForFlowUnlock(
+  userId: string,
+  flowId: string
+): Promise<boolean> {
+  // Get flow details
+  const flow = await prisma.flow.findUnique({
+    where: {
+      id: flowId,
+    },
+    select: {
+      unlockFee: true,
+      creatorId: true,
+      title: true,
+    },
+  });
+
+  if (!flow || flow.unlockFee === null || flow.unlockFee === 0) {
+    return true; // Flow is free
+  }
+
+  const unlockFee = flow.unlockFee;
+  // Platform takes 20% of the unlock fee
+  const platformFee = Math.floor(unlockFee * 0.2);
+  const creatorPayment = unlockFee - platformFee;
+  
+  // Deduct unlock fee from user
+  const remainingBalance = await deductCredits(
+    userId,
+    unlockF

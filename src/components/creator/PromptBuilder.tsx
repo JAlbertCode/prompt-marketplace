@@ -5,39 +5,193 @@ import { Prompt, SonarModel, ImageModel, InputField } from '@/types';
 import ModelSelector from './ModelSelector';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
+import { usePromptStore } from '@/store/usePromptStore';
+import { getModelById, getCostBreakdown } from '@/lib/models/modelRegistry';
 
 interface PromptBuilderProps {
   initialPrompt?: Partial<Prompt>;
   onSave: (prompt: Omit<Prompt, 'id' | 'createdAt'>) => void;
   onCancel?: () => void;
+  editId?: string;
 }
 
 const PromptBuilder: React.FC<PromptBuilderProps> = ({
   initialPrompt,
   onSave,
-  onCancel
+  onCancel,
+  editId
 }) => {
-  const [title, setTitle] = useState(initialPrompt?.title || '');
-  const [description, setDescription] = useState(initialPrompt?.description || '');
-  const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
-  const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 50);
-  const [model, setModel] = useState<SonarModel>(initialPrompt?.model || 'sonar-medium-chat');
-  const [imageModel, setImageModel] = useState<ImageModel | undefined>(initialPrompt?.imageModel);
-  const [inputFields, setInputFields] = useState<InputField[]>(initialPrompt?.inputFields || []);
-  const [isPrivate, setIsPrivate] = useState(initialPrompt?.isPrivate || false);
-  const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(
-    initialPrompt?.capabilities || ['text']
-  );
-  const [outputType, setOutputType] = useState<'text' | 'image'>(
-    initialPrompt?.outputType || (initialPrompt?.imageModel ? 'image' : 'text')
-  );
+  console.log('PromptBuilder rendering with initialPrompt:', initialPrompt);
+  console.log('EditId:', editId);
+  
+  // Initialize state with default empty values
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [creatorFee, setCreatorFee] = useState(0);
+  const [creditCost, setCreditCost] = useState(0);
+  const [model, setModel] = useState<string>('gpt-4o');
+  const [imageModel, setImageModel] = useState<ImageModel | undefined>(undefined);
+  const [inputFields, setInputFields] = useState<InputField[]>([]);
+  const [isPublished, setIsPublished] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(true);
+  const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(['text']);
+  const [outputType, setOutputType] = useState<'text' | 'image'>('text');
+  
+  // Track if form has been initialized with data
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Add default input field if none exist
   useEffect(() => {
-    if (inputFields.length === 0) {
+    if (inputFields.length === 0 && isInitialized) {
+      console.log('No input fields after initialization, adding default field');
       addInputField();
     }
-  }, []);
+  }, [inputFields, isInitialized]);
+
+  // Update form values when initialPrompt changes
+  useEffect(() => {
+    console.log('initialPrompt changed:', initialPrompt);
+    
+    // If we have a valid initialPrompt with an id, initialize the form
+    if (initialPrompt && Object.keys(initialPrompt).length > 0) {
+      // Only initialize once with non-empty data
+      if (!isInitialized) {
+        console.log('Initializing form with data:', JSON.stringify(initialPrompt, null, 2));
+        
+        // Track which fields we're initializing
+        const initializedFields: Record<string, any> = {};
+        
+        // Basic text fields
+        setTitle(initialPrompt.title || '');
+        initializedFields.title = initialPrompt.title;
+        
+        setDescription(initialPrompt.description || '');
+        initializedFields.description = initialPrompt.description;
+        
+        // Handle both old and new prompt formats
+        const promptContent = initialPrompt.systemPrompt || initialPrompt.content || '';
+        setSystemPrompt(promptContent);
+        initializedFields.systemPrompt = promptContent;
+        
+        // Numeric fields
+        const fee = typeof initialPrompt.creatorFee === 'number' ? initialPrompt.creatorFee : 0;
+        setCreatorFee(fee);
+        initializedFields.creatorFee = fee;
+        
+        const cost = typeof initialPrompt.creditCost === 'number' ? initialPrompt.creditCost : 0;
+        setCreditCost(cost);
+        initializedFields.creditCost = cost;
+        
+        // Model selection
+        const modelId = initialPrompt.model || 'gpt-4o';
+        setModel(modelId);
+        initializedFields.model = modelId;
+        
+        if (initialPrompt.imageModel) {
+          setImageModel(initialPrompt.imageModel);
+          initializedFields.imageModel = initialPrompt.imageModel;
+        }
+        
+        // Handle input fields carefully
+        if (initialPrompt.inputFields && Array.isArray(initialPrompt.inputFields) && initialPrompt.inputFields.length > 0) {
+          console.log('Setting input fields:', initialPrompt.inputFields);
+          setInputFields(initialPrompt.inputFields);
+          initializedFields.inputFields = initialPrompt.inputFields;
+        } else {
+          // Add default input field if none exist
+          console.log('No input fields found, adding default');
+          const defaultField: InputField = {
+            id: uuidv4(),
+            label: 'Prompt',
+            placeholder: 'Enter your prompt here',
+            required: true,
+            type: 'text'
+          };
+          setInputFields([defaultField]);
+          initializedFields.inputFields = [defaultField];
+        }
+        
+        // Boolean fields
+        const isPrivateValue = initialPrompt.isPrivate !== undefined ? initialPrompt.isPrivate : true;
+        setIsPrivate(isPrivateValue);
+        initializedFields.isPrivate = isPrivateValue;
+        
+        // Arrays and enums
+        const caps = Array.isArray(initialPrompt.capabilities) ? initialPrompt.capabilities : ['text'];
+        setCapabilities(caps);
+        initializedFields.capabilities = caps;
+        
+        const outType = initialPrompt.outputType || (initialPrompt.imageModel ? 'image' : 'text');
+        setOutputType(outType as 'text' | 'image');
+        initializedFields.outputType = outType;
+        
+        setIsInitialized(true);
+        console.log('Form initialized with fields:', initializedFields);
+      }
+    } else {
+      console.warn('Invalid or empty initialPrompt received:', initialPrompt);
+    }
+  }, [initialPrompt, isInitialized]);
+  
+  // Calculate total cost whenever the model or fee changes
+  useEffect(() => {
+    // Get the model information
+    const modelInfo = getModelById(model);
+    
+    if (!modelInfo) {
+      // Default to 10000 credits if model not found
+      setCreditCost(10000 + creatorFee);
+      return;
+    }
+    
+    // Creator fee must be at least 0
+    const safeFee = Math.max(0, creatorFee);
+    
+    // Get cost breakdown for medium prompt
+    const costBreakdown = getCostBreakdown(model, 'medium', safeFee);
+    
+    // Update total cost
+    setCreditCost(costBreakdown.totalCost);
+  }, [model, creatorFee]);
+  
+  // Update capabilities based on selected model
+  useEffect(() => {
+    const selectedModel = getModelById(model);
+    if (selectedModel) {
+      // Update capabilities based on model type
+      const newCapabilities: ('text' | 'image' | 'code')[] = [];
+      
+      if (selectedModel.type === 'text' || selectedModel.capabilities.includes('text')) {
+        newCapabilities.push('text');
+      }
+      
+      if (selectedModel.type === 'image' || selectedModel.capabilities.includes('image')) {
+        newCapabilities.push('image');
+      }
+      
+      if (selectedModel.capabilities.includes('code')) {
+        newCapabilities.push('code');
+      }
+      
+      // Only update if capabilities have changed
+      if (JSON.stringify(newCapabilities.sort()) !== JSON.stringify(capabilities.sort())) {
+        setCapabilities(newCapabilities);
+      }
+      
+      // Update output type based on model type
+      if (selectedModel.type === 'image' && outputType !== 'image') {
+        setOutputType('image');
+      } else if (selectedModel.type === 'text' && outputType !== 'text') {
+        setOutputType('text');
+      }
+      
+      // For image models, set the imageModel too
+      if (selectedModel.type === 'image') {
+        setImageModel(selectedModel.id as ImageModel);
+      }
+    }
+  }, [model]);
 
   const addInputField = () => {
     const newField: InputField = {
@@ -69,6 +223,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submission started');
     
     // Validate all required fields
     if (!title.trim()) {
@@ -92,16 +247,41 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       return;
     }
     
-    const newPrompt: Omit<Prompt, 'id' | 'createdAt'> = {
+    console.log('Form validation passed, preparing data to save');
+    console.log('Current form values:', {
       title,
       description,
-      systemPrompt,
+      systemPrompt: systemPrompt.substring(0, 100) + '...', // Truncate for log
       inputFields,
       model,
       creditCost,
+      creatorFee,
       isPrivate,
       capabilities,
-      outputType
+      outputType,
+      imageModel
+    });
+    
+    // Prepare the prompt data with all required fields
+    const newPrompt: Omit<Prompt, 'id' | 'createdAt'> = {
+      title,
+      description,
+      systemPrompt,  // New field format
+      content: undefined, // Explicitly clear old format
+      inputFields: inputFields.map(field => ({
+        ...field,
+        // Ensure all fields have required properties
+        required: field.required !== undefined ? field.required : true,
+        type: field.type || 'text'
+      })),
+      model,
+      creditCost,
+      creatorFee,
+      isPrivate,
+      capabilities,
+      outputType,
+      // Set visibility based on isPrivate
+      visibility: isPrivate ? 'private' : 'public'
     };
     
     // Add image model if needed
@@ -109,6 +289,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       newPrompt.imageModel = imageModel;
     }
     
+    console.log('Saving prompt:', newPrompt);
     onSave(newPrompt);
   };
 
@@ -170,7 +351,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Text Model <span className="text-red-500">*</span>
+            Select Model <span className="text-red-500">*</span>
           </label>
           <ModelSelector 
             currentModel={model} 
@@ -178,21 +359,114 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
           />
         </div>
         
-        <div className="mb-4">
-          <label htmlFor="creditCost" className="block text-sm font-medium text-gray-700 mb-1">
-            Credit Cost <span className="text-red-500">*</span>
+        {/* Display model capabilities */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Model Capabilities
           </label>
-          <input
-            type="number"
-            id="creditCost"
-            value={creditCost}
-            onChange={(e) => setCreditCost(Math.max(1, parseInt(e.target.value) || 0))}
-            min="1"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            How many credits users will spend to run this prompt
+          <div className="flex flex-wrap gap-2">
+            {capabilities.map(capability => (
+              <span 
+                key={capability}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  capability === 'text' ? 'bg-blue-100 text-blue-800' :
+                  capability === 'image' ? 'bg-pink-100 text-pink-800' :
+                  'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {capability.charAt(0).toUpperCase() + capability.slice(1)}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        {/* Display output type selector for models with multiple capabilities */}
+        {capabilities.length > 1 && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Primary Output Type <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-3">
+              {capabilities.includes('text') && (
+                <label className="inline-flex items-center">
+                  <input 
+                    type="radio" 
+                    name="outputType" 
+                    value="text"
+                    checked={outputType === 'text'}
+                    onChange={() => setOutputType('text')}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Text</span>
+                </label>
+              )}
+              {capabilities.includes('image') && (
+                <label className="inline-flex items-center">
+                  <input 
+                    type="radio" 
+                    name="outputType" 
+                    value="image"
+                    checked={outputType === 'image'}
+                    onChange={() => setOutputType('image')}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Image</span>
+                </label>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            Pricing Breakdown <span className="text-red-500">*</span>
+          </label>
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">System cost for {model}:</span>
+              <span className="font-medium">{model && getModelById(model)?.cost.medium.toLocaleString() || 10000} credits</span>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">Your fee:</span>
+              <div className="flex">
+                <input
+                  type="number"
+                  id="creatorFee"
+                  value={creatorFee}
+                  onChange={(e) => setCreatorFee(Math.max(0, parseInt(e.target.value) || 0))}
+                  min="0"
+                  className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+                  required
+                />
+                <span className="ml-2 text-sm text-gray-700 pt-1">credits</span>
+              </div>
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-700">Platform fee (10% of your fee{creatorFee === 0 ? ', min. 100' : ''}):</span>
+              <span className="font-medium">{creatorFee > 0 ? Math.max(Math.floor(creatorFee * 0.1), 1) : 100} credits</span>
+            </div>
+            <div className="pt-2 mt-2 border-t border-gray-300 flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-900">Total user cost:</span>
+              <span className="font-bold text-lg text-indigo-600">{creditCost} credits</span>
+            </div>
+            
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-800 mb-2">What users get for their money:</h4>
+              <div className="bg-blue-50 p-2 rounded-md text-sm">
+                <div className="flex justify-between mb-1">
+                  <span>Cost per run:</span>
+                  <span className="font-medium">${(creditCost * 0.000001).toFixed(6)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Runs per $10:</span>
+                  <span className="font-medium">{Math.floor(10000000 / creditCost)} runs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p className="text-sm text-gray-500">
+            These are the credits users will spend each time they run this prompt.
+            You'll receive {creatorFee} credits per run, and we take a 10% fee.
           </p>
         </div>
       </div>
@@ -212,76 +486,76 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         <div className="space-y-4">
           {inputFields.map((field, index) => (
             <div key={field.id} className="border border-gray-200 rounded-md p-4">
-            <div className="flex justify-between items-center mb-3">
-            <h3 className="font-medium">Field {index + 1}</h3>
-            <button
-            type="button"
-            onClick={() => removeInputField(field.id)}
-            className="text-red-600 hover:text-red-800 text-sm"
-            >
-            Remove
-            </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-            <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
-            Label <span className="text-red-500">*</span>
-            </label>
-            <input
-            type="text"
-            id={`field-${field.id}-label`}
-            value={field.label}
-            onChange={(e) => updateInputField(field.id, { label: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g., Topic"
-            required
-            />
-            </div>
-            
-            <div>
-            <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
-            Placeholder
-            </label>
-            <input
-            type="text"
-            id={`field-${field.id}-placeholder`}
-            value={field.placeholder}
-            onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g., Enter a topic..."
-            />
-            </div>
-            
-            <div>
-            <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
-            Type
-            </label>
-            <select
-            id={`field-${field.id}-type`}
-            value={field.type || 'text'}
-            onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-            <option value="text">Text</option>
-            <option value="textarea">Text Area</option>
-            <option value="select">Select</option>
-            </select>
-            </div>
-            
-            <div className="flex items-center">
-            <input
-            type="checkbox"
-            id={`field-${field.id}-required`}
-            checked={field.required}
-            onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-            />
-            <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
-            Required field
-            </label>
-            </div>
-            </div>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-medium">Field {index + 1}</h3>
+                <button
+                  type="button"
+                  onClick={() => removeInputField(field.id)}
+                  className="text-red-600 hover:text-red-800 text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor={`field-${field.id}-label`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Label <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id={`field-${field.id}-label`}
+                    value={field.label}
+                    onChange={(e) => updateInputField(field.id, { label: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g., Topic"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor={`field-${field.id}-placeholder`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Placeholder
+                  </label>
+                  <input
+                    type="text"
+                    id={`field-${field.id}-placeholder`}
+                    value={field.placeholder}
+                    onChange={(e) => updateInputField(field.id, { placeholder: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="e.g., Enter a topic..."
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor={`field-${field.id}-type`} className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    id={`field-${field.id}-type`}
+                    value={field.type || 'text'}
+                    onChange={(e) => updateInputField(field.id, { type: e.target.value as 'text' | 'textarea' | 'select' | 'image' })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="text">Text</option>
+                    <option value="textarea">Text Area</option>
+                    <option value="select">Select</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`field-${field.id}-required`}
+                    checked={field.required}
+                    onChange={(e) => updateInputField(field.id, { required: e.target.checked })}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor={`field-${field.id}-required`} className="ml-2 block text-sm text-gray-700">
+                    Required field
+                  </label>
+                </div>
+              </div>
 
               {/* Select options editor */}
               {field.type === 'select' && (

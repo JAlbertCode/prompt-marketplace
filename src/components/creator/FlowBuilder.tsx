@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PromptFlow, FlowStep, Prompt, InputMapping } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
+import { useFlowStore } from '@/store/useFlowStore';
 import { calculateFlowCreditCost, validateFlowSteps } from '@/lib/utils/flowValidator';
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'react-hot-toast';
@@ -11,21 +12,24 @@ interface FlowBuilderProps {
   initialFlow?: Partial<PromptFlow>;
   onSave: (flow: Omit<PromptFlow, 'id' | 'createdAt'>) => void;
   onCancel?: () => void;
+  editId?: string;
 }
 
 const FlowBuilder: React.FC<FlowBuilderProps> = ({
   initialFlow,
   onSave,
-  onCancel
+  onCancel,
+  editId
 }) => {
   const { prompts } = usePromptStore();
+  const { getFlowById } = useFlowStore();
   
   const [title, setTitle] = useState(initialFlow?.title || '');
   const [description, setDescription] = useState(initialFlow?.description || '');
   const [steps, setSteps] = useState<FlowStep[]>(initialFlow?.steps || []);
   const [unlockPrice, setUnlockPrice] = useState(initialFlow?.unlockPrice || 0);
-  const [isPrivate, setIsPrivate] = useState(initialFlow?.isPrivate || false);
-  const [isDraft, setIsDraft] = useState(initialFlow?.isDraft !== false); // Default to draft
+  const [isPrivate, setIsPrivate] = useState(initialFlow?.isPrivate !== false);
+  const [isPublished, setIsPublished] = useState(initialFlow?.isDraft === false);
   
   // Create a map of prompts by ID for easy lookup
   const promptsMap = React.useMemo(() => {
@@ -34,6 +38,39 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
       return acc;
     }, {} as Record<string, Prompt>);
   }, [prompts]);
+
+  // Load flow data if editId is provided
+  useEffect(() => {
+    if (editId && getFlowById) {
+      const flowToEdit = getFlowById(editId);
+      if (flowToEdit) {
+        setTitle(flowToEdit.title || '');
+        setDescription(flowToEdit.description || '');
+        setSteps(flowToEdit.steps || []);
+        setUnlockPrice(flowToEdit.unlockPrice || 0);
+        setIsPrivate(flowToEdit.isPrivate !== false);
+        setIsPublished(flowToEdit.isDraft === false);
+      }
+    }
+  }, [editId, getFlowById]);
+
+  // State for prompt search
+  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  
+  // Function to close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId && !(event.target as Element).closest('.prompt-search-container')) {
+        setOpenDropdownId(null);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
   
   // Calculate total credit cost whenever steps change
   const totalCreditCost = React.useMemo(() => {
@@ -164,7 +201,7 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
     setSteps(reorderedSteps);
   };
   
-  const handleSubmit = (e: React.FormEvent, saveAsDraft: boolean = false) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate all required fields
@@ -191,8 +228,8 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
       steps,
       totalCreditCost,
       isPrivate,
-      isDraft: saveAsDraft,
-      unlockPrice
+      isDraft: !isPublished,
+      unlockPrice: isPublished ? unlockPrice : 0
     };
     
     onSave(newFlow);
@@ -200,7 +237,7 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
   
   return (
     <div className="space-y-6">
-      <form onSubmit={(e) => handleSubmit(e, isDraft)}>
+      <form onSubmit={handleSubmit}>
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <h2 className="text-xl font-bold mb-4">Flow Information</h2>
           
@@ -233,50 +270,18 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
             />
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label htmlFor="unlockPrice" className="block text-sm font-medium text-gray-700 mb-1">
-                Unlock Price (Credits)
-              </label>
+          <div className="mt-4">
+            <div className="flex items-center mb-2">
               <input
-                type="number"
-                id="unlockPrice"
-                value={unlockPrice}
-                onChange={(e) => setUnlockPrice(Math.max(0, parseInt(e.target.value) || 0))}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                type="checkbox"
+                id="isPrivate"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <p className="mt-1 text-sm text-gray-500">
-                Credits required to unlock this flow (0 for free)
-              </p>
-            </div>
-            
-            <div className="flex flex-col justify-end">
-              <div className="flex items-center mb-2">
-                <input
-                  type="checkbox"
-                  id="isPrivate"
-                  checked={isPrivate}
-                  onChange={(e) => setIsPrivate(e.target.checked)}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isPrivate" className="ml-2 block text-sm text-gray-700">
-                  Private (only visible to you)
-                </label>
-              </div>
-              
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isDraft"
-                  checked={isDraft}
-                  onChange={(e) => setIsDraft(e.target.checked)}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isDraft" className="ml-2 block text-sm text-gray-700">
-                  Save as draft (not published to marketplace)
-                </label>
-              </div>
+              <label htmlFor="isPrivate" className="ml-2 block text-sm text-gray-700">
+                Private (only visible to you and people you share with)
+              </label>
             </div>
           </div>
         </div>
@@ -356,19 +361,121 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
                       <label htmlFor={`step-${step.id}-prompt`} className="block text-sm font-medium text-gray-700 mb-1">
                         Select Prompt
                       </label>
-                      <select
-                        id={`step-${step.id}-prompt`}
-                        value={step.promptId}
-                        onChange={(e) => updatePromptForStep(step.id, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        {prompts.map(p => (
-                          <option key={p.id} value={p.id}>{p.title}</option>
-                        ))}
-                      </select>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Cost: {prompt.creditCost} credits
-                      </p>
+                      
+                      <div className="relative mb-14 prompt-search-container">
+                        <div className="flex">
+                          <input
+                            type="text"
+                            id={`step-${step.id}-prompt-search`}
+                            placeholder="Search for a prompt..."
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${openDropdownId === step.id ? 'border-indigo-500 rounded-b-none' : 'border-gray-300'}`}
+                            onClick={() => setOpenDropdownId(step.id)}
+                            onChange={(e) => {
+                              setSearchQueries(prev => ({
+                                ...prev,
+                                [step.id]: e.target.value.toLowerCase()
+                              }));
+                              // Open dropdown when typing
+                              if (e.target.value && openDropdownId !== step.id) {
+                                setOpenDropdownId(step.id);
+                              }
+                            }}
+                            value={searchQueries[step.id] || ''}
+                          />
+                        </div>
+                        
+                        {openDropdownId === step.id && (
+                          <div className="mt-0 absolute w-full z-10 bg-white border border-indigo-500 border-t-0 rounded-md rounded-t-none shadow-lg max-h-64 overflow-y-auto">
+                            {/* Favorite prompts section */}
+                            <div className="p-2 bg-gray-50 text-xs font-semibold text-gray-700 border-b border-gray-200 sticky top-0">
+                              Your Favorite Prompts
+                            </div>
+                          
+                            {prompts
+                              .filter(p => {
+                                const searchQuery = searchQueries[step.id] || '';
+                                const matchesSearch = !searchQuery || 
+                                  p.title.toLowerCase().includes(searchQuery) || 
+                                  p.description.toLowerCase().includes(searchQuery);
+                                return p.isPrivate && matchesSearch;
+                              })
+                              .slice(0, 5)
+                              .map(p => (
+                                <div 
+                                  key={p.id} 
+                                  className={`p-2 hover:bg-indigo-50 cursor-pointer ${p.id === step.promptId ? 'bg-indigo-100' : ''}`}
+                                  onClick={() => {
+                                    updatePromptForStep(step.id, p.id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  <div className="font-medium text-sm">{p.title}</div>
+                                  <div className="text-xs text-gray-500 truncate">{p.description}</div>
+                                </div>
+                              ))}
+                            
+                            {/* Divider */}
+                            <div className="p-2 bg-gray-50 text-xs font-semibold text-gray-700 border-b border-t border-gray-200 sticky top-0">
+                              Marketplace Prompts
+                            </div>
+                            
+                            {prompts
+                              .filter(p => {
+                                const searchQuery = searchQueries[step.id] || '';
+                                const matchesSearch = !searchQuery || 
+                                  p.title.toLowerCase().includes(searchQuery) || 
+                                  p.description.toLowerCase().includes(searchQuery);
+                                return !p.isPrivate && matchesSearch;
+                              })
+                              .slice(0, 5)
+                              .map(p => (
+                                <div 
+                                  key={p.id} 
+                                  className={`p-2 hover:bg-indigo-50 cursor-pointer ${p.id === step.promptId ? 'bg-indigo-100' : ''}`}
+                                  onClick={() => {
+                                    updatePromptForStep(step.id, p.id);
+                                    setOpenDropdownId(null);
+                                  }}
+                                >
+                                  <div className="font-medium text-sm">{p.title}</div>
+                                  <div className="text-xs text-gray-500 truncate">{p.description}</div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="pt-14 pb-2">
+                        <div className="p-3 border border-gray-200 rounded-md bg-gray-50">
+                          <div className="flex items-center">
+                            <div className="flex-1">
+                              <div className="font-medium">{prompt.title}</div>
+                              <div className="text-xs text-gray-600 mt-1 line-clamp-2">{prompt.description}</div>
+                            </div>
+                            <div>
+                              <a 
+                                href={`/prompt/${prompt.id}/edit`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                </svg>
+                                Edit Prompt
+                              </a>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex justify-between text-xs">
+                            <span className="text-gray-500">
+                              Cost: <span className="font-semibold">{prompt.creditCost} credits</span>
+                            </span>
+                            <span className="text-gray-500">
+                              Model: <span className="font-semibold">{prompt.model}</span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
@@ -376,17 +483,135 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
             </div>
           )}
           
-          <div className="mt-6 p-4 bg-indigo-50 rounded-md">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="font-medium">Total Flow Cost</h3>
-                <p className="text-sm text-gray-600">
-                  Sum of all prompt costs in this flow
-                </p>
+          <div className="mt-6 space-y-4">
+            <div className="p-4 bg-indigo-50 rounded-md">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium">Total Flow Cost</h3>
+                  <p className="text-sm text-gray-600">
+                    Sum of all prompt costs in this flow
+                  </p>
+                </div>
+                <div className="text-xl font-bold text-indigo-700">
+                  {totalCreditCost} credits
+                </div>
               </div>
-              <div className="text-xl font-bold text-indigo-700">
-                {totalCreditCost} credits
+            </div>
+            
+            <div className="p-4 bg-orange-50 rounded-md">
+              <h3 className="font-medium mb-2">Marketplace Settings</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Choose how to make your flow available to others
+              </p>
+              
+              <div className="mb-3">
+                <label htmlFor="publishStatus" className="block text-sm font-medium text-gray-700 mb-2">
+                  Publishing Status
+                </label>
+                <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                  <div className="flex flex-col divide-y divide-gray-200">
+                    <label 
+                      className={`p-3 flex items-center cursor-pointer ${!isPublished ? 'bg-gray-50' : ''}`}
+                      htmlFor="draft"
+                    >
+                      <input
+                        type="radio"
+                        id="draft"
+                        name="publishStatus"
+                        checked={!isPublished}
+                        onChange={() => setIsPublished(false)}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <div className="ml-3">
+                        <span className="block text-sm font-medium text-gray-900">Save as Draft</span>
+                        <span className="block text-xs text-gray-500">
+                          Your flow will be saved but not visible on the marketplace
+                        </span>
+                      </div>
+                    </label>
+                    <label 
+                      className={`p-3 flex items-center cursor-pointer ${isPublished ? 'bg-gray-50' : ''}`}
+                      htmlFor="publish"
+                    >
+                      <input
+                        type="radio"
+                        id="publish"
+                        name="publishStatus"
+                        checked={isPublished}
+                        onChange={() => setIsPublished(true)}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <div className="ml-3">
+                        <span className="block text-sm font-medium text-gray-900">Publish on Marketplace</span>
+                        <span className="block text-xs text-gray-500">
+                          Your flow will be visible to everyone on the marketplace
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
+              
+              {isPublished && (
+                <div className="mt-4">
+                  <label htmlFor="pricingOption" className="block text-sm font-medium text-gray-700 mb-2">
+                    Pricing Option
+                  </label>
+                  <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
+                    <div className="flex flex-col divide-y divide-gray-200">
+                      <label 
+                        className={`p-3 flex items-center cursor-pointer ${unlockPrice === 0 ? 'bg-gray-50' : ''}`}
+                        htmlFor="free"
+                      >
+                        <input
+                          type="radio"
+                          id="free"
+                          name="pricingOption"
+                          checked={unlockPrice === 0}
+                          onChange={() => setUnlockPrice(0)}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                        />
+                        <div className="ml-3">
+                          <span className="block text-sm font-medium text-gray-900">Free for Everyone</span>
+                          <span className="block text-xs text-gray-500">
+                            Anyone can use this flow without paying credits (they'll still pay for execution)
+                          </span>
+                        </div>
+                      </label>
+                      <label 
+                        className={`p-3 flex items-center cursor-pointer ${unlockPrice > 0 ? 'bg-gray-50' : ''}`}
+                        htmlFor="paid"
+                      >
+                        <input
+                          type="radio"
+                          id="paid"
+                          name="pricingOption"
+                          checked={unlockPrice > 0}
+                          onChange={() => unlockPrice === 0 ? setUnlockPrice(500) : null}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                        />
+                        <div className="ml-3 flex-grow">
+                          <span className="block text-sm font-medium text-gray-900">Premium (One-time payment)</span>
+                          <div className="flex items-center mt-1">
+                            <input
+                              type="number"
+                              value={unlockPrice}
+                              onChange={(e) => setUnlockPrice(Math.max(1, parseInt(e.target.value) || 0))}
+                              disabled={unlockPrice === 0}
+                              min="1"
+                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-500">credits</span>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-500">
+                            <span className="font-medium">You earn 90%</span> ({Math.round(unlockPrice * 0.9)} credits) per unlock
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -405,7 +630,7 @@ const FlowBuilder: React.FC<FlowBuilderProps> = ({
             type="submit"
             className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            {isDraft ? 'Save as Draft' : 'Publish Flow'}
+            {isPublished ? 'Publish Flow' : 'Save Draft'}
           </button>
         </div>
       </form>

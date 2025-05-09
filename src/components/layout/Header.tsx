@@ -1,17 +1,24 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { useFavoriteStore } from '@/store/useFavoriteStore';
 import { toast } from 'react-hot-toast';
+import { useSession, signOut } from 'next-auth/react';
+import { logout as clearCustomAuth } from '@/lib/auth/authHelpers';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 const Header: React.FC = () => {
   const { credits, addCredits } = useCreditStore();
   const { favorites } = useFavoriteStore();
   const pathname = usePathname();
   const isLowCredits = credits < 200;
+  const { data: session, status } = useSession();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const router = useRouter();
   
   // Check if a navigation link is active
   const isActive = (path: string) => {
@@ -22,6 +29,25 @@ const Header: React.FC = () => {
   const handleAddTestCredits = () => {
     addCredits(1000, 'Test credit addition');
     toast.success('Added 1000 test credits!');
+  };
+
+  const toggleUserMenu = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
+  };
+
+  const handleSignOut = async () => {
+    // Clear custom auth first
+    clearCustomAuth();
+    
+    // Then try next-auth signout
+    try {
+      await signOut({ callbackUrl: '/waitlist' });
+    } catch (error) {
+      // If next-auth fails, just redirect manually
+      router.push('/waitlist');
+    }
+    
+    toast.success('Signed out successfully');
   };
   
   return (
@@ -51,8 +77,17 @@ const Header: React.FC = () => {
             </Link>
             
             <Link 
-              href="/favorites"
-              className={`text-sm font-medium px-3 py-2 rounded-md flex items-center ${isActive('/favorites') 
+              href="/models"
+              className={`text-sm font-medium px-3 py-2 rounded-md ${isActive('/models') 
+                ? 'bg-gray-100 text-gray-900' 
+                : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              Models
+            </Link>
+            
+            <Link 
+              href="/dashboard?tab=favoritePrompts"
+              className={`text-sm font-medium px-3 py-2 rounded-md flex items-center ${pathname.startsWith('/dashboard') && pathname.includes('favorite') 
                 ? 'bg-gray-100 text-gray-900' 
                 : 'text-gray-600 hover:text-gray-900'}`}
             >
@@ -65,12 +100,13 @@ const Header: React.FC = () => {
             </Link>
             
             <Link 
-              href="/submit"
-              className={`text-sm font-medium px-3 py-2 rounded-md ${isActive('/submit') 
-                ? 'bg-gray-100 text-gray-900' 
-                : 'text-gray-600 hover:text-gray-900'}`}
+              href="/create"
+              className={`text-sm font-medium px-3 py-2 rounded-md ${
+                pathname.startsWith('/create') || pathname.startsWith('/submit')
+                  ? 'bg-gray-100 text-gray-900' 
+                  : 'text-gray-600 hover:text-gray-900'}`}
             >
-              Create Prompt
+              Create
             </Link>
             
             {/* Credit display */}
@@ -84,15 +120,102 @@ const Header: React.FC = () => {
               {isLowCredits && (
                 <span className="mr-1">⚠️</span>
               )}
-              <span>{credits} Credits</span>
+              <span>{session?.user?.credits || credits} Credits</span>
             </div>
             
-            <button
-              onClick={handleAddTestCredits}
-              className="ml-2 text-xs px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-            >
-              Test: Add Credits
-            </button>
+            {!session && status !== 'loading' ? (
+              <div className="flex space-x-2">
+                <Link
+                  href="/login"
+                  className="px-3 py-1 text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-3 py-1 text-sm font-medium bg-indigo-600 text-white rounded-md hover:bg-indigo-500"
+                >
+                  Sign up
+                </Link>
+              </div>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={toggleUserMenu}
+                  className="flex items-center focus:outline-none"
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="true"
+                >
+                  <span className="sr-only">Open user menu</span>
+                  <div className="h-8 w-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border border-gray-300">
+                    {session?.user?.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt="User avatar"
+                        width={32}
+                        height={32}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-gray-600">
+                        {session?.user?.name?.[0]?.toUpperCase() || "U"}
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {isUserMenuOpen && (
+                  <div
+                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-labelledby="user-menu"
+                  >
+                    <div className="py-1">
+                      <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                        <p className="font-medium">{session?.user?.name}</p>
+                        <p className="text-gray-500 truncate">{session?.user?.email}</p>
+                      </div>
+                      
+                      <Link
+                        href="/dashboard"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      
+                      <Link
+                        href="/settings"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Settings
+                      </Link>
+                      
+                      <button
+                        onClick={handleSignOut}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        role="menuitem"
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {process.env.NODE_ENV === 'development' && (
+              <button
+                onClick={handleAddTestCredits}
+                className="ml-2 text-xs px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                Test: Add Credits
+              </button>
+            )}
           </nav>
         </div>
       </div>

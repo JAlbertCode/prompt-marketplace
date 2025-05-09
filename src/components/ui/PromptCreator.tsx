@@ -4,7 +4,8 @@ import { toast } from 'react-hot-toast';
 import { Prompt, InputField, SonarModel } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
 import { validateInputFields, validateSystemPrompt, createInputField } from '@/lib/promptHelpers';
-import { getBaselineCost, isValidCreditCost } from '@/lib/creditHelpers';
+import { getModelById, getModelBaseCost, calculatePlatformFee, getCostBreakdown } from '@/lib/models/modelRegistry';
+import ModelInfoBadge from '@/components/shared/ModelInfoBadge';
 import { executePrompt } from '@/lib/sonarApi';
 import Button from '@/components/shared/Button';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
@@ -21,7 +22,7 @@ const PromptCreator: React.FC = () => {
   createInputField('Input', 'Enter your input here')
   ]);
   const [model, setModel] = useState<SonarModel>('sonar-medium-chat');
-  const [creditCost, setCreditCost] = useState(getBaselineCost('sonar-medium-chat'));
+  const [creatorFee, setCreatorFee] = useState(0); // Default to 0 credits
   const [isPrivate, setIsPrivate] = useState(false);
   
   // Test state
@@ -31,13 +32,7 @@ const PromptCreator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Set the credit cost based on the model whenever it changes
-  useEffect(() => {
-    const baselineCost = getBaselineCost(model);
-    if (creditCost < baselineCost) {
-      setCreditCost(baselineCost);
-    }
-  }, [model]);
+  // We don't need to adjust creator fee when model changes
   
   const handleTestInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -107,10 +102,9 @@ const PromptCreator: React.FC = () => {
       newErrors.inputFields = 'At least one input field with a label is required';
     }
     
-    // Check if credit cost is valid for the selected model
-    const baselineCost = getBaselineCost(model);
-    if (!isValidCreditCost(creditCost, model)) {
-      newErrors.creditCost = `Credit cost must be at least ${baselineCost} for the ${model} model`;
+    // Creator fee can be any value >= 0
+    if (creatorFee < 0) {
+      newErrors.creatorFee = 'Creator fee cannot be negative';
     }
     
     setErrors(newErrors);
@@ -161,7 +155,7 @@ const PromptCreator: React.FC = () => {
         systemPrompt,
         inputFields,
         model,
-        creditCost,
+        creatorFee,
         // If we've tested the prompt, use the test output as an example
         exampleOutput: testOutput || undefined,
         isPrivate,
@@ -360,11 +354,7 @@ const PromptCreator: React.FC = () => {
                   const newModel = e.target.value as SonarModel;
                   setModel(newModel);
                   
-                  // Update credit cost based on model baseline
-                  const baselineCost = getBaselineCost(newModel);
-                  if (creditCost < baselineCost) {
-                    setCreditCost(baselineCost);
-                  }
+                  // No need to adjust creator fee when model changes
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
@@ -375,25 +365,31 @@ const PromptCreator: React.FC = () => {
             </div>
             
             <div className="space-y-1">
-              <label htmlFor="creditCost" className="block text-sm font-medium text-gray-700">
-                Credit Cost <span className="text-red-500">*</span>
+              <label htmlFor="creatorFee" className="block text-sm font-medium text-gray-700">
+                Creator Fee
               </label>
               <div className="relative">
                 <input
                   type="number"
-                  id="creditCost"
-                  value={creditCost}
-                  onChange={(e) => setCreditCost(parseInt(e.target.value) || 0)}
-                  min={getBaselineCost(model)}
+                  id="creatorFee"
+                  value={creatorFee}
+                  onChange={(e) => setCreatorFee(parseInt(e.target.value) || 0)}
+                  min={0}
                   max={1000}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
                 <div className="text-xs text-gray-500 mt-1">
-                  Baseline cost: {getBaselineCost(model)} credits (minimum for {model.split('-')[1] || 'this'} model)
+                  {creatorFee === 0 ? 
+                    `No creator fee. Platform fee: ${calculatePlatformFee(0)} credits.` : 
+                    `You earn ${creatorFee} credits per run. Platform fee: ${calculatePlatformFee(creatorFee)} credits.`
+                  }
+                </div>
+                <div className="mt-2">
+                  <ModelInfoBadge modelId={model} creatorFee={creatorFee} />
                 </div>
               </div>
-              {errors.creditCost && (
-                <p className="text-sm text-red-600">{errors.creditCost}</p>
+              {errors.creatorFee && (
+                <p className="text-sm text-red-600">{errors.creatorFee}</p>
               )}
             </div>
           </div>

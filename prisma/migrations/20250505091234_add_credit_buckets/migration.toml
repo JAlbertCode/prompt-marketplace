@@ -1,0 +1,5 @@
+# This is an empty Prisma Migrate migration file,
+# created because there were no database changes since the migration file generated in the last deployment.
+# migration_name = "20250505091234_add_credit_buckets"
+# migration_file_path = "C:\Users\Jay\Documents\GitHub\prompt-marketplace\prisma\migrations\20250505091234_add_credit_buckets\migration.sql"
+# migration_content_hash = "d5fe44550e6e10d5a23e0d01174ebfd851fe7ddd64a1e242793cc85d1ce8c49f"

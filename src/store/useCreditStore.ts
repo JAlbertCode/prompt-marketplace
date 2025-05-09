@@ -1,154 +1,172 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { getOrCreateSessionId, isValidSession } from '@/lib/sessionHelpers';
-import { getCreditWarningLevel } from '@/lib/creditHelpers';
+import { PromptLength } from '@/lib/models/modelRegistry';
 
 interface CreditTransaction {
   id: string;
-  timestamp: number;
-  amount: number;
-  type: 'deduct' | 'add';
-  reason: string;
-  promptId?: string;
+  userId: string;
+  creatorId?: string;
+  modelId: string;
+  creditsUsed: number;
+  creatorFeePercentage: number;
+  promptLength: PromptLength;
+  createdAt: Date;
+  itemType?: 'prompt' | 'flow' | 'completion';
+  itemId?: string;
 }
 
-interface CreditState {
+interface CreditBreakdown {
+  purchased: number;
+  bonus: number;
+  referral: number;
+}
+
+interface CreditStore {
+  // State
   credits: number;
-  sessionId: string;
-  transactions: CreditTransaction[];
-  warningLevel: 'none' | 'low' | 'critical';
-  autoTopUp: boolean;
-  autoTopUpThreshold: number;
-  autoTopUpAmount: number;
-  deductCredits: (amount: number, reason: string, promptId?: string) => boolean;
-  addCredits: (amount: number, reason: string) => void;
-  resetCredits: () => void;
-  setAutoTopUp: (enabled: boolean) => void;
-  setAutoTopUpSettings: (threshold: number, amount: number) => void;
-  updateWarningLevel: () => void;
+  isLoading: boolean;
+  error: string | null;
+  creditBreakdown: CreditBreakdown;
+  recentTransactions: CreditTransaction[];
+  
+  // Actions
+  fetchCredits: () => Promise<void>;
+  addCredits: (amount: number, source: string) => Promise<void>;
+  deductCredits: (amount: number, reason: string, itemId?: string, itemType?: string) => Promise<boolean>;
+  setCredits: (credits: number) => void;
+  setCreditBreakdown: (breakdown: CreditBreakdown) => void;
+  clearError: () => void;
 }
 
-const INITIAL_CREDITS = 1000;
-const DEFAULT_AUTO_TOPUP_THRESHOLD = 200;
-const DEFAULT_AUTO_TOPUP_AMOUNT = 1000;
-
-const generateTransactionId = () => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-};
-
-export const useCreditStore = create<CreditState>()(
-  persist(
-    (set, get) => ({
-      credits: INITIAL_CREDITS,
-      sessionId: '',
-      transactions: [],
-      warningLevel: 'none',
-      autoTopUp: false,
-      autoTopUpThreshold: DEFAULT_AUTO_TOPUP_THRESHOLD,
-      autoTopUpAmount: DEFAULT_AUTO_TOPUP_AMOUNT,
+export const useCreditStore = create<CreditStore>((set, get) => ({
+  credits: 0,
+  isLoading: false,
+  error: null,
+  creditBreakdown: {
+    purchased: 0,
+    bonus: 0,
+    referral: 0
+  },
+  recentTransactions: [],
+  
+  fetchCredits: async () => {
+    try {
+      set({ isLoading: true, error: null });
       
-      deductCredits: (amount: number, reason: string = "Credit deduction", promptId?: string) => {
-        const currentCredits = get().credits;
-        
-        // Check if user has enough credits
-        if (currentCredits < amount) {
-          // Not enough credits - return false to indicate failure
-          return false;
-        }
-        
-        // Create a transaction record
-        const transaction: CreditTransaction = {
-          id: generateTransactionId(),
-          timestamp: Date.now(),
-          amount,
-          type: 'deduct',
-          reason,
-          promptId
-        };
-        
-        // Update credits and transaction history
-        set((state) => {
-          const newCredits = Math.max(0, state.credits - amount);
-          const warningLevel = getCreditWarningLevel(newCredits);
-          
-          return { 
-            credits: newCredits,
-            transactions: [transaction, ...state.transactions].slice(0, 50), // Keep last 50 transactions
-            warningLevel
-          };
-        });
-        
-        // Check if auto top-up should be triggered
-        const { autoTopUp, autoTopUpThreshold, autoTopUpAmount } = get();
-        const newCredits = get().credits;
-        
-        if (autoTopUp && newCredits <= autoTopUpThreshold) {
-          // Auto top-up (in a real app, this would trigger a payment)
-          // For this MVP, we'll just add the credits directly
-          get().addCredits(autoTopUpAmount, 'Auto top-up');
-        }
-        
-        return true;
-      },
+      const response = await fetch('/api/credits');
       
-      addCredits: (amount: number, reason: string = "Credit addition") => {
-        // Create a transaction record
-        const transaction: CreditTransaction = {
-          id: generateTransactionId(),
-          timestamp: Date.now(),
-          amount,
-          type: 'add',
-          reason
-        };
-        
-        // Update credits and transaction history
-        set((state) => ({ 
-          credits: state.credits + amount,
-          transactions: [transaction, ...state.transactions].slice(0, 50), // Keep last 50 transactions
-          warningLevel: getCreditWarningLevel(state.credits + amount)
-        }));
-      },
-      
-      resetCredits: () => 
-        set({ 
-          credits: INITIAL_CREDITS,
-          transactions: [],
-          warningLevel: 'none'
-        }),
-        
-      setAutoTopUp: (enabled: boolean) =>
-        set({ autoTopUp: enabled }),
-        
-      setAutoTopUpSettings: (threshold: number, amount: number) =>
-        set({ 
-          autoTopUpThreshold: threshold,
-          autoTopUpAmount: amount
-        }),
-        
-      updateWarningLevel: () => {
-        const credits = get().credits;
-        set({ warningLevel: getCreditWarningLevel(credits) });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch credits');
       }
-    }),
-    {
-      name: 'credit-storage',
-      onRehydrateStorage: () => {
-        // When rehydrating storage, update the session ID
-        return (state) => {
-          if (state) {
-            state.sessionId = getOrCreateSessionId();
-            state.updateWarningLevel();
-            
-            // If session validation fails, reset to initial state
-            // This prevents credit refresh exploits
-            if (!isValidSession()) {
-              state.credits = INITIAL_CREDITS;
-              state.transactions = [];
-              state.warningLevel = 'none';
-            }
-          }
-        };
-      }
+      
+      const data = await response.json();
+      
+      set({
+        credits: data.totalCredits,
+        creditBreakdown: data.creditBreakdown,
+        recentTransactions: data.recentTransactions,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Error fetching credits:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to fetch credits',
+        isLoading: false
+      });
     }
-  )
-);
+  },
+  
+  addCredits: async (amount: number, source: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      const response = await fetch('/api/credits/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          amount,
+          source
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to add credits');
+      }
+      
+      const data = await response.json();
+      
+      set({
+        credits: data.total,
+        isLoading: false
+      });
+      
+      // Refresh all credit data
+      get().fetchCredits();
+      
+      return data;
+    } catch (error) {
+      console.error('Error adding credits:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to add credits',
+        isLoading: false
+      });
+    }
+  },
+  
+  deductCredits: async (amount: number, reason: string, itemId?: string, itemType?: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      
+      // For this dummy function, we'll just assume it's working using a generic model
+      // In real implementation, you'd need to call the API with full model details
+      const response = await fetch('/api/credits/deduct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          modelId: 'gpt-4o', // Placeholder model
+          promptLength: 'medium',
+          itemType,
+          itemId
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to deduct credits');
+      }
+      
+      const data = await response.json();
+      
+      set({
+        credits: data.remaining,
+        isLoading: false
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deducting credits:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to deduct credits',
+        isLoading: false
+      });
+      return false;
+    }
+  },
+  
+  setCredits: (credits: number) => {
+    set({ credits });
+  },
+  
+  setCreditBreakdown: (breakdown: CreditBreakdown) => {
+    set({ creditBreakdown: breakdown });
+  },
+  
+  clearError: () => {
+    set({ error: null });
+  }
+}));

@@ -9,6 +9,9 @@ import { useCreditStore } from '@/store/useCreditStore';
 import Button from '@/components/shared/Button';
 import LoadingIndicator from '@/components/shared/LoadingIndicator';
 import ImageDisplay from '@/components/ui/ImageDisplay';
+import ModelInfoBadge from '@/components/ui/ModelInfoBadge';
+import CreditConfirmationDialog from '@/components/ui/CreditConfirmationDialog';
+import { getCostBreakdown } from '@/lib/models/modelRegistry';
 
 interface PromptFormProps {
   prompt: Prompt;
@@ -27,6 +30,13 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [showCreditWarning, setShowCreditWarning] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+  // Credit confirmation dialog state
+  const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
+  
+  // Get cost breakdown
+  const promptLength = prompt.inputFields?.some(f => f.type === 'textarea') ? 'long' : 'medium';
+  const costBreakdown = getCostBreakdown(prompt.model, promptLength, prompt.creatorFee || 0);
+  const totalCost = costBreakdown.totalCost;
   
   // Determine prompt capabilities
   const hasImageCapability = prompt.capabilities?.includes('image');
@@ -34,8 +44,8 @@ const PromptForm: React.FC<PromptFormProps> = ({
   
   useEffect(() => {
     // Check if credits are insufficient and show warning
-    setShowCreditWarning(credits < prompt.creditCost);
-  }, [credits, prompt.creditCost]);
+    setShowCreditWarning(credits < totalCost);
+  }, [credits, totalCost]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -54,13 +64,13 @@ const PromptForm: React.FC<PromptFormProps> = ({
     setError(null);
     
     // Check if user has enough credits
-    if (credits < prompt.creditCost) {
+    if (credits < totalCost) {
       toast.error('Not enough credits to run this prompt');
       return;
     }
     
     // Check required fields
-    const missingFields = prompt.inputFields
+    const missingFields = (prompt.inputFields || [])
       .filter(field => field.required && !inputValues[field.id])
       .map(field => field.label);
     
@@ -68,6 +78,15 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setError(`Please fill in the required fields: ${missingFields.join(', ')}`);
       return;
     }
+    
+    // Show credit confirmation dialog
+    setShowCreditConfirmation(true);
+  };
+  
+  // This function is called when the credit confirmation dialog is confirmed
+  const handleCreditConfirmation = async () => {
+    // Close the dialog
+    setShowCreditConfirmation(false);
     
     try {
       setIsLoading(true);
@@ -108,7 +127,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
         try {
           // Call the Sonar API for text generation
           const textResult = await executePrompt(
-            prompt.systemPrompt,
+            prompt.systemPrompt || prompt.content || '',
             formattedInputs,
             prompt.model
           );
@@ -150,11 +169,12 @@ const PromptForm: React.FC<PromptFormProps> = ({
         throw new Error('No generation capabilities available');
       }
       
-      // Deduct credits
-      deductCredits(prompt.creditCost, "Run prompt", prompt.id);
+      // Deduct credits - In a real implementation, this would call the API endpoint
+      // The endpoint call is now done inside the confirmation dialog
+      deductCredits(totalCost, "Run prompt", prompt.id);
       
       // Show success notification
-      toast.success(`Prompt executed! -${prompt.creditCost} credits`);
+      toast.success(`Prompt executed! -${totalCost} credits`);
       
       // Toggle to show output
       setShowOutput(true);
@@ -183,7 +203,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       setIsLoading(true);
       
       // Check if user has enough credits for regeneration
-      const regenerationCost = Math.ceil(prompt.creditCost / 2);
+      const regenerationCost = Math.ceil(totalCost / 2);
       
       if (credits < regenerationCost) {
         toast.error(`Not enough credits to regenerate image. Needs ${regenerationCost} credits.`);
@@ -289,6 +309,16 @@ const PromptForm: React.FC<PromptFormProps> = ({
   
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 relative">
+      {/* Credit Confirmation Dialog */}
+      <CreditConfirmationDialog
+        isOpen={showCreditConfirmation}
+        onClose={() => setShowCreditConfirmation(false)}
+        onConfirm={handleCreditConfirmation}
+        promptId={prompt.id}
+        modelId={prompt.model}
+        title={prompt.title}
+      />
+      
       {isLoading && (
         <div className="absolute inset-0 bg-gray-50/80 flex items-center justify-center z-10">
           <div className="bg-white p-4 rounded-md shadow-md flex flex-col items-center">
@@ -325,12 +355,20 @@ const PromptForm: React.FC<PromptFormProps> = ({
             Text Generation
           </div>
         )}
+        
+        <div className="mt-2">
+          <ModelInfoBadge 
+            modelId={prompt.model} 
+            creatorFee={prompt.creatorFee || 0} 
+            showDetails={false} 
+          />
+        </div>
       </div>
       
       <div className="p-4">
         {!showOutput ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {prompt.inputFields.map((field) => (
+            {(prompt.inputFields || []).map((field) => (
               <div key={field.id} className="space-y-1">
                 <label 
                   htmlFor={field.id}
@@ -354,15 +392,17 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                Not enough credits! You need {prompt.creditCost} credits but have {credits} credits.
+                Not enough credits! You need {totalCost} credits but have {credits} credits.
               </div>
             )}
             
             <div className="flex justify-between items-center pt-2">
               <div>
-                <span className="text-sm text-gray-500">
-                  Cost: <span className="font-semibold">{prompt.creditCost} credits</span>
-                </span>
+                <ModelInfoBadge 
+                  modelId={prompt.model} 
+                  creatorFee={prompt.creatorFee || 0}
+                  showDetails={true} 
+                />
               </div>
               
               <div className="flex space-x-3">
@@ -376,7 +416,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
                 
                 <Button
                   type="submit"
-                  disabled={isLoading || credits < prompt.creditCost}
+                  disabled={isLoading || credits < totalCost}
                 >
                   {isLoading ? (
                     <span className="flex items-center">
