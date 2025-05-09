@@ -1,24 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { X, ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { X, ArrowLeft, Plus } from 'lucide-react';
 
 // Simple placeholder for New Flow page
 export default function NewFlowPage() {
@@ -33,71 +17,69 @@ export default function NewFlowPage() {
     <div className="container mx-auto py-6 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={handleBackClick}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
-          </Button>
+          </button>
           <h1 className="text-2xl font-bold">Create New Flow</h1>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <h2 className="text-xl font-semibold">Basic Details</h2>
-          <p className="text-sm text-gray-500">
-            Set up the basic information for your new flow
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input 
-                id="title" 
-                placeholder="Enter a title for your flow" 
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description" 
-                placeholder="Describe what this flow does" 
-                rows={3} 
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="visibility">Visibility</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select visibility" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="private">Private</SelectItem>
-                  <SelectItem value="public">Public</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                Private flows are only visible to you
-              </p>
-            </div>
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-2">Basic Details</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Set up the basic information for your new flow
+        </p>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+            <input 
+              id="title" 
+              placeholder="Enter a title for your flow" 
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="space-y-2">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+            <textarea 
+              id="description" 
+              placeholder="Describe what this flow does" 
+              rows={3} 
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="visibility" className="block text-sm font-medium text-gray-700">Visibility</label>
+            <select
+              id="visibility"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Private flows are only visible to you
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="outline" onClick={handleBackClick}>
+        <button 
+          onClick={handleBackClick}
+          className="px-4 py-2 border border-gray-300 rounded-md"
+        >
           Cancel
-        </Button>
-        <Button>
+        </button>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-md">
           Continue
-        </Button>
+        </button>
       </div>
     </div>
   );
