@@ -175,10 +175,10 @@ export default function PromptDetailPage({ params }: { params: { promptId: strin
         <h2 className="text-lg font-semibold text-gray-800 mb-2">System Prompt</h2>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <p className="text-gray-600">
-            {prompt.systemPrompt ? (
+            {prompt.systemPrompt || prompt.content ? (
               <>
-                {prompt.systemPrompt.substring(0, 150)}
-                {prompt.systemPrompt.length > 150 && '...'}
+                {(prompt.systemPrompt || prompt.content || '').substring(0, 150)}
+                {(prompt.systemPrompt || prompt.content || '').length > 150 && '...'}
               </>
             ) : (
               'System prompt is hidden. Run this prompt to see it in action.'

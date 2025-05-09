@@ -47,7 +47,9 @@ export default function PromptRunner({
       }
     };
     
-    fetchCost();
+    if (promptId && modelId) {
+      fetchCost();
+    }
   }, [promptId, modelId, calculatePromptCost]);
 
   const handleRunClick = () => {

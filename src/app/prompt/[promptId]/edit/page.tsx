@@ -6,6 +6,7 @@ import { usePromptStore } from '@/store/usePromptStore';
 import PromptBuilder from '@/components/creator/PromptBuilder';
 import { Prompt } from '@/types';
 import { toast } from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 
 export default function EditPromptPage({ params }: { params: { promptId: string } }) {
   const router = useRouter();
@@ -18,16 +19,50 @@ export default function EditPromptPage({ params }: { params: { promptId: string 
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
+    console.log('Edit page mounting with promptId:', promptId);
+    
     // Fetch the prompt data from store
     if (promptId) {
       const promptData = promptStore.getPrompt?.(promptId);
+      console.log('Prompt data loaded from store:', promptData ? 'Found' : 'Not found');
+      console.log('Raw prompt data:', JSON.stringify(promptData, null, 2));
       
       if (promptData) {
-        setPrompt(promptData);
+        console.log('Setting prompt state with data:', JSON.stringify(promptData, null, 2));
+        
+        // Ensure we have all needed fields correctly formatted for the form
+        const formattedPrompt: Prompt = {
+          ...promptData,
+          // Make sure these critical fields exist
+          id: promptData.id,
+          title: promptData.title || '',
+          description: promptData.description || '',
+          inputFields: promptData.inputFields || [],
+          systemPrompt: promptData.systemPrompt || promptData.content || '',
+          model: promptData.model || 'gpt-4o',
+          creditCost: typeof promptData.creditCost === 'number' ? promptData.creditCost : 0,
+          creatorFee: typeof promptData.creatorFee === 'number' ? promptData.creatorFee : 0,
+          capabilities: Array.isArray(promptData.capabilities) ? promptData.capabilities : ['text'],
+          outputType: promptData.outputType || 'text',
+          createdAt: promptData.createdAt || Date.now(),
+          
+          // Preserve these fields if they exist
+          visibility: promptData.visibility,
+          creatorId: promptData.creatorId || promptData.ownerId,
+          creatorName: promptData.creatorName,
+          tags: promptData.tags,
+          runCount: promptData.runCount,
+          avgRating: promptData.avgRating,
+          
+          // Add a helper function for backwards compatibility
+          getSystemPrompt: () => promptData.systemPrompt || promptData.content || ''
+        };
+        
+        setPrompt(formattedPrompt);
       } else {
         console.error('Prompt not found for editing:', promptId);
         toast.error('Prompt not found');
-        router.push('/');
+        router.push('/dashboard/content');
       }
     }
     
@@ -38,8 +73,48 @@ export default function EditPromptPage({ params }: { params: { promptId: string 
     try {
       if (!prompt) return;
       
+      console.log('Updating prompt with new data:', JSON.stringify(promptData, null, 2));
+      console.log('Original prompt data:', JSON.stringify(prompt, null, 2));
+      
+      // Create a merged update that preserves fields not in the form
+      const updateData = {
+        ...promptData,
+        
+        // Ensure these fields are always included
+        systemPrompt: promptData.systemPrompt || '',
+        inputFields: Array.isArray(promptData.inputFields) ? promptData.inputFields.map(field => ({
+          ...field,
+          // Normalize field properties
+          required: field.required !== undefined ? field.required : true,
+          type: field.type || 'text',
+          placeholder: field.placeholder || ''
+        })) : [],
+        model: promptData.model || 'gpt-4o',
+        creditCost: promptData.creditCost || 0,
+        creatorFee: promptData.creatorFee || 0,
+        capabilities: Array.isArray(promptData.capabilities) ? promptData.capabilities : ['text'],
+        outputType: promptData.outputType || 'text',
+        
+        // Keep these fields from the original prompt if they exist
+        visibility: prompt.visibility,
+        creatorId: prompt.creatorId || prompt.ownerId,
+        creatorName: prompt.creatorName,
+        tags: prompt.tags || [],
+        runCount: prompt.runCount || 0,
+        avgRating: prompt.avgRating || 0,
+        
+        // Always clear this deprecated field to avoid confusion
+        content: undefined
+      };
+      
+      console.log('Final update data:', JSON.stringify(updateData, null, 2));
+      
       // Update the prompt with the new data
-      promptStore.updatePrompt?.(prompt.id, promptData);
+      promptStore.updatePrompt?.(prompt.id, updateData);
+      
+      // Verify the update by getting the prompt again
+      const updatedPrompt = promptStore.getPrompt?.(prompt.id);
+      console.log('Prompt after update:', JSON.stringify(updatedPrompt, null, 2));
       
       toast.success('Prompt updated successfully!');
       
@@ -93,7 +168,8 @@ export default function EditPromptPage({ params }: { params: { promptId: string 
       <PromptBuilder 
         onSave={handlePromptUpdate} 
         onCancel={handleCancel} 
-        initialData={prompt}
+        initialPrompt={prompt}
+        editId={promptId} // Pass the ID explicitly
       />
     </div>
   );

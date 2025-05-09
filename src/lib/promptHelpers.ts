@@ -61,11 +61,16 @@ export function validateInputFields(inputFields: InputField[]): boolean {
  * @returns A record of formatted inputs
  */
 export function formatUserInputs(
-  inputFields: InputField[],
+  inputFields: InputField[] | undefined,
   inputValues: Record<string, string>
 ): Record<string, string> {
   // Start with an empty object
   const formattedInputs: Record<string, string> = {};
+  
+  // Handle undefined inputFields
+  if (!inputFields || !Array.isArray(inputFields)) {
+    return formattedInputs;
+  }
   
   // Format each input field
   for (const field of inputFields) {
@@ -89,7 +94,7 @@ export function simplifyPromptForApi(prompt: Prompt): any {
     id: prompt.id,
     title: prompt.title,
     description: prompt.description,
-    inputFields: prompt.inputFields.map(field => ({
+    inputFields: (prompt.inputFields || []).map(field => ({
       id: field.id,
       label: field.label,
       placeholder: field.placeholder,
@@ -108,8 +113,12 @@ export function simplifyPromptForApi(prompt: Prompt): any {
  * @returns A record of placeholders
  */
 export function getInputPlaceholders(
-  inputFields: InputField[]
+  inputFields: InputField[] | undefined
 ): Record<string, string> {
+  if (!inputFields || !Array.isArray(inputFields)) {
+    return {};
+  }
+  
   return inputFields.reduce((acc, field) => {
     acc[field.id] = field.placeholder || '';
     return acc;

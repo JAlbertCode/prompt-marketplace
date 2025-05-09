@@ -34,7 +34,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [showCreditConfirmation, setShowCreditConfirmation] = useState(false);
   
   // Get cost breakdown
-  const promptLength = prompt.inputFields.some(f => f.type === 'textarea') ? 'long' : 'medium';
+  const promptLength = prompt.inputFields?.some(f => f.type === 'textarea') ? 'long' : 'medium';
   const costBreakdown = getCostBreakdown(prompt.model, promptLength, prompt.creatorFee || 0);
   const totalCost = costBreakdown.totalCost;
   
@@ -70,7 +70,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
     }
     
     // Check required fields
-    const missingFields = prompt.inputFields
+    const missingFields = (prompt.inputFields || [])
       .filter(field => field.required && !inputValues[field.id])
       .map(field => field.label);
     
@@ -127,7 +127,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
         try {
           // Call the Sonar API for text generation
           const textResult = await executePrompt(
-            prompt.systemPrompt,
+            prompt.systemPrompt || prompt.content || '',
             formattedInputs,
             prompt.model
           );
@@ -368,7 +368,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
       <div className="p-4">
         {!showOutput ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-            {prompt.inputFields.map((field) => (
+            {(prompt.inputFields || []).map((field) => (
               <div key={field.id} className="space-y-1">
                 <label 
                   htmlFor={field.id}

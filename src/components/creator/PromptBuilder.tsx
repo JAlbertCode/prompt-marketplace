@@ -21,50 +21,118 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   onCancel,
   editId
 }) => {
-  const { getPromptById } = usePromptStore();
-  const [title, setTitle] = useState(initialPrompt?.title || '');
-  const [description, setDescription] = useState(initialPrompt?.description || '');
-  const [systemPrompt, setSystemPrompt] = useState(initialPrompt?.systemPrompt || '');
-  const [creatorFee, setCreatorFee] = useState(initialPrompt?.creatorFee || 0);
-  const [creditCost, setCreditCost] = useState(initialPrompt?.creditCost || 0);
-  const [model, setModel] = useState<string>(initialPrompt?.model || 'gpt-4o');
-  const [imageModel, setImageModel] = useState<ImageModel | undefined>(initialPrompt?.imageModel);
-  const [inputFields, setInputFields] = useState<InputField[]>(initialPrompt?.inputFields || []);
-  const [isPublished, setIsPublished] = useState(initialPrompt?.isPublished || false);
-  const [isPrivate, setIsPrivate] = useState(initialPrompt?.isPrivate || true);
-  const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(
-    initialPrompt?.capabilities || ['text']
-  );
-  const [outputType, setOutputType] = useState<'text' | 'image'>(
-    initialPrompt?.outputType || (initialPrompt?.imageModel ? 'image' : 'text')
-  );
+  console.log('PromptBuilder rendering with initialPrompt:', initialPrompt);
+  console.log('EditId:', editId);
+  
+  // Initialize state with default empty values
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [creatorFee, setCreatorFee] = useState(0);
+  const [creditCost, setCreditCost] = useState(0);
+  const [model, setModel] = useState<string>('gpt-4o');
+  const [imageModel, setImageModel] = useState<ImageModel | undefined>(undefined);
+  const [inputFields, setInputFields] = useState<InputField[]>([]);
+  const [isPublished, setIsPublished] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(true);
+  const [capabilities, setCapabilities] = useState<('text' | 'image' | 'code')[]>(['text']);
+  const [outputType, setOutputType] = useState<'text' | 'image'>('text');
+  
+  // Track if form has been initialized with data
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Add default input field if none exist
   useEffect(() => {
-    if (inputFields.length === 0) {
+    if (inputFields.length === 0 && isInitialized) {
+      console.log('No input fields after initialization, adding default field');
       addInputField();
     }
-  }, []);
+  }, [inputFields, isInitialized]);
 
-  // Load prompt data if editId is provided
+  // Update form values when initialPrompt changes
   useEffect(() => {
-    if (editId && getPromptById) {
-      const promptToEdit = getPromptById(editId);
-      if (promptToEdit) {
-        setTitle(promptToEdit.title || '');
-        setDescription(promptToEdit.description || '');
-        setSystemPrompt(promptToEdit.systemPrompt || '');
-        setCreatorFee(promptToEdit.creatorFee || 50);
-        setCreditCost(promptToEdit.creditCost || 50);
-        setModel(promptToEdit.model || 'gpt-4o');
-        setImageModel(promptToEdit.imageModel);
-        setInputFields(promptToEdit.inputFields || []);
-        setIsPrivate(promptToEdit.isPrivate || false);
-        setCapabilities(promptToEdit.capabilities || ['text']);
-        setOutputType(promptToEdit.outputType || 'text');
+    console.log('initialPrompt changed:', initialPrompt);
+    
+    // If we have a valid initialPrompt with an id, initialize the form
+    if (initialPrompt && Object.keys(initialPrompt).length > 0) {
+      // Only initialize once with non-empty data
+      if (!isInitialized) {
+        console.log('Initializing form with data:', JSON.stringify(initialPrompt, null, 2));
+        
+        // Track which fields we're initializing
+        const initializedFields: Record<string, any> = {};
+        
+        // Basic text fields
+        setTitle(initialPrompt.title || '');
+        initializedFields.title = initialPrompt.title;
+        
+        setDescription(initialPrompt.description || '');
+        initializedFields.description = initialPrompt.description;
+        
+        // Handle both old and new prompt formats
+        const promptContent = initialPrompt.systemPrompt || initialPrompt.content || '';
+        setSystemPrompt(promptContent);
+        initializedFields.systemPrompt = promptContent;
+        
+        // Numeric fields
+        const fee = typeof initialPrompt.creatorFee === 'number' ? initialPrompt.creatorFee : 0;
+        setCreatorFee(fee);
+        initializedFields.creatorFee = fee;
+        
+        const cost = typeof initialPrompt.creditCost === 'number' ? initialPrompt.creditCost : 0;
+        setCreditCost(cost);
+        initializedFields.creditCost = cost;
+        
+        // Model selection
+        const modelId = initialPrompt.model || 'gpt-4o';
+        setModel(modelId);
+        initializedFields.model = modelId;
+        
+        if (initialPrompt.imageModel) {
+          setImageModel(initialPrompt.imageModel);
+          initializedFields.imageModel = initialPrompt.imageModel;
+        }
+        
+        // Handle input fields carefully
+        if (initialPrompt.inputFields && Array.isArray(initialPrompt.inputFields) && initialPrompt.inputFields.length > 0) {
+          console.log('Setting input fields:', initialPrompt.inputFields);
+          setInputFields(initialPrompt.inputFields);
+          initializedFields.inputFields = initialPrompt.inputFields;
+        } else {
+          // Add default input field if none exist
+          console.log('No input fields found, adding default');
+          const defaultField: InputField = {
+            id: uuidv4(),
+            label: 'Prompt',
+            placeholder: 'Enter your prompt here',
+            required: true,
+            type: 'text'
+          };
+          setInputFields([defaultField]);
+          initializedFields.inputFields = [defaultField];
+        }
+        
+        // Boolean fields
+        const isPrivateValue = initialPrompt.isPrivate !== undefined ? initialPrompt.isPrivate : true;
+        setIsPrivate(isPrivateValue);
+        initializedFields.isPrivate = isPrivateValue;
+        
+        // Arrays and enums
+        const caps = Array.isArray(initialPrompt.capabilities) ? initialPrompt.capabilities : ['text'];
+        setCapabilities(caps);
+        initializedFields.capabilities = caps;
+        
+        const outType = initialPrompt.outputType || (initialPrompt.imageModel ? 'image' : 'text');
+        setOutputType(outType as 'text' | 'image');
+        initializedFields.outputType = outType;
+        
+        setIsInitialized(true);
+        console.log('Form initialized with fields:', initializedFields);
       }
+    } else {
+      console.warn('Invalid or empty initialPrompt received:', initialPrompt);
     }
-  }, [editId, getPromptById]);
+  }, [initialPrompt, isInitialized]);
   
   // Calculate total cost whenever the model or fee changes
   useEffect(() => {
@@ -155,6 +223,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submission started');
     
     // Validate all required fields
     if (!title.trim()) {
@@ -178,17 +247,41 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       return;
     }
     
-    const newPrompt: Omit<Prompt, 'id' | 'createdAt'> = {
+    console.log('Form validation passed, preparing data to save');
+    console.log('Current form values:', {
       title,
       description,
-      systemPrompt,
+      systemPrompt: systemPrompt.substring(0, 100) + '...', // Truncate for log
       inputFields,
       model,
       creditCost,
       creatorFee,
       isPrivate,
       capabilities,
-      outputType
+      outputType,
+      imageModel
+    });
+    
+    // Prepare the prompt data with all required fields
+    const newPrompt: Omit<Prompt, 'id' | 'createdAt'> = {
+      title,
+      description,
+      systemPrompt,  // New field format
+      content: undefined, // Explicitly clear old format
+      inputFields: inputFields.map(field => ({
+        ...field,
+        // Ensure all fields have required properties
+        required: field.required !== undefined ? field.required : true,
+        type: field.type || 'text'
+      })),
+      model,
+      creditCost,
+      creatorFee,
+      isPrivate,
+      capabilities,
+      outputType,
+      // Set visibility based on isPrivate
+      visibility: isPrivate ? 'private' : 'public'
     };
     
     // Add image model if needed
@@ -196,6 +289,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       newPrompt.imageModel = imageModel;
     }
     
+    console.log('Saving prompt:', newPrompt);
     onSave(newPrompt);
   };
 

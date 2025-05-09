@@ -443,12 +443,51 @@ export const usePromptStore = create<PromptState>(
       },
       
       getPrompt: (id) => {
+        console.log('getPrompt called with id:', id);
+        
+        if (!id) {
+          console.error('Invalid ID provided to getPrompt');
+          return undefined;
+        }
+        
         const prompts = get().prompts;
+        
         if (!prompts || !Array.isArray(prompts)) {
           console.error('Prompts array is not available or not in the correct format');
           return undefined;
         }
-        return prompts.find(prompt => prompt.id === id);
+        
+        const foundPrompt = prompts.find(prompt => prompt.id === id);
+        console.log('Found prompt:', foundPrompt ? 'yes' : 'no');
+        
+        if (foundPrompt) {
+          // Ensure we normalize the prompt data structure
+          // Some older prompts might use 'content' instead of 'systemPrompt'
+          let normalizedPrompt = { ...foundPrompt };
+          
+          if (!normalizedPrompt.systemPrompt && normalizedPrompt.content) {
+            normalizedPrompt.systemPrompt = normalizedPrompt.content;
+          }
+          
+          // Make sure capabilities and outputType exist for old prompts
+          if (!normalizedPrompt.capabilities) {
+            normalizedPrompt.capabilities = ['text'];
+          }
+          
+          if (!normalizedPrompt.outputType) {
+            normalizedPrompt.outputType = normalizedPrompt.imageModel ? 'image' : 'text';
+          }
+          
+          // Make sure inputFields is an array
+          if (!normalizedPrompt.inputFields || !Array.isArray(normalizedPrompt.inputFields)) {
+            normalizedPrompt.inputFields = [];
+          }
+          
+          console.log('Returning normalized prompt:', normalizedPrompt);
+          return normalizedPrompt;
+        }
+        
+        return foundPrompt;
       },
       
       removePrompt: (id) => {
@@ -468,13 +507,47 @@ export const usePromptStore = create<PromptState>(
           // Make sure we have a valid array to avoid errors
           const currentPrompts = Array.isArray(state.prompts) ? state.prompts : [];
           
-          // Find and update the prompt
-          const updatedPrompts = currentPrompts.map(prompt => 
-            prompt.id === id ? { ...prompt, ...promptData } : prompt
-          );
+          // Get the existing prompt to preserve important fields
+          const existingPrompt = currentPrompts.find(p => p.id === id);
           
-          // Log the update
-          console.log(`Updated prompt ${id}:`, updatedPrompts.find(p => p.id === id));
+          if (!existingPrompt) {
+            console.error(`Prompt with id ${id} not found for update`);
+            return { prompts: currentPrompts };
+          }
+          
+          // Preserve these fields if they already exist
+          const preservedFields = {
+            id: existingPrompt.id,
+            createdAt: existingPrompt.createdAt,
+            creatorId: existingPrompt.creatorId || existingPrompt.ownerId,
+            creatorName: existingPrompt.creatorName,
+            // Keep visibility, price, tags from existing prompt if not in update data
+            visibility: promptData.visibility || existingPrompt.visibility,
+            price: promptData.price || existingPrompt.price,
+            tags: promptData.tags || existingPrompt.tags,
+            runCount: existingPrompt.runCount || 0,
+            avgRating: existingPrompt.avgRating || 0
+          };
+          
+          // Create updated prompt with preserved fields and new data
+          const updatedPrompt = {
+            ...existingPrompt,  // Start with all existing data
+            ...promptData,      // Update with new data
+            ...preservedFields, // Ensure critical fields are preserved
+            // Ensure proper format for required fields
+            systemPrompt: promptData.systemPrompt || existingPrompt.systemPrompt || existingPrompt.content || '',
+            // Clear deprecated fields
+            content: undefined
+          };
+          
+          console.log('Original prompt:', JSON.stringify(existingPrompt, null, 2));
+          console.log('Updates:', JSON.stringify(promptData, null, 2));
+          console.log('Final updated prompt:', JSON.stringify(updatedPrompt, null, 2));
+          
+          // Update the prompts array
+          const updatedPrompts = currentPrompts.map(prompt => 
+            prompt.id === id ? updatedPrompt : prompt
+          );
           
           // Force localStorage update to ensure the change is persisted
           try {
