@@ -46,7 +46,7 @@ export default function PromptDetailPage({ params }: { params: { promptId: strin
   };
   
   const handleBackClick = () => {
-    router.push('/');
+    router.push('/dashboard/content');
   };
   
   if (loading) {
@@ -79,10 +79,10 @@ export default function PromptDetailPage({ params }: { params: { promptId: strin
           className="text-blue-600 hover:text-blue-800 flex items-center"
         >
           <ArrowLeft className="mr-1" />
-          Back
+          Back to My Content
         </button>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <Button
             variant="outline"
             onClick={() => setShowExample(!!prompt.exampleOutput)}
@@ -93,11 +93,11 @@ export default function PromptDetailPage({ params }: { params: { promptId: strin
           </Button>
           
           <Button 
-            variant="outline" 
+            variant="secondary" 
             onClick={handleEditClick}
           >
             <Edit className="mr-1" /> 
-            Edit
+            Edit Prompt
           </Button>
           
           <Button 

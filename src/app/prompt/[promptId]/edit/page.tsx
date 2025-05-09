@@ -56,7 +56,7 @@ export default function EditPromptPage({ params }: { params: { promptId: string 
       if (prompt) {
         router.push(`/prompt/${prompt.id}`);
       } else {
-        router.push('/');
+        router.push('/dashboard/content');
       }
     }
   };

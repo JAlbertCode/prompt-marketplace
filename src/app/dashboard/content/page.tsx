@@ -74,31 +74,21 @@ export default function ContentPage() {
           </Link>
         </div>
       ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {myPrompts.map((prompt) => (
-              <div key={prompt.id} className="relative group">
-                <PromptCard prompt={prompt} />
-                
-                {/* Edit overlay that appears on hover */}
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="flex space-x-3">
-                    <Link 
-                      href={`/prompt/${prompt.id}`}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    >
-                      View Details
-                    </Link>
-                    <Link 
-                      href={`/prompt/${prompt.id}/edit`}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                    >
-                      Edit Prompt
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {myPrompts.map((prompt) => (
+            <Link 
+              key={prompt.id} 
+              href={`/prompt/${prompt.id}`}
+              className="block transition-transform hover:-translate-y-1 duration-200"
+            >
+              <PromptCard 
+                prompt={prompt} 
+                actionButtonText="View Details"
+                actionButtonVariant="primary"
+              />
+            </Link>
+          ))}
+        </div>
       )}
     </div>
   );

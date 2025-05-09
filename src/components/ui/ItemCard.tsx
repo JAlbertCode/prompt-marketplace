@@ -18,12 +18,16 @@ interface ItemCardProps {
   item: Prompt | PromptFlow;
   itemType: ItemType;
   className?: string;
+  actionButtonText?: string;
+  actionButtonVariant?: 'primary' | 'secondary' | 'outline';
 }
 
 const ItemCard: React.FC<ItemCardProps> = ({
   item,
   itemType,
   className = '',
+  actionButtonText,
+  actionButtonVariant = 'primary'
 }) => {
   const router = useRouter();
   const { removePrompt } = usePromptStore();
@@ -334,16 +338,16 @@ const ItemCard: React.FC<ItemCardProps> = ({
               </button>
               
               <Button 
-                variant="primary"
+                variant={actionButtonVariant}
                 size="sm"
                 onClick={handleRunClick}
                 disabled={isLocked}
                 className={`${isPrompt ? 'bg-blue-600 hover:bg-blue-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white`}
               >
-                {isPrompt 
+                {actionButtonText || (isPrompt 
                   ? (capabilities?.includes('transformation') ? 'Transform' : 'Run Prompt')
                   : 'Run Flow'
-                }
+                )}
               </Button>
             </div>
           </div>
