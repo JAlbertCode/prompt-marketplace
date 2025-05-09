@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Prompt, InputField } from '@/types';
+import { Prompt } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface PromptState {
@@ -18,180 +18,76 @@ const initialPrompts: Prompt[] = [
     id: '1',
     title: 'Blog Post Generator',
     description: 'Generate a full blog post on any topic with proper structure',
-    systemPrompt: 'You are a professional blog writer. Create a well-structured blog post with an introduction, main sections with subheadings, and a conclusion. The blog post should be informative, engaging, and between 800-1000 words.',
-    inputFields: [
-      {
-        id: 'topic',
-        label: 'Topic',
-        placeholder: 'Enter the blog topic',
-        required: true
-      },
-      {
-        id: 'tone',
-        label: 'Tone',
-        placeholder: 'Professional, casual, humorous, etc.',
-        required: false
-      },
-      {
-        id: 'targetAudience',
-        label: 'Target Audience',
-        placeholder: 'Who is this blog post for?',
-        required: false
-      }
-    ],
-    model: 'sonar-medium-chat',
-    creditCost: 50,
-    createdAt: Date.now(),
-    isPrivate: false,
-    capabilities: ['text'],
-    exampleOutput: "# The Future of Renewable Energy\n\n## Introduction\nAs the global community grapples with the challenges of climate change, renewable energy has emerged as a critical solution. This blog explores the latest trends, innovations, and future prospects of renewable energy technologies.\n\n## Current Landscape\nRenewable energy sources now account for over 26% of global electricity generation, with solar and wind leading the growth...\n\n[Example output continues]"
+    content: 'You are a professional blog writer. Create a well-structured blog post with an introduction, main sections with subheadings, and a conclusion. The blog post should be informative, engaging, and between 800-1000 words.',
+    model: 'gpt-4o',
+    tags: ['blog', 'writing', 'content'],
+    visibility: 'public',
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    createdAt: new Date(),
+    runCount: 0,
+    avgRating: 4.8,
+    price: 0
   },
   {
     id: '2',
     title: 'Code Explainer',
     description: 'Get a detailed explanation of any code snippet',
-    systemPrompt: 'You are an expert programming tutor. Explain the provided code snippet in detail, breaking down what each part does, identifying patterns or anti-patterns, and suggesting possible improvements where applicable. Use a clear, educational tone.',
-    inputFields: [
-      {
-        id: 'code',
-        label: 'Code Snippet',
-        placeholder: 'Paste your code here',
-        required: true,
-        type: 'textarea'
-      },
-      {
-        id: 'language',
-        label: 'Programming Language',
-        placeholder: 'e.g., JavaScript, Python, etc.',
-        required: true
-      },
-      {
-        id: 'experienceLevel',
-        label: 'Your Experience Level',
-        placeholder: 'Beginner, Intermediate, Advanced',
-        required: false
-      }
-    ],
+    content: 'You are an expert programming tutor. Explain the provided code snippet in detail, breaking down what each part does, identifying patterns or anti-patterns, and suggesting possible improvements where applicable. Use a clear, educational tone.',
     model: 'sonar-medium-chat',
-    creditCost: 30,
-    createdAt: Date.now(),
-    capabilities: ['text'],
-    exampleOutput: "# Analysis of React useEffect Hook Code\n\nThe code snippet you've shared demonstrates a common pattern for data fetching in React using the useEffect hook. Let me break it down:\n\n```jsx\nuseEffect(() => {\n  const fetchData = async () => {\n    setLoading(true);\n    try {\n      const response = await api.get('/users');\n      setUsers(response.data);\n    } catch (error) {\n      setError(error.message);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  fetchData();\n}, []);\n```\n\n## Key Components:\n\n1. The useEffect hook is called with two arguments:\n   - A callback function (the effect)\n   - A dependency array (empty in this case)\n\n2. Inside the effect, there's an async function declaration..."
+    tags: ['code', 'programming', 'education'],
+    visibility: 'public',
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    createdAt: new Date(),
+    runCount: 0,
+    avgRating: 4.7,
+    price: 0
   },
   {
     id: '3',
     title: 'Product Description Writer',
     description: 'Create compelling product descriptions for e-commerce',
-    systemPrompt: 'You are a professional e-commerce copywriter. Write an engaging, persuasive product description that highlights features, benefits, and unique selling points. The description should be SEO-friendly and compelling enough to convert browsers into buyers.',
-    inputFields: [
-      {
-        id: 'product',
-        label: 'Product Name',
-        placeholder: 'Enter the product name',
-        required: true
-      },
-      {
-        id: 'features',
-        label: 'Key Features',
-        placeholder: 'List the main features of the product',
-        required: true
-      },
-      {
-        id: 'targetMarket',
-        label: 'Target Market',
-        placeholder: 'Who is this product for?',
-        required: false
-      },
-      {
-        id: 'pricePoint',
-        label: 'Price Point',
-        placeholder: 'Budget, Mid-range, Premium',
-        required: false
-      }
-    ],
+    content: 'You are a professional e-commerce copywriter. Write an engaging, persuasive product description that highlights features, benefits, and unique selling points. The description should be SEO-friendly and compelling enough to convert browsers into buyers.',
     model: 'sonar-small-online',
-    creditCost: 25,
-    createdAt: Date.now(),
-    capabilities: ['text'],
-    exampleOutput: "# Ultra Premium Noise-Cancelling Headphones XC-5000\n\nImmerse yourself in pure audio perfection with the revolutionary XC-5000 wireless headphones. Engineered for the discerning audiophile, these premium headphones combine cutting-edge noise cancellation technology with unparalleled sound quality.\n\n## Key Features That Set XC-5000 Apart:\n\n- **Advanced Adaptive Noise Cancellation** that intelligently adjusts to your environment, creating a personal oasis of sound in even the noisiest settings\n- **Studio-Quality Audio** with custom-tuned 40mm drivers delivering rich bass, crystal-clear highs, and perfectly balanced mid-tones\n- **All-Day Comfort** with memory foam ear cushions and adjustable lightweight design for extended listening sessions\n\nPerfect for frequent travelers, professionals working in distracting environments, or anyone who demands the ultimate sound experience without compromise.\n\nInvest in your sound journey today and experience music the way it was meant to be heard."
+    tags: ['marketing', 'ecommerce', 'copywriting'],
+    visibility: 'public',
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    createdAt: new Date(),
+    runCount: 0,
+    avgRating: 4.6,
+    price: 0
   },
   {
     id: '7',
     title: 'Image Prompt Writer',
     description: 'Create detailed prompts for text-to-image generation tools',
-    systemPrompt: 'You are an expert at writing prompts for AI image generation tools. Create a detailed and visual description that can be used as input for DALL-E 3 or similar text-to-image generation tools. Be extremely specific about composition, lighting, colors, style, mood, and subject matter. DO NOT use bullet points or formatting - write a cohesive paragraph that describes exactly what the image should look like. The more specific detail, the better the resulting image will be when users take your output to an image generation tool.',
-    inputFields: [
-      {
-        id: 'product',
-        label: 'Subject',
-        placeholder: 'Describe what you want to appear in the image',
-        required: true
-      },
-      {
-        id: 'style',
-        label: 'Visual Style',
-        placeholder: 'Professional, friendly, minimalist, etc.',
-        required: true
-      },
-      {
-        id: 'audience',
-        label: 'Target Audience',
-        placeholder: 'Who will be viewing this image?',
-        required: false
-      },
-      {
-        id: 'additionalDetails',
-        label: 'Additional Details',
-        placeholder: 'Any specific elements or technical details to include',
-        required: false,
-        type: 'textarea'
-      }
-    ],
+    content: 'You are an expert at writing prompts for AI image generation tools. Create a detailed and visual description that can be used as input for DALL-E 3 or similar text-to-image generation tools. Be extremely specific about composition, lighting, colors, style, mood, and subject matter. DO NOT use bullet points or formatting - write a cohesive paragraph that describes exactly what the image should look like. The more specific detail, the better the resulting image will be when users take your output to an image generation tool.',
     model: 'sonar-small-online',
-    creditCost: 150,
-    createdAt: Date.now(),
-    capabilities: ['text'],
-    exampleImageUrl: 'https://picsum.photos/seed/marketing1/1024/1024',
-    exampleOutput: "A photorealistic marketing image featuring a premium smart water bottle with temperature control functionality. The sleek, stainless steel bottle is positioned prominently in the center of the frame on a minimalist white surface with subtle blue lighting. The bottle has a modern digital temperature display that emits a soft blue glow. Small water droplets are visible on the exterior of the bottle, suggesting coolness and freshness. The background features a smooth gradient from light blue to teal, creating a clean, high-tech atmosphere without distracting from the product. The lighting is bright and even with soft shadows that give the bottle a premium, professional appearance. There is negative space on the right side of the image where marketing text could be overlaid. The overall mood is refreshing, modern, and premium, targeted at health-conscious professionals."
+    tags: ['image', 'dall-e', 'prompt-engineering'],
+    visibility: 'public',
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    createdAt: new Date(),
+    runCount: 0,
+    avgRating: 4.9,
+    price: 0
   },
   {
     id: '8',
     title: 'Product Description Generator',
     description: 'Create detailed descriptions for product visualization',
-    systemPrompt: 'You are a professional product photographer and visualization expert. Create a detailed description of how a product would be photographed professionally. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic. Include specific details about studio setup, background, reflections, and shadows to achieve a professional product photography look. This is not for image generation, but to help users understand how to present their products professionally.',
-    inputFields: [
-      {
-        id: 'productDescription',
-        label: 'Product Description',
-        placeholder: 'Describe the product in detail',
-        required: true,
-        type: 'textarea'
-      },
-      {
-        id: 'environment',
-        label: 'Environment',
-        placeholder: 'Studio, lifestyle, outdoor, etc.',
-        required: true
-      },
-      {
-        id: 'angle',
-        label: 'Camera Angle',
-        placeholder: 'Front view, 3/4 view, top-down, etc.',
-        required: false
-      },
-      {
-        id: 'lighting',
-        label: 'Lighting Style',
-        placeholder: 'Soft, dramatic, natural, etc.',
-        required: false
-      }
-    ],
+    content: 'You are a professional product photographer and visualization expert. Create a detailed description of how a product would be photographed professionally. Focus on lighting, angles, materials, and presentation that would make the product look appealing and realistic.',
     model: 'sonar-medium-chat',
-    creditCost: 200,
-    createdAt: Date.now(),
-    capabilities: ['text'],
-    exampleImageUrl: 'https://picsum.photos/seed/product1/1024/1024',
-    exampleOutput: "A photorealistic image of a premium wireless gaming headset, shown from a slight 3/4 angle to display both the sleek ear cup design and the adjustable microphone. The headset features a matte black finish with subtle red LED accents along the ear cups and microphone tip. The product is displayed on a reflective black surface in a studio environment with professional lighting - a main key light from the front right creating a subtle highlight across the curves of the headset, and a rim light from behind creating a defining edge. The background features a gradient from dark gray to black, keeping the focus entirely on the product. The materials appear high-end with memory foam ear cushions visible, and the overall image has a slight depth of field with the front of the headset in perfect focus while the rear elements have a slight, appealing blur."
+    tags: ['product', 'marketing', 'visualization'],
+    visibility: 'public',
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    createdAt: new Date(),
+    runCount: 0,
+    avgRating: 4.5,
+    price: 0
   },
   {
     id: '9',
@@ -491,7 +387,7 @@ export const usePromptStore = create<PromptState>()(
         const newPrompt: Prompt = {
           ...promptData,
           id,
-          createdAt: Date.now()
+          createdAt: new Date()
         };
         
         set((state) => ({
@@ -531,7 +427,7 @@ export const usePromptStore = create<PromptState>()(
         if (!prompts || !Array.isArray(prompts)) {
           return [];
         }
-        return prompts.filter(prompt => !prompt.isPrivate);
+        return prompts.filter(prompt => prompt.visibility === 'public');
       },
       
       getUserPrompts: (userId) => {
@@ -543,9 +439,11 @@ export const usePromptStore = create<PromptState>()(
           // Return prompts that are either:
           // 1. Public prompts
           // 2. Private prompts owned by this user
-          return !prompt.isPrivate || (prompt.isPrivate && prompt.ownerId === userId);
+          return prompt.visibility === 'public' || 
+                 (prompt.visibility !== 'public' && prompt.creatorId === userId);
         });
       }
+    }),
     }),
     {
       name: 'prompt-storage',

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { PromptFlow, FlowStep, InputMapping } from '@/types';
+import { PromptFlow } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface FlowState {
@@ -9,15 +9,9 @@ interface FlowState {
   getFlow: (id: string) => PromptFlow | undefined;
   removeFlow: (id: string) => void;
   updateFlow: (id: string, flowData: Partial<PromptFlow>) => void;
-  publishFlow: (id: string, unlockPrice?: number) => void;
   resetStore: () => void;
   getPublicFlows: () => PromptFlow[];
   getUserFlows: (userId: string) => PromptFlow[];
-  addStepToFlow: (flowId: string, step: Omit<FlowStep, 'id'>) => string;
-  removeStepFromFlow: (flowId: string, stepId: string) => void;
-  updateStepInFlow: (flowId: string, stepId: string, stepData: Partial<FlowStep>) => void;
-  reorderStepsInFlow: (flowId: string, stepIds: string[]) => void;
-  updateInputMapping: (flowId: string, stepId: string, mapping: InputMapping) => void;
 }
 
 // Sample flows to start with
@@ -30,55 +24,27 @@ const initialFlows: PromptFlow[] = [
       {
         id: 'step-1',
         promptId: '1', // Blog Post Generator
-        order: 0,
-        title: 'Generate Blog Post',
-        inputMappings: [
-        {
-        targetInputId: 'topic',
-        sourceType: 'user',
-        userInputId: 'flowTopic'
-        },
-        {
-        targetInputId: 'tone',
-        sourceType: 'user',
-        userInputId: 'flowTone'
-        },
-        {
-        targetInputId: 'targetAudience',
-        sourceType: 'user',
-        userInputId: 'flowAudience'
-        }
-        ]
+        model: 'gpt-4o',
+        inputType: 'text',
+        outputType: 'text',
+        order: 0
       },
       {
         id: 'step-2',
         promptId: '7', // Marketing Image Description Creator
-        order: 1,
-        title: 'Create Image Description for DALL-E',
-        inputMappings: [
-        {
-        targetInputId: 'product',
-        sourceType: 'previousStep',
-        sourceStepId: 'step-1',
-        sourceOutputPath: 'title'
-        },
-        {
-        targetInputId: 'style',
-        sourceType: 'user',
-        userInputId: 'imageStyle'
-        },
-        {
-        targetInputId: 'audience',
-        sourceType: 'user',
-        userInputId: 'flowAudience'
-        }
-        ]
+        model: 'sonar-medium-chat',
+        inputType: 'text',
+        outputType: 'text',
+        order: 1
       }
     ],
-    totalCreditCost: 200, // 50 + 150
-    createdAt: Date.now(),
-    unlockPrice: 0, // Free flow
-    exampleOutput: "This flow works in two steps: First, it generates a complete blog post based on your topic, tone, and target audience. Then, it creates a detailed image description based on the blog content, which is used to generate a matching image with DALL-E 3. The DALL-E image will be styled according to your preferences while maintaining consistency with the blog content."
+    creatorId: 'system',
+    creatorName: 'PromptFlow',
+    visibility: 'public',
+    tags: ['content', 'blog', 'image'],
+    createdAt: new Date(),
+    runCount: 0,
+    price: 0 // Free flow
   }
 ];
 
@@ -92,7 +58,7 @@ export const useFlowStore = create<FlowState>()(
         const newFlow: PromptFlow = {
           ...flowData,
           id,
-          createdAt: Date.now()
+          createdAt: new Date()
         };
         
         set((state) => ({
@@ -131,18 +97,6 @@ export const useFlowStore = create<FlowState>()(
         }));
       },
       
-      publishFlow: (id, unlockPrice = 0) => {
-        set((state) => ({
-          flows: state.flows.map(flow => 
-            flow.id === id ? { 
-              ...flow, 
-              isDraft: false,
-              unlockPrice
-            } : flow
-          )
-        }));
-      },
-      
       resetStore: () => {
         set({ flows: initialFlows });
       },
@@ -152,7 +106,7 @@ export const useFlowStore = create<FlowState>()(
         if (!flows || !Array.isArray(flows)) {
           return [];
         }
-        return flows.filter(flow => !flow.isPrivate && !flow.isDraft);
+        return flows.filter(flow => flow.visibility === 'public');
       },
       
       getUserFlows: (userId) => {
@@ -163,143 +117,10 @@ export const useFlowStore = create<FlowState>()(
         return flows.filter(flow => {
           // Return flows that are either:
           // 1. Public flows
-          // 2. Private flows owned by this user
-          // 3. Draft flows owned by this user
-          return (!flow.isPrivate && !flow.isDraft) || 
-                 ((flow.isPrivate || flow.isDraft) && flow.ownerId === userId);
+          // 2. User's private or unlisted flows
+          return flow.visibility === 'public' || 
+                 (flow.visibility !== 'public' && flow.creatorId === userId);
         });
-      },
-      
-      addStepToFlow: (flowId, stepData) => {
-        const stepId = uuidv4();
-        
-        set((state) => ({
-          flows: state.flows.map(flow => {
-            if (flow.id === flowId) {
-              const newStep: FlowStep = {
-                ...stepData,
-                id: stepId
-              };
-              
-              // Calculate new totalCreditCost based on the prompts used
-              // This would need to get the prompt cost from the prompt store in a real implementation
-              
-              return {
-                ...flow,
-                steps: [...flow.steps, newStep]
-              };
-            }
-            return flow;
-          })
-        }));
-        
-        return stepId;
-      },
-      
-      removeStepFromFlow: (flowId, stepId) => {
-        set((state) => ({
-          flows: state.flows.map(flow => {
-            if (flow.id === flowId) {
-              const newSteps = flow.steps.filter(step => step.id !== stepId);
-              
-              // Reorder the remaining steps
-              const reorderedSteps = newSteps.map((step, index) => ({
-                ...step,
-                order: index
-              }));
-              
-              return {
-                ...flow,
-                steps: reorderedSteps
-              };
-            }
-            return flow;
-          })
-        }));
-      },
-      
-      updateStepInFlow: (flowId, stepId, stepData) => {
-        set((state) => ({
-          flows: state.flows.map(flow => {
-            if (flow.id === flowId) {
-              const updatedSteps = flow.steps.map(step =>
-                step.id === stepId ? { ...step, ...stepData } : step
-              );
-              
-              return {
-                ...flow,
-                steps: updatedSteps
-              };
-            }
-            return flow;
-          })
-        }));
-      },
-      
-      reorderStepsInFlow: (flowId, stepIds) => {
-        set((state) => ({
-          flows: state.flows.map(flow => {
-            if (flow.id === flowId) {
-              // Create a map of the original steps by ID for quick lookup
-              const stepsMap = flow.steps.reduce((map, step) => {
-                map[step.id] = step;
-                return map;
-              }, {} as Record<string, FlowStep>);
-              
-              // Create reordered steps array using the provided order of IDs
-              const reorderedSteps = stepIds.map((id, index) => ({
-                ...stepsMap[id],
-                order: index
-              }));
-              
-              return {
-                ...flow,
-                steps: reorderedSteps
-              };
-            }
-            return flow;
-          })
-        }));
-      },
-      
-      updateInputMapping: (flowId, stepId, mapping) => {
-        set((state) => ({
-          flows: state.flows.map(flow => {
-            if (flow.id === flowId) {
-              const updatedSteps = flow.steps.map(step => {
-                if (step.id === stepId) {
-                  // Find if this mapping already exists for this target input
-                  const existingMappingIndex = step.inputMappings.findIndex(
-                    m => m.targetInputId === mapping.targetInputId
-                  );
-                  
-                  let updatedMappings;
-                  
-                  if (existingMappingIndex >= 0) {
-                    // Update existing mapping
-                    updatedMappings = [...step.inputMappings];
-                    updatedMappings[existingMappingIndex] = mapping;
-                  } else {
-                    // Add new mapping
-                    updatedMappings = [...step.inputMappings, mapping];
-                  }
-                  
-                  return {
-                    ...step,
-                    inputMappings: updatedMappings
-                  };
-                }
-                return step;
-              });
-              
-              return {
-                ...flow,
-                steps: updatedSteps
-              };
-            }
-            return flow;
-          })
-        }));
       }
     }),
     {

@@ -8,7 +8,7 @@ import { usePromptStore } from '@/store/usePromptStore';
 import { useFlowStore } from '@/store/useFlowStore';
 import { getDollarCostPerRun } from '@/lib/models/modelRegistry';
 
-// This would be fetched from the database in a real implementation
+// Mock unlocked items data
 const mockUnlockedItems = [
   {
     id: 'unlocked-1',
@@ -87,14 +87,14 @@ const UnlockedItemsPage: React.FC = () => {
             ? getPrompt?.(item.promptId) || { 
                 id: item.promptId, 
                 title: `Prompt ${item.promptId}`,
-                description: 'A premium prompt you've unlocked',
+                description: 'A premium prompt you\'ve unlocked',
                 model: 'gpt-4o',
                 creatorFee: 5000
               }
             : getFlow?.(item.flowId) || {
                 id: item.flowId,
                 title: `Flow ${item.flowId}`,
-                description: 'A premium flow you've unlocked',
+                description: 'A premium flow you\'ve unlocked',
                 steps: [{ model: 'gpt-4o' }]
               };
               

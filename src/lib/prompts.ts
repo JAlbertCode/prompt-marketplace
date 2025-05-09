@@ -1,186 +1,138 @@
-// src/lib/prompts.ts
-import { prisma } from '@/lib/db';
-import { Prompt } from '@/types/prompt';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { Session } from 'next-auth';
-import { trackUserPromptCreation } from '@/lib/credits/emailEvents';
+import { Prompt } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Get all prompts with filtering options
+ * Create a new prompt
  */
-export async function getPrompts(filters: any = {}, sort = 'newest'): Promise<Prompt[]> {
-  // Implementation of getPrompts...
-  // This would be the existing function
-  return [];
-}
-
-/**
- * Get favorite prompts for the current user
- */
-export async function getFavoritePrompts(session?: Session | null): Promise<Prompt[]> {
-  // If no session provided, try to get it
-  if (!session) {
-    session = await getServerSession(authOptions);
-  }
-  
-  if (!session?.user?.id) {
-    throw new Error('User not authenticated');
-  }
-  
-  const userId = session.user.id;
-  
-  // Get favorites using the Prisma client
-  const favorites = await prisma.favorite.findMany({
-    where: {
-      userId,
-      promptId: { not: null }, // Only get prompt favorites
-    },
-    include: {
-      prompt: {
-        include: {
-          creator: { select: { name: true, id: true } },
-          favorites: { where: { userId }, select: { id: true } },
-        },
-      },
-    },
-  });
-  
-  // Format the prompts for the frontend
-  return favorites
-    .filter((fav) => fav.prompt !== null) // Filter out null prompts
-    .map((fav) => ({
-      id: fav.prompt!.id,
-      title: fav.prompt!.title,
-      description: fav.prompt!.description || '',
-      systemPrompt: fav.prompt!.systemPrompt,
-      model: fav.prompt!.model,
-      author: fav.prompt!.creator?.name || 'Unknown',
-      authorId: fav.prompt!.creator?.id,
-      tags: fav.prompt!.tags,
-      isFavorite: true, // It's a favorite by definition
-      capabilities: fav.prompt!.capabilities,
-      creditCost: fav.prompt!.creditCost,
-      createdAt: fav.createdAt.toISOString(),
-      isPrivate: fav.prompt!.isPrivate,
-    }));
-}
-
-/**
- * Toggle favorite status for a prompt
- */
-export async function toggleFavoritePrompt(promptId: string): Promise<{ isFavorite: boolean }> {
-  const session = await getServerSession(authOptions);
-  
-  if (!session?.user?.id) {
-    throw new Error('User not authenticated');
-  }
-  
-  const userId = session.user.id;
-  
-  // Check if favorite already exists
-  const existingFavorite = await prisma.favorite.findFirst({
-    where: {
-      userId,
-      promptId,
-    },
-  });
-  
-  // Toggle favorite
-  if (existingFavorite) {
-    // Remove favorite
-    await prisma.favorite.delete({
-      where: {
-        id: existingFavorite.id,
-      },
-    });
+export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' | 'creatorId' | 'creatorName'>): Promise<Prompt> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 500));
     
-    return { isFavorite: false };
-  } else {
-    // Add favorite
-    await prisma.favorite.create({
-      data: {
-        userId,
-        promptId,
-      },
-    });
-    
-    return { isFavorite: true };
-  }
-}
-
-/**
- * Create a new prompt with email event tracking
- */
-export async function createPrompt(promptData: any, userId: string) {
-  // Create the prompt in the database
-  const prompt = await prisma.prompt.create({
-    data: {
+    // Create a new prompt with default values
+    const newPrompt: Prompt = {
+      id: uuidv4(),
       ...promptData,
-      userId,
-      creatorId: userId // Set as both the creator and owner
-    }
-  });
-  
-  // Track the prompt creation event for email automation
-  // Only do this if we have a valid prompt and it was successfully created
-  if (prompt && prompt.id && process.env.BREVO_API_KEY) {
-    try {
-      await trackUserPromptCreation(
-        userId,
-        prompt.id,
-        prompt.title
-      );
-    } catch (error) {
-      console.error('Error tracking prompt creation:', error);
-      // Don't throw error - this is a non-critical operation
-    }
+      creatorId: 'current-user', // Would be set by the server based on auth
+      creatorName: 'Current User', // Would be set by the server
+      createdAt: new Date(),
+      runCount: 0,
+      avgRating: 0
+    };
+    
+    return newPrompt;
+  } catch (error) {
+    console.error('Error creating prompt:', error);
+    throw new Error('Failed to create prompt');
   }
-  
-  return prompt;
 }
 
 /**
- * Update an existing prompt
+ * Get all prompts with optional filters
  */
-export async function updatePrompt(promptId: string, promptData: any) {
-  return await prisma.prompt.update({
-    where: { id: promptId },
-    data: promptData
-  });
+export async function getPrompts(options?: {
+  visibility?: 'public' | 'private' | 'unlisted';
+  creatorId?: string;
+  tags?: string[];
+}): Promise<Prompt[]> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, return mock data
+    return []; // Would be populated from API
+  } catch (error) {
+    console.error('Error fetching prompts:', error);
+    throw new Error('Failed to fetch prompts');
+  }
+}
+
+/**
+ * Get a prompt by ID
+ */
+export async function getPromptById(id: string): Promise<Prompt | null> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Would be fetched from API
+    return null;
+  } catch (error) {
+    console.error(`Error fetching prompt ${id}:`, error);
+    throw new Error('Failed to fetch prompt');
+  }
+}
+
+/**
+ * Update a prompt
+ */
+export async function updatePrompt(id: string, updates: Partial<Prompt>): Promise<Prompt> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Would update via API
+    throw new Error('Not implemented');
+  } catch (error) {
+    console.error(`Error updating prompt ${id}:`, error);
+    throw new Error('Failed to update prompt');
+  }
 }
 
 /**
  * Delete a prompt
  */
-export async function deletePrompt(promptId: string) {
-  return await prisma.prompt.delete({
-    where: { id: promptId }
-  });
+export async function deletePrompt(id: string): Promise<boolean> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Would delete via API
+    return true;
+  } catch (error) {
+    console.error(`Error deleting prompt ${id}:`, error);
+    throw new Error('Failed to delete prompt');
+  }
 }
 
 /**
- * Get a specific prompt by ID
+ * Run a prompt
  */
-export async function getPromptById(promptId: string) {
-  return await prisma.prompt.findUnique({
-    where: { id: promptId },
-    include: {
-      creator: { select: { id: true, name: true, image: true } }
-    }
-  });
+export async function runPrompt(
+  promptId: string, 
+  inputs: Record<string, any>
+): Promise<{output: string; creditCost: number}> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Would run via API
+    return {
+      output: 'This is a simulated response from the model.',
+      creditCost: 1000
+    };
+  } catch (error) {
+    console.error(`Error running prompt ${promptId}:`, error);
+    throw new Error('Failed to run prompt');
+  }
 }
 
 /**
- * Check if a prompt is favorited by a user
+ * Rate a prompt
  */
-export async function isPromptFavorited(promptId: string, userId: string): Promise<boolean> {
-  const favorite = await prisma.favorite.findFirst({
-    where: {
-      promptId,
-      userId
-    }
-  });
-  
-  return !!favorite;
+export async function ratePrompt(promptId: string, rating: number): Promise<boolean> {
+  try {
+    // In a real implementation, this would call the API
+    // For now, simulate an API call with timeout
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Would rate via API
+    return true;
+  } catch (error) {
+    console.error(`Error rating prompt ${promptId}:`, error);
+    throw new Error('Failed to rate prompt');
+  }
 }

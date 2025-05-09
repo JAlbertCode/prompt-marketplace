@@ -378,6 +378,30 @@ export function estimatePromptLength(text: string): PromptLength {
 }
 
 /**
+ * Calculate dollar cost for a prompt run
+ */
+export function getDollarCostPerRun(
+  modelId: string, 
+  creatorFee: number = 0,
+  promptLength: PromptLength = 'medium'
+): number {
+  const model = getModelById(modelId);
+  
+  if (!model) {
+    return 0; // Default to 0 if model not found
+  }
+  
+  // Get base cost based on prompt length
+  const baseCost = model.cost[promptLength];
+  
+  // Add creator fee if applicable
+  const totalCost = baseCost + creatorFee;
+  
+  // Convert to dollars (1 credit = $0.000001)
+  return totalCost * 0.000001;
+}
+
+/**
  * Calculate credit cost for a prompt run
  */
 export function calculatePromptCreditCost(
