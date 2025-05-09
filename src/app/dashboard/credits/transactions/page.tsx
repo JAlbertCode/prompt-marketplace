@@ -5,12 +5,12 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowUpCircleIcon, 
-  ArrowDownCircleIcon,
-  ClockIcon,
-  PlusCircleIcon,
-  CreditCardIcon
-} from '@heroicons/react/24/outline';
+  ArrowUpCircle, 
+  ArrowDownCircle,
+  Clock,
+  PlusCircle,
+  CreditCard
+} from 'lucide-react';
 import { getUserTransactions, getUserCredits } from '@/utils/creditManager';
 
 export default function TransactionsPage() {
@@ -99,7 +99,7 @@ export default function TransactionsPage() {
         <h1 className="text-3xl font-bold">Credit Transactions</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center bg-white rounded-lg border border-gray-200 px-3 py-1 text-sm">
-            <CreditCardIcon className="h-4 w-4 text-gray-500 mr-2" />
+            <CreditCard className="h-4 w-4 text-gray-500 mr-2" />
             <div className="flex flex-col">
               <span className="font-medium">{credits.toLocaleString()} credits</span>
               <span className="text-gray-500 text-xs">${(credits / 1000000).toFixed(6)}</span>
@@ -109,7 +109,7 @@ export default function TransactionsPage() {
             href="/dashboard/credits" 
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <PlusCircleIcon className="h-5 w-5 mr-2" />
+            <PlusCircle className="h-5 w-5 mr-2" />
             Buy Credits
           </Link>
         </div>
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
               </p>
             </div>
             <div className="rounded-full bg-blue-50 p-3">
-              <CreditCardIcon className="h-6 w-6 text-blue-600" />
+              <CreditCard className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function TransactionsPage() {
               </p>
             </div>
             <div className="rounded-full bg-green-50 p-3">
-              <ArrowUpCircleIcon className="h-6 w-6 text-green-600" />
+              <ArrowUpCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function TransactionsPage() {
               </p>
             </div>
             <div className="rounded-full bg-purple-50 p-3">
-              <ClockIcon className="h-6 w-6 text-purple-600" />
+              <Clock className="h-6 w-6 text-purple-600" />
             </div>
           </div>
         </div>
