@@ -17,20 +17,34 @@ export default function CreatePage({ searchParams }: { searchParams?: { tab?: st
   const [itemType, setItemType] = useState<ItemType>(searchParams?.tab === 'flow' ? 'flow' : 'prompt');
   const editId = searchParams?.edit;
   
+  // Debug on component mount
+  
   const handlePromptSave = (promptData: Omit<Prompt, 'id' | 'createdAt'>) => {
     try {
-      // Add a mock owner ID for the MVP
-      const promptWithOwner = {
+      // Add essential fields for prompt display
+      const enrichedPromptData = {
         ...promptData,
-        ownerId: 'current-user'
+        visibility: 'public', // Ensure the prompt is visible
+        ownerId: 'current-user',
+        creatorId: 'current-user',
+        creatorName: 'You',
+        // Add other required fields with defaults if not provided
+        tags: promptData.tags || [],
+        runCount: 0,
+        avgRating: 5.0,
+        price: 0
       };
       
-      const newPromptId = promptStore.addPrompt(promptWithOwner);
+      // Use promptStore to add the prompt
+      const newPromptId = promptStore.addPrompt(enrichedPromptData);
+      console.log('Created new prompt with ID:', newPromptId);
       
       toast.success('Prompt created successfully!');
       
-      // Navigate to the prompt page
-      router.push(`/`);
+      // Redirect to the dashboard content page instead of home
+      setTimeout(() => {
+        window.location.href = `/dashboard/content`;
+      }, 500);
     } catch (error) {
       console.error('Error saving prompt:', error);
       toast.error('Failed to create prompt. Please try again.');
@@ -56,8 +70,10 @@ export default function CreatePage({ searchParams }: { searchParams?: { tab?: st
         ? 'Flow saved as draft!' 
         : 'Flow published successfully!');
       
-      // Navigate to the home page
-      router.push('/');
+      // Use direct navigation for reliable page loading
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     } catch (error) {
       console.error('Error saving flow:', error);
       toast.error('Failed to create flow. Please try again.');

@@ -4,11 +4,13 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Create a new prompt
  */
-export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' | 'creatorId' | 'creatorName'>): Promise<Prompt> {
+export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' | 'creatorId' | 'creatorName' | 'runCount' | 'avgRating'>): Promise<Prompt> {
   try {
     // In a real implementation, this would call the API
     // For now, simulate an API call with timeout
     await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('Creating prompt with data:', promptData);
     
     // Create a new prompt with default values
     const newPrompt: Prompt = {
@@ -21,6 +23,7 @@ export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' |
       avgRating: 0
     };
     
+    console.log('Created new prompt:', newPrompt);
     return newPrompt;
   } catch (error) {
     console.error('Error creating prompt:', error);

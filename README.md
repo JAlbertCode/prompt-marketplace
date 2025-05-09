@@ -122,6 +122,142 @@ Administrators are automatically notified when new users join the waitlist, help
 
 This implementation uses Brevo's cloud-based automation workflows rather than local cron jobs. All scheduled and recurring emails are configured directly in the Brevo dashboard, making it easy to manage without the need for hosting recurring jobs locally.
 
+## Common Issues and Solutions
+
+### Zustand Store Initialization Error
+
+If you encounter the error `Cannot read properties of undefined (reading 'call')` in the browser console, this is related to a Zustand store initialization issue. 
+
+**The Problem**:
+The error occurs because of a syntax issue with how the Zustand stores are created. The root cause is a mismatch between the Zustand version and the store creation syntax.
+
+**The Solution**:
+The correct way to initialize Zustand stores when using TypeScript and the persist middleware is:
+
+```typescript
+// CORRECT: No extra parentheses after create<State>
+export const useYourStore = create<YourState>(
+  persist(
+    // store implementation
+  )
+);
+
+// INCORRECT: Extra parentheses will cause the error
+// export const useYourStore = create<YourState>()(
+//   persist(
+//     // store implementation
+//   )
+// );
+```
+
+All stores in the application have been updated to use the correct syntax.
+
+### Initial Page Loading Issue
+
+If the application gets stuck on the loading screen when first opening the site, this is typically due to authentication redirection issues.
+
+**The Problem**:
+The issue occurs because Next.js client-side navigation may not complete properly in certain scenarios, particularly when deployed to Vercel. This often manifests as the root page (`/`) displaying a loading spinner that never resolves, even though the redirect code is executing.
+
+**The Solution**:
+Implement a more robust redirection strategy with these key components:
+
+1. Use direct browser navigation instead of Next.js Router for critical redirects:
+   ```javascript
+   // Instead of this
+   router.push('/home');
+   
+   // Use this
+   window.location.href = '/home';
+   ```
+
+2. Store authentication state in both localStorage AND cookies:
+   ```javascript
+   localStorage.setItem('isAuthenticated', 'true');
+   document.cookie = 'isAuthenticated=true; path=/; max-age=2592000';
+   ```
+
+3. Configure Vercel redirects in vercel.json for server-side handling:
+   ```json
+   {
+     "redirects": [
+       {
+         "source": "/",
+         "destination": "/home",
+         "has": [
+           {
+             "type": "cookie",
+             "key": "isAuthenticated",
+             "value": "true"
+           }
+         ]
+       }
+     ]
+   }
+   ```
+
+These changes ensure that even if client-side navigation fails, the server-side redirect will handle the request appropriately.
+
+### Created Prompts Not Appearing in UI
+
+If you create a new prompt but it doesn't appear in the homepage, this is typically due to issues with Zustand's persistence layer and localStorage.
+
+**The Problem**:
+Zustand stores data in localStorage, but sometimes the UI doesn't properly re-render or the storage isn't properly synchronized between tabs or app instances.
+
+**The Solution**:
+Implement a more robust approach to localStorage management:
+
+1. Use a force-reload mechanism for the store:
+   ```javascript
+   // Force reload data from localStorage to ensure UI is updated
+   export function forceReloadStore(storeName) {
+     const data = localStorage.getItem(storeName);
+     if (data) {
+       // Re-save the data to trigger watchers
+       localStorage.setItem(storeName, data);
+       return true;
+     }
+     return false;
+   }
+   ```
+
+2. Ensure all required fields are provided when creating a new prompt:
+   ```javascript
+   const enrichedPromptData = {
+     ...promptData,
+     visibility: 'public', // Critical for display
+     creatorId: 'current-user',
+     // Other required fields
+   };
+   ```
+
+3. Add a manual refresh button to force UI updates:
+   ```jsx
+   <button 
+     onClick={() => {
+       forceReloadStore('prompt-storage');
+       setRefreshKey(prev => prev + 1); // Force component re-render
+     }}
+   >
+     Refresh Data
+   </button>
+   ```
+
+These changes significantly improve the reliability of prompt creation and display.
+
+### Database Connection Issues
+
+If you're having trouble with database connections, the application includes a fallback mode to ensure functionality even without a database connection.
+
+**Enable Database Fallback Mode**:
+In your `.env.local` file, set:
+```
+USE_DB_FALLBACK=true
+```
+
+This will allow the application to function using localStorage instead of requiring a database connection.
+
 ## Development Tips
 
 ### Environment Setup

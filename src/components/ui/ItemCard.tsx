@@ -12,7 +12,7 @@ import CreditBadge from '@/components/ui/CreditBadge';
 import ExampleModal from '@/components/ui/ExampleModal';
 import { toast } from 'react-hot-toast';
 import { getBaselineCost } from '@/lib/creditHelpers';
-import { LuLock, LuKey, LuStar, LuTrash2, LuEye, LuSettings, LuNetwork, LuMessageSquare } from 'react-icons/lu';
+import { Lock, Key, Star, Trash2, Eye, Settings, Network, MessageSquare } from 'lucide-react';
 
 interface ItemCardProps {
   item: Prompt | PromptFlow;
@@ -40,6 +40,16 @@ const ItemCard: React.FC<ItemCardProps> = ({
   // Determine if the item is a prompt or flow
   const isPrompt = itemType === 'prompt';
   const isFlow = itemType === 'flow';
+  
+  // Navigate to detail page when clicking the card
+  const handleCardClick = () => {
+    // Navigate to the detail page for the item
+    if (isPrompt) {
+      router.push(`/prompt/${item.id}`);
+    } else {
+      router.push(`/flow/${item.id}`);
+    }
+  };
   
   // Calculate costs and check if unlocked
   const unlockPrice = isFlow ? (item as PromptFlow).unlockPrice : 0;
@@ -178,7 +188,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
         bg-white rounded-lg overflow-hidden
         border border-gray-200 transition
         transform hover:-translate-y-1 duration-200
-        flex flex-col h-full
+        flex flex-col h-full cursor-pointer
         ${isDraft ? 'border-yellow-300 shadow-[0_2px_8px_rgba(234,179,8,0.25)] hover:shadow-[0_4px_12px_rgba(234,179,8,0.35)]' : 
           isLocked ? 'border-orange-200 shadow-[0_2px_8px_rgba(249,115,22,0.25)] hover:shadow-[0_4px_12px_rgba(249,115,22,0.35)]' : 
           isPrompt ? 'shadow-[0_2px_8px_rgba(37,99,235,0.25)] hover:shadow-[0_4px_12px_rgba(37,99,235,0.35)]' : 
@@ -186,13 +196,14 @@ const ItemCard: React.FC<ItemCardProps> = ({
         }
         ${className}
       `}
+      onClick={handleCardClick}
     >
       
       {/* Locked Overlay */}
       {isLocked && (
         <div className="absolute inset-0 bg-gray-200 bg-opacity-10 flex items-center justify-center pointer-events-none z-0">
           <div className="bg-white bg-opacity-80 rounded-full p-3 shadow-lg">
-            <LuLock className="h-8 w-8 text-orange-500" />
+            <Lock className="h-8 w-8 text-orange-500" />
           </div>
         </div>
       )}
@@ -220,14 +231,14 @@ const ItemCard: React.FC<ItemCardProps> = ({
               aria-label={favorite ? 'Remove from favorites' : 'Add to favorites'}
               title={favorite ? 'Remove from favorites' : 'Add to favorites'}
             >
-              <LuStar className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
+              <Star className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
             </button>
             <button
               onClick={handleRemoveClick}
               className="text-sm text-red-500 hover:text-red-700"
               aria-label={`Remove ${isPrompt ? 'prompt' : 'flow'}`}
             >
-              <LuTrash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" />
             </button>
             {isFlow && (
               <button
@@ -235,7 +246,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
                 className="text-sm text-blue-500 hover:text-blue-700"
                 aria-label="Edit flow"
               >
-                <LuSettings className="h-4 w-4" />
+                <Settings className="h-4 w-4" />
               </button>
             )}
             <div className="relative whitespace-nowrap">
@@ -307,7 +318,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
               }`}
               title={isUnlocked ? `View ${isPrompt ? 'system prompt' : 'flow details'}` : `Unlock ${isPrompt ? 'system prompt' : 'flow'}`}
             >
-              {isUnlocked ? <LuKey size={12} /> : <LuLock size={12} />}
+              {isUnlocked ? <Key size={12} /> : <Lock size={12} />}
               <span className="ml-1">{isUnlocked ? 'Unlocked' : 'Unlock'}</span>
             </button>
             
@@ -318,7 +329,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
                 title={item.exampleOutput ? "View example output" : "No example output available"}
                 disabled={!item.exampleOutput}
               >
-                <LuEye size={14} />
+                <Eye size={14} />
                 <span className="ml-1">Example</span>
               </button>
               

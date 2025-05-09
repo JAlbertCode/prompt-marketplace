@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { forceReloadStore } from '@/lib/hydrationHelper';
 import Link from 'next/link';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFlowStore } from '@/store/useFlowStore';
@@ -19,13 +20,37 @@ export default function HomePage() {
   const flowStore = useFlowStore();
   const unlockedFlowStore = useUnlockedFlowStore();
   
+  // Add a state to force rerenders
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Force refresh of data when component mounts
+  useEffect(() => {
+    console.log('Home component mounted, refreshing data');
+    
+    // Attempt to force reload store data from localStorage
+    if (typeof window !== 'undefined') {
+      // Small delay to ensure the component is fully mounted
+      setTimeout(() => {
+        const storeReloaded = forceReloadStore('prompt-storage');
+        console.log('Prompt store reloaded:', storeReloaded);
+        
+        // If reload was successful, trigger a re-render
+        if (storeReloaded) {
+          setRefreshKey(prev => prev + 1);
+        }
+      }, 100);
+    }
+  }, []);
+  
   // For the MVP, we'll use a mock current user ID
   const currentUserId = 'current-user';
   
   // Get available prompts and flows
   const availablePrompts = useMemo(() => {
-    return promptStore.getUserPrompts?.(currentUserId) || [];
-  }, [promptStore, currentUserId]);
+    const prompts = promptStore.prompts || [];
+    console.log(`Loaded ${prompts.length} prompts:`, prompts.map(p => p.title));
+    return prompts;
+  }, [promptStore.prompts, refreshKey]);
   
   const availableFlows = useMemo(() => {
     return flowStore.getUserFlows?.(currentUserId) || [];
@@ -133,6 +158,21 @@ export default function HomePage() {
             className="text-xs text-blue-600 hover:text-blue-800 hover:underline mr-2"
           >
             Reset Stores
+          </button>
+          <button 
+            onClick={() => {
+              // Force reload data from localStorage
+              const reloaded = forceReloadStore('prompt-storage');
+              console.log('Manually reloaded store:', reloaded);
+              
+              // Force a re-render
+              setRefreshKey(prev => prev + 1);
+              
+              toast.success('Data refreshed');
+            }}
+            className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline mr-2"
+          >
+            Refresh Data
           </button>
           <div className="flex space-x-2">
             <button

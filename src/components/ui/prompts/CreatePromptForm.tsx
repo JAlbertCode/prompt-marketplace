@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Prompt } from '@/types';
+import { usePromptStore } from '@/store/usePromptStore';
 import { createPrompt } from '@/lib/prompts';
 
 interface CreatePromptFormProps {
@@ -37,6 +38,7 @@ const promptSchema = z.object({
 
 export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFormProps) {
   const router = useRouter();
+  const { addPrompt } = usePromptStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [promptData, setPromptData] = useState({
     title: '',
@@ -95,7 +97,7 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         ? parseInt(promptData.price, 10) || 0 
         : promptData.price;
 
-      // Create the prompt
+      // Create the prompt via API (mock)
       const newPrompt = await createPrompt({
         title: promptData.title,
         description: promptData.description,
@@ -106,12 +108,18 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         price,
       });
 
+      console.log('Created prompt:', newPrompt);
+
+      // Directly add to Zustand store
+      const promptId = addPrompt(newPrompt);
+      console.log('Added to store with ID:', promptId);
+
       toast.success('Prompt created successfully');
       
       if (onSubmit) {
         onSubmit(newPrompt);
       } else {
-        router.push('/dashboard/creator/prompts');
+        router.push('/dashboard');
       }
     } catch (error) {
       console.error('Failed to create prompt:', error);

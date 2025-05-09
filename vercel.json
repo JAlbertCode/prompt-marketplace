@@ -66,6 +66,28 @@
       "source": "/login",
       "destination": "/api/auth/signin",
       "permanent": true
+    },
+    {
+      "source": "/",
+      "destination": "/waitlist",
+      "has": [
+        {
+          "type": "cookie",
+          "key": "isAuthenticated",
+          "value": "false"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "/home",
+      "has": [
+        {
+          "type": "cookie",
+          "key": "isAuthenticated",
+          "value": "true"
+        }
+      ]
     }
   ]
 }

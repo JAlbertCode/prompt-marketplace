@@ -15,7 +15,7 @@ interface UnlockedFlowState {
   setUnlockedFlows: (flowIds: string[]) => void;
 }
 
-export const useUnlockedFlowStore = create<UnlockedFlowState>()(
+export const useUnlockedFlowStore = create<UnlockedFlowState>(
   persist(
     (set, get) => ({
       unlockedFlows: [],

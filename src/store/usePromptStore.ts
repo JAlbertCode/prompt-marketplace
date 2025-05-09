@@ -8,6 +8,7 @@ interface PromptState {
   addPrompt: (prompt: Omit<Prompt, 'id' | 'createdAt'>) => string;
   getPrompt: (id: string) => Prompt | undefined;
   removePrompt: (id: string) => void;
+  updatePrompt: (id: string, promptData: Partial<Prompt>) => void;
   resetStore: () => void;
   getPublicPrompts: () => Prompt[];
   getUserPrompts: (userId: string) => Prompt[];
@@ -377,7 +378,33 @@ const initialPrompts: Prompt[] = [
   }
 ];
 
-export const usePromptStore = create<PromptState>()(
+// Always include this merge function to handle migrating existing data correctly
+const promptStoreMerger = (persistedState: any, currentState: any) => {
+  // If no persisted state, use current state
+  if (!persistedState || !persistedState.prompts || !Array.isArray(persistedState.prompts)) {
+    return { ...currentState };
+  }
+  
+  // Identify default templates by fixed IDs
+  const defaultTemplateIds = new Set(['1', '2', '3', '7', '8', '9', '20', '21', '22', '23']);
+  
+  // Get existing non-default template IDs to preserve user-created prompts
+  const userPrompts = persistedState.prompts.filter((p: Prompt) => !defaultTemplateIds.has(p.id));
+  
+  // Get default templates from current state (guaranteed to be there)
+  const defaultPrompts = currentState.prompts.filter((p: any) => defaultTemplateIds.has(p.id));
+  
+  console.log(`Merging store: ${defaultPrompts.length} default prompts, ${userPrompts.length} user prompts`);
+  
+  // Merge user-created prompts with default templates
+  return {
+    ...currentState,
+    prompts: [...defaultPrompts, ...userPrompts],
+  };
+};
+
+// Create the store with proper type safety
+export const usePromptStore = create<PromptState>(
   persist(
     (set, get) => ({
       prompts: initialPrompts,
@@ -390,9 +417,27 @@ export const usePromptStore = create<PromptState>()(
           createdAt: new Date()
         };
         
-        set((state) => ({
-          prompts: [...state.prompts, newPrompt]
-        }));
+        // Add debugging to trace prompt creation
+        console.log('Adding new prompt:', JSON.stringify(newPrompt, null, 2));
+        
+        set((state) => {
+          // Make sure we have a valid array to avoid errors
+          const currentPrompts = Array.isArray(state.prompts) ? state.prompts : [];
+          const newPrompts = [...currentPrompts, newPrompt];
+          
+          // Force localStorage update to ensure the prompt is persisted
+          try {
+            if (typeof window !== 'undefined') {
+              const storeData = { state: { prompts: newPrompts } };
+              localStorage.setItem('prompt-storage', JSON.stringify(storeData));
+              console.log('Manually updated localStorage with new prompts');
+            }
+          } catch (error) {
+            console.error('Failed to manually update localStorage:', error);
+          }
+          
+          return { prompts: newPrompts };
+        });
         
         return id;
       },
@@ -416,6 +461,34 @@ export const usePromptStore = create<PromptState>()(
         set((state) => ({
           prompts: state.prompts.filter(prompt => prompt.id !== id)
         }));
+      },
+      
+      updatePrompt: (id, promptData) => {
+        set((state) => {
+          // Make sure we have a valid array to avoid errors
+          const currentPrompts = Array.isArray(state.prompts) ? state.prompts : [];
+          
+          // Find and update the prompt
+          const updatedPrompts = currentPrompts.map(prompt => 
+            prompt.id === id ? { ...prompt, ...promptData } : prompt
+          );
+          
+          // Log the update
+          console.log(`Updated prompt ${id}:`, updatedPrompts.find(p => p.id === id));
+          
+          // Force localStorage update to ensure the change is persisted
+          try {
+            if (typeof window !== 'undefined') {
+              const storeData = { state: { prompts: updatedPrompts } };
+              localStorage.setItem('prompt-storage', JSON.stringify(storeData));
+              console.log('Manually updated localStorage with edited prompt');
+            }
+          } catch (error) {
+            console.error('Failed to manually update localStorage:', error);
+          }
+          
+          return { prompts: updatedPrompts };
+        });
       },
       
       resetStore: () => {
@@ -444,33 +517,12 @@ export const usePromptStore = create<PromptState>()(
         });
       }
     }),
-    }),
     {
       name: 'prompt-storage',
       storage: createJSONStorage(() => typeof window !== 'undefined' ? localStorage : null),
       partialize: (state) => ({ prompts: state.prompts }),
-      // Merge strategy to handle combining existing localStorage data with new templates
-      merge: (persistedState: any, currentState) => {
-        // If persistedState doesn't have a valid prompts array, use currentState
-        if (!persistedState || !persistedState.prompts || !Array.isArray(persistedState.prompts)) {
-          return { ...currentState };
-        }
-        
-        // Identify default templates by fixed IDs
-        const defaultTemplateIds = new Set(['1', '2', '3', '7', '8', '9', '20', '21', '22', '23']);
-        
-        // Get existing non-default template IDs to preserve user-created prompts
-        const userPrompts = persistedState.prompts.filter((p: Prompt) => !defaultTemplateIds.has(p.id));
-        
-        // Get default templates from current state (guaranteed to be there)
-        const defaultPrompts = currentState.prompts.filter(p => defaultTemplateIds.has(p.id));
-        
-        // Merge user-created prompts with default templates
-        return {
-          ...currentState,
-          prompts: [...defaultPrompts, ...userPrompts],
-        };
-      }
+      // Use our custom merger function
+      merge: promptStoreMerger
     }
   )
 );

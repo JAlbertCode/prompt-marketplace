@@ -1,5 +1,3 @@
-import withBundleAnalyzer from '@next/bundle-analyzer';
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable server components by default
@@ -98,9 +96,4 @@ const nextConfig = {
   poweredByHeader: false,
 };
 
-// Enable bundle analyzer in ANALYZE mode
-const analyzer = withBundleAnalyzer({
-  enabled: process.env.ANALYZE === 'true',
-});
-
-export default analyzer(nextConfig);
+export default nextConfig;

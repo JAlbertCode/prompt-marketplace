@@ -13,7 +13,7 @@
     "db:studio": "prisma studio",
     "db:seed": "node scripts/seed-credits.js",
     "setup:email": "node scripts/install-email-dependencies.js",
-    "analyze": "cross-env ANALYZE=true next build",
+    "analyze": "echo 'Please install @next/bundle-analyzer first' && exit 1",
     "test": "jest"
   },
   "dependencies": {
@@ -54,7 +54,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
-    "@next/bundle-analyzer": "^15.3.1",
     "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",

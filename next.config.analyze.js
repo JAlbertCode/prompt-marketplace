@@ -1,15 +1,7 @@
+// This is a placeholder that will be used when @next/bundle-analyzer is installed
 /** @type {import('next').NextConfig} */
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
-
 // Import the base config
 const baseConfig = require('./next.config.js');
 
-// Combine the configurations
-const config = {
-  ...baseConfig,
-  // Add any analyzer-specific configurations here
-};
-
-module.exports = withBundleAnalyzer(config);
+// For now, just return the base config
+module.exports = baseConfig;

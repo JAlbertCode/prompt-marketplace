@@ -48,7 +48,7 @@ const initialFlows: PromptFlow[] = [
   }
 ];
 
-export const useFlowStore = create<FlowState>()(
+export const useFlowStore = create<FlowState>(
   persist(
     (set, get) => ({
       flows: initialFlows,

@@ -16,10 +16,12 @@ export default function WaitlistPage() {
   
   // Check if already authenticated
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuth = localStorage.getItem('isAuthenticated') === 'true';
-      if (isAuth) {
-        router.push('/');
+  if (typeof window !== 'undefined') {
+  const isAuth = localStorage.getItem('isAuthenticated') === 'true';
+  if (isAuth) {
+  // Also set cookie for server-side redirects
+    document.cookie = `isAuthenticated=true; path=/; max-age=2592000`;
+      router.push('/');
       }
     }
   }, [router]);
@@ -102,12 +104,16 @@ export default function WaitlistPage() {
     const correctPassword = 'promptflow'; // Using the value from your .env
     
     if (password === correctPassword) {
-      // Set cookies directly
-      document.cookie = 'auth=true; path=/; max-age=2592000'; // 30 days
+      // Set authentication state in localStorage and cookie
       localStorage.setItem('isAuthenticated', 'true');
+      document.cookie = 'isAuthenticated=true; path=/; max-age=2592000'; // 30 days
+      document.cookie = 'auth=true; path=/; max-age=2592000'; // 30 days for backward compatibility
       
       showNotification('Access granted!');
-      router.push('/');
+      setTimeout(() => {
+        // Use direct navigation to prevent loading issues
+        window.location.href = '/home';
+      }, 500);
     } else {
       showNotification('Invalid password', 'error');
     }

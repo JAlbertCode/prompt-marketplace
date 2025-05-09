@@ -2,25 +2,31 @@
 
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { redirect } from 'next/navigation';
 
 export default function IndexPage() {
   const router = useRouter();
   
   useEffect(() => {
+    // For debugging
+    console.log('Root page loading, checking auth state');
+    
     // Check if authenticated on client-side
-    if (typeof window !== 'undefined') {
-      const authStatus = localStorage.getItem('isAuthenticated') === 'true';
-      
-      // If authenticated, redirect to home
-      if (authStatus) {
-        router.push('/home');
-      } else {
-        // Otherwise redirect to waitlist
-        router.push('/waitlist');
+    try {
+      if (typeof window !== 'undefined') {
+        const authStatus = localStorage.getItem('isAuthenticated') === 'true';
+        console.log('Auth status:', authStatus);
+        
+        // Force a direct navigation
+        const destination = authStatus ? '/home' : '/waitlist';
+        console.log('Navigating to:', destination);
+        window.location.href = destination;
       }
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      // In case of error, force navigation to waitlist
+      window.location.href = '/waitlist';
     }
-  }, [router]);
+  }, []);
   
   // Show loading until client-side redirect happens
   return (
