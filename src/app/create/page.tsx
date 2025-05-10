@@ -8,6 +8,7 @@ import { useFlowStore } from '@/store/useFlowStore';
 import PromptBuilder from '@/components/creator/PromptBuilder';
 import FlowBuilder from '@/components/creator/FlowBuilder';
 import { toast } from 'react-hot-toast';
+import { forceReloadStore } from '@/lib/hydrationHelper';
 
 export default function CreatePage({ searchParams }: { searchParams?: { tab?: string, edit?: string } }) {
   const router = useRouter();
@@ -38,6 +39,10 @@ export default function CreatePage({ searchParams }: { searchParams?: { tab?: st
       // Use promptStore to add the prompt
       const newPromptId = promptStore.addPrompt(enrichedPromptData);
       console.log('Created new prompt with ID:', newPromptId);
+      
+      // Force refresh local storage and trigger events
+      forceReloadStore('prompt-storage');
+      window.dispatchEvent(new Event('storage'));
       
       toast.success('Prompt created successfully!');
       

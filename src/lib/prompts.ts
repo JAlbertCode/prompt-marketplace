@@ -4,7 +4,11 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Create a new prompt
  */
-export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' | 'creatorId' | 'creatorName' | 'runCount' | 'avgRating'>): Promise<Prompt> {
+export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' | 'creatorId' | 'creatorName' | 'runCount' | 'avgRating'> & {
+  unlockFee?: number;
+  isPublished?: boolean;
+  exampleOutput?: string;
+}): Promise<Prompt> {
   try {
     // In a real implementation, this would call the API
     // For now, simulate an API call with timeout
@@ -20,8 +24,23 @@ export async function createPrompt(promptData: Omit<Prompt, 'id' | 'createdAt' |
       creatorName: 'Current User', // Would be set by the server
       createdAt: new Date(),
       runCount: 0,
-      avgRating: 0
+      avgRating: 0,
+      unlockFee: promptData.unlockFee || 0,
+      isPublished: promptData.isPublished || false,
+      exampleOutput: promptData.exampleOutput || null
     };
+    
+    // If this is a published prompt, we would typically:
+    // 1. Charge the user for generating the example
+    // 2. Update the isPublished status in the database
+    // 3. Make it available in the marketplace
+    if (promptData.isPublished) {
+      console.log('Publishing prompt:', newPrompt.id);
+      // In a real implementation, this would make an API call to:
+      // - Generate and save an example output
+      // - Charge the user for the example generation
+      // - Update the prompt status to published
+    }
     
     console.log('Created new prompt:', newPrompt);
     return newPrompt;
@@ -137,5 +156,48 @@ export async function ratePrompt(promptId: string, rating: number): Promise<bool
   } catch (error) {
     console.error(`Error rating prompt ${promptId}:`, error);
     throw new Error('Failed to rate prompt');
+  }
+}
+
+/**
+ * Publish a prompt to make it available in the marketplace
+ * This will generate an example output and charge the user
+ */
+export async function publishPrompt(promptId: string): Promise<{
+  success: boolean;
+  prompt?: Prompt;
+  exampleOutput?: string;
+  error?: string;
+}> {
+  try {
+    // In a real implementation, this would call the API
+    const response = await fetch('/api/prompts/publish', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ promptId }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      return {
+        success: false,
+        error: error.message || 'Failed to publish prompt',
+      };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      prompt: data.prompt,
+      exampleOutput: data.exampleOutput,
+    };
+  } catch (error) {
+    console.error(`Error publishing prompt ${promptId}:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to publish prompt',
+    };
   }
 }

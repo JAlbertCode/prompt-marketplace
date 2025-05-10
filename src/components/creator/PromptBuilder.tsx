@@ -29,6 +29,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [creatorFee, setCreatorFee] = useState(0);
+  const [unlockFee, setUnlockFee] = useState(0);
   const [creditCost, setCreditCost] = useState(0);
   const [model, setModel] = useState<string>('gpt-4o');
   const [imageModel, setImageModel] = useState<ImageModel | undefined>(undefined);
@@ -78,6 +79,11 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         const fee = typeof initialPrompt.creatorFee === 'number' ? initialPrompt.creatorFee : 0;
         setCreatorFee(fee);
         initializedFields.creatorFee = fee;
+        
+        // Set unlock fee if available
+        const unlockFeeValue = typeof initialPrompt.unlockFee === 'number' ? initialPrompt.unlockFee : 0;
+        setUnlockFee(unlockFeeValue);
+        initializedFields.unlockFee = unlockFeeValue;
         
         const cost = typeof initialPrompt.creditCost === 'number' ? initialPrompt.creditCost : 0;
         setCreditCost(cost);
@@ -277,6 +283,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
       model,
       creditCost,
       creatorFee,
+      unlockFee,
       isPrivate,
       capabilities,
       outputType,
@@ -451,6 +458,27 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
             </div>
             
             <div className="mt-4 pt-3 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-800 mb-2">System Prompt Unlock Fee:</h4>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-700">Fee to unlock your system prompt:</span>
+                <div className="flex">
+                  <input
+                    type="number"
+                    id="unlockFee"
+                    value={unlockFee}
+                    onChange={(e) => setUnlockFee(Math.max(0, parseInt(e.target.value) || 0))}
+                    min="0"
+                    className="w-24 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-right"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 pt-1">credits</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Set a price for users to unlock and view your system prompt. Set to 0 for free access.
+              </p>
+            </div>
+            
+            <div className="mt-4 pt-3 border-t border-gray-200">
               <h4 className="text-sm font-medium text-gray-800 mb-2">What users get for their money:</h4>
               <div className="bg-blue-50 p-2 rounded-md text-sm">
                 <div className="flex justify-between mb-1">
@@ -614,6 +642,31 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
         </div>
       </div>
       
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-xl font-bold mb-4">Publishing Options</h2>
+        
+        <div className="flex items-center space-x-2 mb-4">
+          <input
+            type="checkbox"
+            id="isPublished"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          />
+          <label htmlFor="isPublished" className="text-sm text-gray-700">
+            Publish to marketplace
+          </label>
+        </div>
+        
+        <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-800">
+          <p>
+            <strong>Important:</strong> When publishing your prompt to the marketplace, 
+            the system will automatically generate an example output using your prompt. 
+            This will cost you credits equal to one run of your prompt.
+          </p>
+        </div>
+      </div>
+      
       <div className="flex justify-end space-x-4">
         {onCancel && (
           <button
@@ -628,7 +681,7 @@ const PromptBuilder: React.FC<PromptBuilderProps> = ({
           type="submit"
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
-          Save Prompt
+          {isPublished ? 'Save & Publish Prompt' : 'Save Prompt'}
         </button>
       </div>
     </form>

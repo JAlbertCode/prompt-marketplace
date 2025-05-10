@@ -8,7 +8,10 @@ export interface Prompt {
   visibility: 'public' | 'private' | 'unlisted';
   tags: string[];
   price: number;
+  unlockFee: number; // Fee to unlock and view the system prompt
   isFavorite: boolean;
   createdAt: string;
   runs?: number;
+  isPublished?: boolean;
+  exampleOutput?: string | null;
 }

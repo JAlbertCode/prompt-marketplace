@@ -22,8 +22,12 @@ export default function ContentPage() {
     console.log('Content page mounted, loading prompts');
     
     // Attempt to force reload store data
-    const reloaded = forceReloadStore('prompt-storage');
-    console.log('Store reload attempt:', reloaded ? 'successful' : 'failed');
+    try {
+      const reloaded = forceReloadStore('prompt-storage');
+      console.log('Store reload attempt:', reloaded ? 'successful' : 'failed');
+    } catch (error) {
+      console.error('Error reloading store:', error);
+    }
     
     // Get prompts where this user is the creator
     const userPrompts = promptStore.prompts?.filter(
@@ -33,6 +37,17 @@ export default function ContentPage() {
     setMyPrompts(userPrompts);
     console.log(`Found ${userPrompts.length} prompts created by user`);
   }, [promptStore, refreshKey]);
+  
+  // Add listener for storage events to catch updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log('Storage change detected, refreshing prompts');
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   
   // Function to refresh data
   const refreshData = () => {

@@ -66,7 +66,7 @@ export default function Hero() {
           </button>
           
           <button 
-            onClick={() => router.push('/submit')}
+            onClick={() => router.push('/create')}
             className="px-8 py-3 bg-blue-800 text-white font-medium rounded-lg hover:bg-blue-900 border border-blue-400/30 flex items-center transition-colors"
           >
             Create Prompt

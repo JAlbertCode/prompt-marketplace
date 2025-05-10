@@ -5,7 +5,6 @@
  * - Creating Stripe Checkout sessions
  * - Managing successful/cancelled payments
  * - Adding purchased credits to user accounts
- * - Tracking email events for marketing automation
  * 
  * Credit bundles from instructions:
  * Price    Base      Bonus     Total
@@ -21,8 +20,12 @@
 
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { getCreditBundles, addCredits } from '@/lib/credits';
-import { trackEvent } from '@/lib/email/brevo';
+import { trackEvent } from '@/lib/email/sendEmail';
 import { prisma } from '@/lib/db';
+
+// Create and export the Stripe server-side instance
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+export { stripe };
 
 // Use environment variable for Stripe publishable key
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
@@ -70,9 +73,6 @@ export async function createCheckoutSession(
   if (!bundle) {
     throw new Error(`Credit bundle ${bundleId} not found`);
   }
-  
-  // Import Stripe server-side
-  const stripe = require('stripe')(stripeSecretKey);
   
   try {
     // Create Stripe Checkout session
@@ -126,9 +126,6 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
     totalCredits: number;
   };
 }> {
-  // Import Stripe server-side
-  const stripe = require('stripe')(stripeSecretKey);
-  
   try {
     // Retrieve the session to get metadata
     const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -155,7 +152,7 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
       parseInt(baseCredits, 10),
       'purchased',
       `stripe_payment:${sessionId}`,
-      365 // Purchased credits expire after 1 year
+      null // Purchased credits don't expire
     );
     
     // Add bonus credits if applicable
@@ -169,32 +166,28 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
       );
     }
     
-    // Track credit purchase event for email marketing
-    // Get the user email
-    if (process.env.BREVO_API_KEY) {
-      try {
-        const user = await prisma.user.findUnique({
-          where: { id: userId }
+    // Track credit purchase event
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true }
+      });
+      
+      if (user?.email) {
+        await trackEvent(user.email, 'credits_purchased', {
+          BUNDLE_ID: bundleId,
+          BUNDLE_NAME: bundle.name,
+          PRICE: bundle.price,
+          BASE_CREDITS: parseInt(baseCredits, 10),
+          BONUS_CREDITS: parseInt(bonusCredits, 10),
+          TOTAL_CREDITS: totalCredits,
+          PURCHASE_DATE: new Date().toISOString(),
+          TRANSACTION_ID: sessionId
         });
-        
-        if (user?.email) {
-          await trackEvent(user.email, 'credits_purchased', {
-            BUNDLE_ID: bundleId,
-            BUNDLE_NAME: bundle.name,
-            PRICE: bundle.price,
-            BASE_CREDITS: parseInt(baseCredits, 10),
-            BONUS_CREDITS: parseInt(bonusCredits, 10),
-            TOTAL_CREDITS: totalCredits,
-            PURCHASE_DATE: new Date().toISOString(),
-            TRANSACTION_ID: sessionId
-          });
-          
-          console.log(`Credit purchase event tracked for user ${userId}`);
-        }
-      } catch (emailError) {
-        // Log but don't fail if email tracking fails
-        console.error('Error tracking credit purchase event:', emailError);
       }
+    } catch (emailError) {
+      // Log but don't fail if tracking fails
+      console.error('Error tracking purchase event:', emailError);
     }
     
     // Return success and transaction details
@@ -217,17 +210,13 @@ export async function handleSuccessfulPayment(sessionId: string): Promise<{
 
 /**
  * Track when a user views a credit purchase page
- * Important for email remarketing campaigns
  */
 export async function trackCreditViewEvent(userId: string, bundleId: string): Promise<boolean> {
   try {
-    // Only track if Brevo is configured
-    if (!process.env.BREVO_API_KEY) {
-      return false;
-    }
-    
+    // Get user email
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { email: true }
     });
     
     if (!user?.email) {
@@ -242,6 +231,7 @@ export async function trackCreditViewEvent(userId: string, bundleId: string): Pr
       return false;
     }
     
+    // Track the view event
     await trackEvent(user.email, 'credit_page_viewed', {
       BUNDLE_ID: bundleId,
       BUNDLE_NAME: bundle.name,
@@ -254,99 +244,6 @@ export async function trackCreditViewEvent(userId: string, bundleId: string): Pr
   } catch (error) {
     console.error('Error tracking credit view event:', error);
     return false;
-  }
-}
-
-/**
- * Retrieve payment intent status
- * @param paymentIntentId The payment intent ID
- * @returns Payment intent status
- */
-export async function getPaymentIntentStatus(paymentIntentId: string): Promise<string> {
-  // Import Stripe server-side
-  const stripe = require('stripe')(stripeSecretKey);
-  
-  try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    return paymentIntent.status;
-  } catch (error) {
-    console.error('Error retrieving payment intent:', error);
-    throw new Error('Failed to retrieve payment status');
-  }
-}
-
-/**
- * Get list of previous transactions for a user
- * @param userId The user ID
- * @param limit Maximum number of transactions to return
- * @returns Array of transaction details
- */
-export async function getUserTransactions(
-  userId: string,
-  limit: number = 10
-): Promise<Array<{
-  id: string;
-  date: Date;
-  amount: number;
-  currency: string;
-  description: string;
-  bundleId: string;
-  credits: number;
-  status: string;
-}>> {
-  // Import Stripe server-side
-  const stripe = require('stripe')(stripeSecretKey);
-  
-  try {
-    // Get payment intents for the user
-    const paymentIntents = await stripe.paymentIntents.list({
-      customer: userId, // Assuming user ID is the same as Stripe customer ID
-      limit,
-    });
-    
-    // Map payment intents to transaction objects
-    return paymentIntents.data.map((intent: any) => {
-      const metadata = intent.metadata || {};
-      return {
-        id: intent.id,
-        date: new Date(intent.created * 1000), // Convert from Unix timestamp
-        amount: intent.amount / 100, // Convert from cents to dollars
-        currency: intent.currency,
-        description: metadata.description || 'Credit purchase',
-        bundleId: metadata.bundleId || 'unknown',
-        credits: parseInt(metadata.totalCredits, 10) || 0,
-        status: intent.status,
-      };
-    });
-  } catch (error) {
-    console.error('Error retrieving user transactions:', error);
-    return [];
-  }
-}
-
-/**
- * Create a Stripe webhook handler
- * @param req The HTTP request
- * @param secret The webhook secret
- * @returns The event if signature verification succeeds
- */
-export async function constructStripeEvent(req: Request, secret: string): Promise<any> {
-  // Import Stripe server-side
-  const stripe = require('stripe')(stripeSecretKey);
-  
-  const signature = req.headers.get('stripe-signature');
-  
-  if (!signature) {
-    throw new Error('No Stripe signature in request');
-  }
-  
-  try {
-    const body = await req.text();
-    const event = stripe.webhooks.constructEvent(body, signature, secret);
-    return event;
-  } catch (error) {
-    console.error('Error verifying webhook signature:', error);
-    throw new Error('Failed to verify webhook signature');
   }
 }
 
@@ -372,7 +269,7 @@ export async function handleWebhookEvent(event: any): Promise<{ success: boolean
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object;
         // Handle successful payment intent
-        // This is often redundant with checkout.session.completed for simple cases
+        console.log(`Payment intent succeeded: ${paymentIntent.id}`);
         break;
       }
       

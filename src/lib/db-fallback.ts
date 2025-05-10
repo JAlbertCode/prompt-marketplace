@@ -99,6 +99,15 @@ function createFallbackProxy(target: any, isConnected: boolean) {
         return Reflect.get(target, prop, receiver);
       }
       
+      // Handle transaction method
+      if (prop === '$transaction') {
+        return async (callback: any) => {
+          console.log('Using mock transaction');
+          // Just execute the callback directly with our proxy as the transaction client
+          return await callback(receiver);
+        };
+      }
+      
       // Handle each model's fallback operations
       switch (prop) {
         case 'creditBucket':

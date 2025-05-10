@@ -325,12 +325,14 @@ export function getModelById(modelId: string): ModelDefinition | undefined {
   return models.find((model) => model.id === modelId);
 }
 
+export type PromptLength = 'short' | 'medium' | 'long';
+
 /**
  * Calculate cost for a prompt based on model and length
  */
 export function calculatePromptCost(
   modelId: string, 
-  promptLength: 'short' | 'medium' | 'long',
+  promptLength: PromptLength,
   creatorFee: number = 0
 ): number {
   const model = getModelById(modelId);
@@ -349,12 +351,41 @@ export function calculatePromptCost(
 }
 
 /**
+ * Calculate credit cost for a prompt execution
+ * This is an alias for calculatePromptCost for backward compatibility
+ */
+export function calculatePromptCreditCost(
+  modelId: string,
+  promptLength: PromptLength,
+  creatorFeePercentage: number = 0
+): number {
+  const model = getModelById(modelId);
+  
+  if (!model) {
+    throw new Error(`Model with ID '${modelId}' not found`);
+  }
+  
+  // Get base cost for the prompt length
+  const baseCost = model.cost[promptLength];
+  
+  // Calculate creator fee if percentage is provided
+  const creatorFee = creatorFeePercentage > 0 
+    ? Math.floor(baseCost * (creatorFeePercentage / 100)) 
+    : 0;
+  
+  // Add creator fee to base cost
+  const totalCost = baseCost + creatorFee;
+  
+  return totalCost;
+}
+
+/**
  * Determine prompt length category based on token/character count
  */
 export function getPromptLengthCategory(
   tokenCount: number,
   provider: string
-): 'short' | 'medium' | 'long' {
+): PromptLength {
   // Different providers may have different thresholds
   if (provider === 'openai') {
     if (tokenCount <= 1000) return 'short';

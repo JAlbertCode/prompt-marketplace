@@ -12,6 +12,7 @@ import MarketplaceSearch from '@/components/marketplace/FilterBar';
 import Hero from '@/components/layout/Hero';
 import { toast } from 'react-hot-toast';
 import { Prompt, PromptFlow, SonarModel, ItemType } from '@/types';
+import { forceReloadStore } from '@/lib/hydrationHelper';
 
 // This is the original home page content, now moved to a separate component
 export default function HomePage() {
@@ -25,6 +26,23 @@ export default function HomePage() {
   // Force refresh of data when component mounts
   useEffect(() => {
     console.log('Home component mounted, fetching data from API');
+    try {
+      const reloaded = forceReloadStore('prompt-storage');
+      console.log('Store reload attempt on homepage:', reloaded ? 'successful' : 'failed');
+    } catch (error) {
+      console.error('Error reloading store on homepage:', error);
+    }
+  }, []);
+  
+  // Add listener for storage events to catch updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      console.log('Storage change detected on homepage, refreshing');
+      setRefreshKey(prev => prev + 1);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   
   // For the MVP, we'll use a mock current user ID

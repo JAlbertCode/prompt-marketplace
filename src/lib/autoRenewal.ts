@@ -12,7 +12,7 @@ import { prisma } from '@/lib/db';
 import { getUserTotalCredits, addCredits } from '@/lib/credits';
 import { getCreditBundles } from '@/lib/credits';
 import { stripe } from '@/lib/payments/stripe';
-import { sendEmail } from '@/lib/email/brevo';
+import { sendEmail } from '@/lib/email/sendEmail';
 
 /**
  * Check if a user's credit balance is below their auto-renewal threshold
@@ -159,93 +159,6 @@ export async function triggerAutoRenewal(userId: string, bundleId: string): Prom
 }
 
 /**
- * Handle a successful payment intent from Stripe for auto-renewal
- */
-export async function handleSuccessfulAutoRenewal(paymentIntent: any): Promise<boolean> {
-  const { userId, bundleId } = paymentIntent.metadata;
-  
-  try {
-    const bundle = getCreditBundles().find(b => b.id === bundleId);
-    
-    if (bundle && userId) {
-      // Add base credits as purchased
-      await addCredits(
-        userId,
-        bundle.baseCredits,
-        'purchased',
-        `auto_renewal_${bundleId}`
-      );
-      
-      // Add bonus credits if any
-      if (bundle.bonusCredits > 0) {
-        await addCredits(
-          userId,
-          bundle.bonusCredits,
-          'bonus',
-          `auto_renewal_bonus_${bundleId}`,
-          90 // 90 days expiry for bonus credits
-        );
-      }
-      
-      // Update auto-renewal log
-      await prisma.autoRenewalLog.update({
-        where: {
-          paymentIntentId: paymentIntent.id
-        },
-        data: {
-          status: 'completed',
-          completedAt: new Date()
-        }
-      });
-      
-      // Reset the auto-renewal attempts counter
-      await prisma.user.update({
-        where: { id: userId },
-        data: { autoRenewalAttempts: 0 }
-      });
-      
-      // Send success notification
-      await sendAutoRenewalSuccessNotification(userId, bundle);
-      
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Error processing successful auto-renewal:', error);
-    return false;
-  }
-}
-
-/**
- * Handle a failed payment intent from Stripe for auto-renewal
- */
-export async function handleFailedAutoRenewal(paymentIntent: any): Promise<boolean> {
-  const { userId, bundleId } = paymentIntent.metadata;
-  
-  try {
-    // Update auto-renewal log
-    await prisma.autoRenewalLog.update({
-      where: {
-        paymentIntentId: paymentIntent.id
-      },
-      data: {
-        status: 'failed',
-        errorMessage: 'Payment failed'
-      }
-    });
-    
-    // Send failure notification
-    await sendAutoRenewalFailureNotification(userId);
-    
-    return true;
-  } catch (error) {
-    console.error('Error processing failed auto-renewal:', error);
-    return false;
-  }
-}
-
-/**
  * Calculate default threshold based on last purchase
  * Default is 10% of the last purchased bundle
  */
@@ -275,26 +188,6 @@ export async function calculateDefaultThreshold(userId: string): Promise<number>
   } catch (error) {
     console.error('Error calculating default threshold:', error);
     return 1000000; // Fall back to 1M credits
-  }
-}
-
-/**
- * Get auto-renewal history for a user
- */
-export async function getUserAutoRenewalHistory(userId: string, limit: number = 10): Promise<any[]> {
-  try {
-    return await prisma.autoRenewalLog.findMany({
-      where: {
-        userId
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit
-    });
-  } catch (error) {
-    console.error('Error getting auto-renewal history:', error);
-    return [];
   }
 }
 

@@ -497,9 +497,22 @@ export const usePromptStore = create<PromptState>(
           return;
         }
         
-        set((state) => ({
-          prompts: state.prompts.filter(prompt => prompt.id !== id)
-        }));
+        const newPrompts = prompts.filter(prompt => prompt.id !== id);
+        set({ prompts: newPrompts });
+        
+        // Force localStorage update to ensure the removal is persisted
+        try {
+          if (typeof window !== 'undefined') {
+            const storeData = { state: { prompts: newPrompts } };
+            localStorage.setItem('prompt-storage', JSON.stringify(storeData));
+            console.log('Manually updated localStorage after prompt removal');
+            
+            // Force window storage event to notify other components
+            window.dispatchEvent(new Event('storage'));
+          }
+        } catch (error) {
+          console.error('Failed to manually update localStorage:', error);
+        }
       },
       
       updatePrompt: (id, promptData) => {

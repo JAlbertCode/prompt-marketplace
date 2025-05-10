@@ -10,8 +10,8 @@ export default function IndexPage() {
     // For debugging
     console.log('Root page loading, redirecting to /home');
     
-    // Just redirect to home
-    router.push('/home');
+    // Use direct window navigation instead of router.push for more reliable redirect
+    window.location.href = '/home';
   }, [router]);
   
   // Show loading until client-side redirect happens

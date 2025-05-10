@@ -1,38 +1,72 @@
 /**
- * Helper functions for dealing with hydration and state management
+ * Hydration Helpers
+ * 
+ * Utilities to help with store hydration and refresh in Zustand
  */
 
 /**
- * Fetch fresh data from the API
- *
- * @param endpoint API endpoint to fetch from
- * @returns Promise with the data
+ * Force reload data from localStorage for a specific store
+ * Useful for refreshing data when it may be out of sync
+ * 
+ * @param storeName The name of the store in localStorage
+ * @returns true if store was found and reloaded, false otherwise
  */
-export async function fetchFromApi<T>(endpoint: string): Promise<T> {
+export function forceReloadStore(storeName: string): boolean {
+  if (typeof window === 'undefined') {
+    return false; // Not in browser environment
+  }
+  
   try {
-    const response = await fetch(`/api/${endpoint}`);
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+    // Get the store data from localStorage
+    const data = localStorage.getItem(storeName);
+    
+    if (data) {
+      // Re-save the data to trigger watchers and force a refresh
+      localStorage.setItem(storeName, data);
+      
+      // Also dispatch a custom event to notify listeners
+      window.dispatchEvent(new CustomEvent('storage-update', { 
+        detail: { store: storeName } 
+      }));
+      
+      return true;
     }
-    return await response.json();
+    
+    return false;
   } catch (error) {
-    console.error(`Failed to fetch from API (${endpoint}):`, error);
-    throw error;
+    console.error(`Error reloading store "${storeName}":`, error);
+    return false;
   }
 }
 
 /**
- * Check if the API endpoint is available
- *
- * @param endpoint API endpoint to check
- * @returns Boolean indicating if the endpoint is available
+ * Clear a specific store from localStorage and memory
+ * 
+ * @param storeName The name of the store in localStorage
+ * @returns true if store was found and cleared, false otherwise
  */
-export async function checkApiEndpoint(endpoint: string): Promise<boolean> {
+export function clearStore(storeName: string): boolean {
+  if (typeof window === 'undefined') {
+    return false; // Not in browser environment
+  }
+  
   try {
-    const response = await fetch(`/api/${endpoint}`, { method: 'HEAD' });
-    return response.ok;
+    // Check if the store exists
+    if (localStorage.getItem(storeName)) {
+      // Remove the store from localStorage
+      localStorage.removeItem(storeName);
+      
+      // Dispatch event to notify listeners
+      window.dispatchEvent(new CustomEvent('storage-clear', { 
+        detail: { store: storeName } 
+      }));
+      
+      return true;
+    }
+    
+    return false;
   } catch (error) {
-    console.error(`Failed to check API endpoint (${endpoint}):`, error);
+    console.error(`Error clearing store "${storeName}":`, error);
     return false;
   }
 }

@@ -19,7 +19,7 @@ import { X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Prompt } from '@/types';
 import { usePromptStore } from '@/store/usePromptStore';
-import { createPrompt } from '@/lib/prompts';
+import { createPrompt, publishPrompt } from '@/lib/prompts';
 
 interface CreatePromptFormProps {
   onSubmit?: (promptData: Prompt) => void;
@@ -34,6 +34,8 @@ const promptSchema = z.object({
   visibility: z.enum(['private', 'public', 'unlisted']),
   tags: z.array(z.string()),
   price: z.number().min(0),
+  unlockFee: z.number().min(0),
+  isPublished: z.boolean().optional(),
 });
 
 export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFormProps) {
@@ -49,6 +51,8 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
     tags: [] as string[],
     tagInput: '',
     price: 0,
+    unlockFee: 0,  // Fee to unlock the system prompt
+    isPublished: false,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -97,7 +101,12 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         ? parseInt(promptData.price, 10) || 0 
         : promptData.price;
 
-      // Create the prompt via API (mock)
+      // Parse unlock fee as number
+      const unlockFee = typeof promptData.unlockFee === 'string'
+        ? parseInt(promptData.unlockFee, 10) || 0
+        : promptData.unlockFee;
+
+      // Create the prompt via API
       const newPrompt = await createPrompt({
         title: promptData.title,
         description: promptData.description,
@@ -106,6 +115,8 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         visibility: promptData.visibility,
         tags: promptData.tags,
         price,
+        unlockFee,
+        isPublished: false, // Start as unpublished, we'll publish separately if needed
       });
 
       console.log('Created prompt:', newPrompt);
@@ -114,7 +125,35 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
       const promptId = addPrompt(newPrompt);
       console.log('Added to store with ID:', promptId);
 
-      toast.success('Prompt created successfully');
+      // If the user wants to publish, do that as a separate step
+      if (promptData.isPublished) {
+        toast.loading('Publishing prompt to marketplace...', {
+          id: 'publishing-prompt',
+        });
+
+        const publishResult = await publishPrompt(newPrompt.id);
+        
+        if (!publishResult.success) {
+          toast.error(`Failed to publish: ${publishResult.error}`, {
+            id: 'publishing-prompt',
+          });
+          // Continue with the process even if publishing fails
+        } else {
+          toast.success('Prompt published successfully!', {
+            id: 'publishing-prompt',
+          });
+          // Update the prompt in the store with the published status
+          if (publishResult.prompt) {
+            addPrompt({
+              ...newPrompt,
+              isPublished: true,
+              exampleOutput: publishResult.exampleOutput || null,
+            });
+          }
+        }
+      } else {
+        toast.success('Prompt created successfully');
+      }
       
       if (onSubmit) {
         onSubmit(newPrompt);
@@ -235,7 +274,7 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="price">Price (in credits)</Label>
+        <Label htmlFor="price">Run Price (in credits)</Label>
         <Input 
           id="price" 
           name="price"
@@ -248,6 +287,21 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         <p className="text-xs text-gray-500">Set to 0 for free access</p>
       </div>
       
+      <div className="space-y-2">
+        <Label htmlFor="unlockFee">System Prompt Unlock Fee (in credits)</Label>
+        <Input 
+          id="unlockFee" 
+          name="unlockFee"
+          type="number"
+          min="0"
+          value={promptData.unlockFee.toString()}
+          onChange={handleChange}
+          placeholder="0 for free access to the system prompt"
+        />
+        <p className="text-xs text-gray-500">Fee to unlock and view the system prompt (0 for free)</p>
+      </div>
+      
+      
       <div className="flex justify-between mt-8">
         <Button 
           type="button" 
@@ -256,12 +310,25 @@ export default function CreatePromptForm({ onSubmit, onCancel }: CreatePromptFor
         >
           Cancel
         </Button>
-        <Button 
-          type="submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Creating...' : 'Create Prompt'}
-        </Button>
+        <div className="space-x-2">
+          <Button 
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Prompt'}
+          </Button>
+          <Button 
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setPromptData(prev => ({ ...prev, isPublished: true }));
+              handleSubmit(new Event('submit') as any);
+            }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Publishing...' : 'Create & Publish'}
+          </Button>
+        </div>
       </div>
     </form>
   );

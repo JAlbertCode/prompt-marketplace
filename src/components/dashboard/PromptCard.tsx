@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { LuStar, LuTrash2, LuSettings } from 'react-icons/lu';
+import { LuStar, LuTrash2, LuSettings, LuGlobe } from 'react-icons/lu';
 import Button from '@/components/shared/Button';
-import { toggleFavoritePrompt } from '@/lib/prompts';
+import { toggleFavoritePrompt, publishPrompt } from '@/lib/prompts';
 import { toast } from 'react-hot-toast';
 
 interface PromptCardProps {
@@ -12,6 +12,7 @@ interface PromptCardProps {
   author: string;
   tags: string[];
   isFavorite: boolean;
+  isPublished?: boolean;
   createdAt: string;
 }
 
@@ -22,11 +23,14 @@ export default function PromptCard({
   author, 
   tags, 
   isFavorite, 
+  isPublished = false,
   createdAt 
 }: PromptCardProps) {
   const router = useRouter();
   const [favorite, setFavorite] = useState(isFavorite);
+  const [published, setPublished] = useState(isPublished);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   // Only enable client-side features after hydration
@@ -73,6 +77,34 @@ export default function PromptCard({
     router.push(`/run/${id}`);
   };
 
+  const handlePublish = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (published) {
+      toast.info('This prompt is already published');
+      return;
+    }
+    
+    setIsPublishing(true);
+    toast.loading('Publishing prompt...', { id: 'publish-toast' });
+    
+    try {
+      const result = await publishPrompt(id);
+      
+      if (result.success) {
+        setPublished(true);
+        toast.success('Prompt published successfully', { id: 'publish-toast' });
+      } else {
+        toast.error(`Failed to publish: ${result.error || 'Unknown error'}`, { id: 'publish-toast' });
+      }
+    } catch (error) {
+      console.error('Failed to publish prompt:', error);
+      toast.error('Failed to publish prompt', { id: 'publish-toast' });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const handleCardClick = () => {
     router.push(`/prompt/${id}`);
   };
@@ -88,8 +120,14 @@ export default function PromptCard({
     >
       <div className="p-4 flex flex-col h-full">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gray-800 truncate">
+          <h3 className="text-lg font-semibold text-gray-800 truncate flex items-center">
             {title}
+            {published && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 text-green-800 rounded-full flex items-center">
+                <LuGlobe className="h-3 w-3 mr-1" />
+                Published
+              </span>
+            )}
           </h3>
           <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
             <button
@@ -100,6 +138,24 @@ export default function PromptCard({
             >
               <LuStar className="h-4 w-4" fill={favorite ? 'currentColor' : 'none'} />
             </button>
+            {!published && (
+              <button
+                onClick={handlePublish}
+                className="text-sm text-green-500 hover:text-green-700"
+                aria-label="Publish prompt"
+                disabled={isPublishing}
+                title="Publish to marketplace"
+              >
+                {isPublishing ? (
+                  <svg className="animate-spin h-4 w-4 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <LuGlobe className="h-4 w-4" />
+                )}
+              </button>
+            )}
             <button
               onClick={handleRemoveClick}
               className="text-sm text-red-500 hover:text-red-700"

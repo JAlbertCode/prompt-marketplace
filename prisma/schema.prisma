@@ -86,6 +86,8 @@ model Prompt {
   tags             String[]        @default([])
   creditCost       Int             @default(100)     // Base cost in credits
   creatorFee       Int             @default(0)       // Creator's fee in credits
+  unlockFee        Int             @default(0)       // Fee to unlock system prompt
+  exampleOutput    String?         @db.Text          // Example output for marketplace
   userId           String?
   user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt        DateTime        @default(now())
