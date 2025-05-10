@@ -24,14 +24,28 @@ Credits are stored in buckets:
 
 Burn priority: purchased → bonus → referral
 
+### Threshold-Based Auto-Renewal
+
+Unlike traditional subscription models, PromptFlow uses a threshold-based auto-renewal system:
+
+- Users enable/disable auto-renewal in settings
+- Users set a minimum credit threshold (default: 10% of last purchase)
+- Users select which credit bundle to purchase when threshold is reached
+- System automatically purchases new credits when balance falls below threshold
+- Payment uses customer's default payment method stored in Stripe
+
+See [THRESHOLD_RENEWAL.md](THRESHOLD_RENEWAL.md) for detailed implementation.
+
 ## Credit Bundles
-| Price | Base | Bonus | Total |
-|-------|------|-------|-------|
-| $10 | 10M | 0 | 10M |
-| $25 | 25M | 2.5M | 27.5M |
-| $50 | 50M | 7.5M | 57.5M |
-| $100 | 100M | 20M | 120M |
-| Enterprise | 100M | 40M | 140M |
+| Price | Base | Bonus | Total | Price/Million |
+|-------|------|-------|-------|-------------|
+| $10 | 10M | 0 | 10M | $1.00 |
+| $25 | 25M | 2.5M | 27.5M | $0.91 |
+| $50 | 50M | 7.5M | 57.5M | $0.87 |
+| $100 | 100M | 20M | 120M | $0.83 |
+| Enterprise | 100M | 40M | 140M | $0.71* |
+
+*Enterprise tier requires a minimum monthly burn of 1.4M credits.
 
 ## Email Automation System
 

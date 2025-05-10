@@ -14,6 +14,7 @@
 
 import { prisma } from '@/lib/db';
 import { PromptLength, calculatePromptCreditCost, getModelById } from '@/lib/models/modelRegistry';
+import { checkAutoRenewalThreshold } from '@/lib/autoRenewal';
 
 export type CreditBucketType = 'purchased' | 'bonus' | 'referral';
 
@@ -199,6 +200,9 @@ export async function burnCredits(options: BurnCreditsOptions): Promise<boolean>
         });
       }
     }
+    
+    // Check if auto-renewal threshold is reached
+    await checkAutoRenewalThreshold(userId);
     
     return true;
   });

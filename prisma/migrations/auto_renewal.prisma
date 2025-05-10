@@ -1,0 +1,31 @@
+// Auto-Renewal Migration
+
+// Add auto-renewal fields to User model
+model User {
+  // existing fields...
+  
+  // Auto-renewal settings
+  autoRenewalEnabled     Boolean   @default(false)
+  autoRenewalThreshold   Int       @default(1000000) // 1M credits by default
+  autoRenewalBundleId    String?   // ID of the bundle to purchase
+  lastAutoRenewalAttempt DateTime?
+  autoRenewalAttempts    Int       @default(0)
+  autoRenewalLogs        AutoRenewalLog[]
+}
+
+// New model for tracking auto-renewal attempts
+model AutoRenewalLog {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bundleId        String    // ID of the bundle attempted to purchase
+  amount          Float     // Amount in dollars
+  paymentIntentId String?   // Stripe payment intent ID
+  status          String    // 'pending', 'completed', 'failed'
+  errorMessage    String?   // Error message if failed
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+  
+  @@index([userId])
+  @@index([status])
+}
