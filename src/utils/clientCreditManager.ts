@@ -25,9 +25,10 @@ export async function getUserCredits(userId: string): Promise<number> {
   } catch (error) {
     console.error('Error fetching credits:', error);
     
-    // In case of errors (DB fallback mode), return a default value
-    // This matches the fallback behavior in the server-side code
-    return 10_000_000; // Default to 10M credits in fallback mode
+    // Don't use fallbacks for credits - show a proper error
+    // and return 0 to indicate an error condition
+    toast.error('Failed to load credit balance. Please try again.');
+    return 0;
   }
 }
 

@@ -21,8 +21,8 @@ export async function GET(request: Request) {
     console.error('Error getting credit balance:', error);
     
     return NextResponse.json(
-      { error: 'Failed to get credit balance', fallback: true, balance: 10000000 },
-      { status: 200 } // Return 200 with fallback data
+      { error: 'Failed to get credit balance' },
+      { status: 500 } // Return 500 to indicate server error
     );
   }
 }

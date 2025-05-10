@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 import { JWT } from "next-auth/jwt";
+import { completeUserOnboarding } from "@/lib/userOnboarding";
 
 // Define types for our session
 interface ExtendedJWT extends JWT {
@@ -36,9 +37,17 @@ export const authOptions = {
     async jwt({ token, account, profile }) {
       // Initial sign in
       if (account && profile) {
-        // Add initial credits for new users
-        if (!token.credits) {
-          token.credits = 1000; // Starting with 1000 credits ($1.00)
+        // If this is a new sign-in, ensure the user has credits
+        if (token.sub) {
+          try {
+            // Call onboarding to add default credits (1 million) if needed
+            await completeUserOnboarding(token.sub);
+            
+            // Update the token to reflect new default credits
+            token.credits = 1_000_000;
+          } catch (error) {
+            console.error('Error during user onboarding:', error);
+          }
         }
       }
       
@@ -57,6 +66,18 @@ export const authOptions = {
       return session;
     },
   },
+  events: {
+    // Run onboarding when a user signs in
+    async signIn({ user }) {
+      if (user?.id) {
+        try {
+          await completeUserOnboarding(user.id);
+        } catch (error) {
+          console.error('Error during sign-in onboarding:', error);
+        }
+      }
+    }
+  }
 };
 
 const handler = NextAuth(authOptions);

@@ -42,11 +42,15 @@ export async function POST(request: Request) {
       },
     });
 
-    // Create user credits with initial balance
-    await prisma.userCredits.create({
+    // Create initial credit bucket with 1M credits ($1.00)
+    await prisma.creditBucket.create({
       data: {
         userId: user.id,
-        balance: 1000, // Give 1000 initial credits ($1.00)
+        type: 'bonus',
+        amount: 1000000, // 1,000,000 credits = $1.00
+        remaining: 1000000,
+        source: 'new_user_bonus',
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days expiry
       },
     });
 
@@ -54,8 +58,8 @@ export async function POST(request: Request) {
     await prisma.creditTransaction.create({
       data: {
         userId: user.id,
-        amount: 1000,
-        type: "PURCHASE",
+        amount: 1000000,
+        type: "BONUS",
         description: "Initial signup bonus credits",
       },
     });

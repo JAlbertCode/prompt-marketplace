@@ -81,9 +81,9 @@ export async function getUserTotalCredits(userId: string): Promise<number> {
     return buckets.reduce((total, bucket) => total + bucket.remaining, 0);
   } catch (error) {
     console.error('Error getting total credits:', error);
-    
-    // In case of errors, return a default amount so the application doesn't crash
-    return 1000; // Default to 1000 credits
+    // Don't use fallback values - return 0 to indicate an error condition
+    // The UI should handle this by showing an error message
+    return 0;
   }
 }
 
@@ -229,20 +229,7 @@ export async function addCredits(
     });
   } catch (error) {
     console.error('Error adding credits:', error);
-    
-    // Return a mock credit bucket in case of database errors
-    // This ensures the application doesn't crash
-    return {
-      id: 'mock-' + Date.now(),
-      userId,
-      type,
-      amount,
-      remaining: amount,
-      source,
-      expiresAt: expiryDays ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000) : null,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    throw error; // Propagate the error to be handled by caller
   }
 }
 

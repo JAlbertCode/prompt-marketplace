@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
@@ -12,23 +12,31 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 const Header: React.FC = () => {
-  const { credits, addCredits } = useCreditStore();
+  const { credits, addCredits, fetchCredits } = useCreditStore();
   const { favorites } = useFavoriteStore();
   const pathname = usePathname();
-  const isLowCredits = credits < 200;
+  const isLowCredits = credits < 5000;
   const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const router = useRouter();
+  
+  // Refresh credits when component mounts or session changes
+  React.useEffect(() => {
+    if (status === 'authenticated') {
+      fetchCredits();
+    }
+  }, [status, fetchCredits]);
   
   // Check if a navigation link is active
   const isActive = (path: string) => {
     return pathname === path;
   };
   
-  // Add 1000 credits for testing
+  // Add 1,000,000 credits for testing
   const handleAddTestCredits = () => {
-    addCredits(1000, 'Test credit addition');
-    toast.success('Added 1000 test credits!');
+    addCredits(1000000, 'Test credit addition');
+    toast.success('Added 1,000,000 test credits!');
+    fetchCredits(); // Refresh credits immediately
   };
 
   const toggleUserMenu = () => {
@@ -61,7 +69,7 @@ const Header: React.FC = () => {
               className="flex items-center text-blue-600 font-bold text-xl"
             >
               <span className="mr-2">🔍</span>
-              <span>Sonar Prompt Marketplace</span>
+              <span>PromptFlow Marketplace</span>
             </Link>
           </div>
           
@@ -110,18 +118,18 @@ const Header: React.FC = () => {
             </Link>
             
             {/* Credit display */}
-            <div className={`
-              px-3 py-1 rounded-full text-sm font-medium
-              ${isLowCredits 
-                ? 'bg-red-100 text-red-800' 
-                : 'bg-blue-100 text-blue-800'
-              }
-            `}>
-              {isLowCredits && (
-                <span className="mr-1">⚠️</span>
-              )}
-              <span>{session?.user?.credits || credits} Credits</span>
-            </div>
+            <Link
+              href="/dashboard/credits"
+              className={`
+                px-3 py-1 rounded-full text-sm font-medium flex items-center
+                ${isLowCredits 
+                  ? 'bg-red-100 text-red-800 hover:bg-red-200' 
+                  : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                }
+              `}
+            >
+              <span>{credits.toLocaleString()} Credits</span>
+            </Link>
             
             {!session && status !== 'loading' ? (
               <div className="flex space-x-2">
@@ -213,7 +221,7 @@ const Header: React.FC = () => {
                 onClick={handleAddTestCredits}
                 className="ml-2 text-xs px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
               >
-                Test: Add Credits
+                Test: Add 1M Credits
               </button>
             )}
           </nav>

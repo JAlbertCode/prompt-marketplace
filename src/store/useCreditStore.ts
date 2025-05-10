@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { PromptLength } from '@/lib/models/modelRegistry';
 
 interface CreditTransaction {
@@ -27,6 +28,7 @@ interface CreditStore {
   error: string | null;
   creditBreakdown: CreditBreakdown;
   recentTransactions: CreditTransaction[];
+  warningLevel?: 'none' | 'low' | 'critical';
   
   // Actions
   fetchCredits: () => Promise<void>;
@@ -37,136 +39,184 @@ interface CreditStore {
   clearError: () => void;
 }
 
-export const useCreditStore = create<CreditStore>((set, get) => ({
-  credits: 0,
-  isLoading: false,
-  error: null,
-  creditBreakdown: {
-    purchased: 0,
-    bonus: 0,
-    referral: 0
-  },
-  recentTransactions: [],
-  
-  fetchCredits: async () => {
-    try {
-      set({ isLoading: true, error: null });
+export const useCreditStore = create<CreditStore>(
+  persist(
+    (set, get) => ({
+      credits: 0,
+      isLoading: false,
+      error: null,
+      creditBreakdown: {
+        purchased: 0,
+        bonus: 0,
+        referral: 0
+      },
+      recentTransactions: [],
+      warningLevel: 'none',
       
-      const response = await fetch('/api/credits');
+      fetchCredits: async () => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          const response = await fetch('/api/credits');
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to fetch credits');
+          }
+          
+          const data = await response.json();
+          
+          // Calculate warning level
+          let warningLevel: 'none' | 'low' | 'critical' = 'none';
+          if (data.totalCredits < 100) {
+            warningLevel = 'critical';
+          } else if (data.totalCredits < 5000) {
+            warningLevel = 'low';
+          }
+          
+          set({
+            credits: data.totalCredits,
+            creditBreakdown: data.creditBreakdown,
+            recentTransactions: data.recentTransactions,
+            warningLevel,
+            isLoading: false
+          });
+        } catch (error) {
+          console.error('Error fetching credits:', error);
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to fetch credits',
+            isLoading: false
+          });
+        }
+      },
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to fetch credits');
+      addCredits: async (amount: number, source: string) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          const response = await fetch('/api/credits/add', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              amount,
+              source
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to add credits');
+          }
+          
+          const data = await response.json();
+          
+          const newTotal = get().credits + amount;
+          
+          // Recalculate warning level
+          let warningLevel: 'none' | 'low' | 'critical' = 'none';
+          if (newTotal < 100) {
+            warningLevel = 'critical';
+          } else if (newTotal < 5000) {
+            warningLevel = 'low';
+          }
+          
+          set({
+            credits: newTotal,
+            warningLevel,
+            isLoading: false
+          });
+          
+          // Refresh all credit data
+          get().fetchCredits();
+          
+          return data;
+        } catch (error) {
+          console.error('Error adding credits:', error);
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to add credits',
+            isLoading: false
+          });
+        }
+      },
+      
+      deductCredits: async (amount: number, reason: string, itemId?: string, itemType?: string) => {
+        try {
+          set({ isLoading: true, error: null });
+          
+          // For this dummy function, we'll just assume it's working using a generic model
+          // In real implementation, you'd need to call the API with full model details
+          const response = await fetch('/api/credits/deduct', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              modelId: 'gpt-4o', // Placeholder model
+              promptLength: 'medium',
+              itemType,
+              itemId
+            })
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Failed to deduct credits');
+          }
+          
+          const data = await response.json();
+          
+          const newTotal = Math.max(0, get().credits - amount);
+          
+          // Recalculate warning level
+          let warningLevel: 'none' | 'low' | 'critical' = 'none';
+          if (newTotal < 100) {
+            warningLevel = 'critical';
+          } else if (newTotal < 5000) {
+            warningLevel = 'low';
+          }
+          
+          set({
+            credits: newTotal,
+            warningLevel,
+            isLoading: false
+          });
+          
+          return true;
+        } catch (error) {
+          console.error('Error deducting credits:', error);
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to deduct credits',
+            isLoading: false
+          });
+          return false;
+        }
+      },
+      
+      setCredits: (credits: number) => {
+        // Calculate warning level
+        let warningLevel: 'none' | 'low' | 'critical' = 'none';
+        if (credits < 100) {
+          warningLevel = 'critical';
+        } else if (credits < 5000) {
+          warningLevel = 'low';
+        }
+        
+        set({ credits, warningLevel });
+      },
+      
+      setCreditBreakdown: (breakdown: CreditBreakdown) => {
+        set({ creditBreakdown: breakdown });
+      },
+      
+      clearError: () => {
+        set({ error: null });
       }
-      
-      const data = await response.json();
-      
-      set({
-        credits: data.totalCredits,
-        creditBreakdown: data.creditBreakdown,
-        recentTransactions: data.recentTransactions,
-        isLoading: false
-      });
-    } catch (error) {
-      console.error('Error fetching credits:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to fetch credits',
-        isLoading: false
-      });
+    }),
+    {
+      name: 'credit-store',
+      getStorage: () => localStorage,
     }
-  },
-  
-  addCredits: async (amount: number, source: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      const response = await fetch('/api/credits/add', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          amount,
-          source
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to add credits');
-      }
-      
-      const data = await response.json();
-      
-      set({
-        credits: data.total,
-        isLoading: false
-      });
-      
-      // Refresh all credit data
-      get().fetchCredits();
-      
-      return data;
-    } catch (error) {
-      console.error('Error adding credits:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to add credits',
-        isLoading: false
-      });
-    }
-  },
-  
-  deductCredits: async (amount: number, reason: string, itemId?: string, itemType?: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      
-      // For this dummy function, we'll just assume it's working using a generic model
-      // In real implementation, you'd need to call the API with full model details
-      const response = await fetch('/api/credits/deduct', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          modelId: 'gpt-4o', // Placeholder model
-          promptLength: 'medium',
-          itemType,
-          itemId
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to deduct credits');
-      }
-      
-      const data = await response.json();
-      
-      set({
-        credits: data.remaining,
-        isLoading: false
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Error deducting credits:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to deduct credits',
-        isLoading: false
-      });
-      return false;
-    }
-  },
-  
-  setCredits: (credits: number) => {
-    set({ credits });
-  },
-  
-  setCreditBreakdown: (breakdown: CreditBreakdown) => {
-    set({ creditBreakdown: breakdown });
-  },
-  
-  clearError: () => {
-    set({ error: null });
-  }
-}));
+  )
+);

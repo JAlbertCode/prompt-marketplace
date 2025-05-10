@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { getUserCredits, deductCredits, calculatePromptRunCost } from '@/utils/clientCreditManager';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
 
 // This is a simplified mock of authentication
 // In a real app, this would come from your auth context/provider
 const getCurrentUserId = () => {
-  // This is just a placeholder - in a real app, get the actual user ID from auth
-  return 'user_123';
+  // Return a default user ID for now
+  // In production, this would come from the auth system
+  return 'user_default';
 };
 
 interface CreditContextType {
@@ -30,25 +32,44 @@ const CreditContext = createContext<CreditContextType | undefined>(undefined);
 export function CreditProvider({ children }: { children: React.ReactNode }) {
   const [credits, setCredits] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const { data: session, status } = useSession();
 
   const fetchCredits = useCallback(async () => {
     try {
       setLoading(true);
-      const userId = getCurrentUserId();
-      if (!userId) return;
       
-      const userCredits = await getUserCredits(userId);
-      setCredits(userCredits);
+      // Only fetch credits if we have an authenticated session
+      if (status === 'authenticated' && session?.user?.id) {
+        const userId = session.user.id;
+        const userCredits = await getUserCredits(userId);
+        setCredits(userCredits);
+      } else if (status === 'loading') {
+        // Do nothing while session is loading
+        return;
+      } else {
+        // Session not authenticated or user ID not available
+        setCredits(0);
+      }
     } catch (error) {
       console.error('Error fetching credits:', error);
       toast.error('Failed to load your credit balance');
+      setCredits(0); // Reset to 0 on error
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [status, session]);
 
   useEffect(() => {
+    // Initialize credits on mount
     fetchCredits();
+    
+    // Set up refresh interval for credits (every 30 seconds)
+    const intervalId = setInterval(() => {
+      fetchCredits();
+    }, 30000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
   }, [fetchCredits]);
 
   const hasEnoughCredits = useCallback((amount: number): boolean => {
@@ -74,9 +95,13 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
 
   const chargeForPromptRun = useCallback(async (promptId: string, modelId: string): Promise<boolean> => {
     try {
-      const userId = getCurrentUserId();
-      if (!userId) return false;
+      // Only charge if we have an authenticated session
+      if (status !== 'authenticated' || !session?.user?.id) {
+        toast.error('You must be logged in to run prompts');
+        return false;
+      }
       
+      const userId = session.user.id;
       const { totalCost } = await calculatePromptRunCost(promptId, modelId);
       
       if (!hasEnoughCredits(totalCost)) {
@@ -100,7 +125,7 @@ export function CreditProvider({ children }: { children: React.ReactNode }) {
       toast.error('Failed to process the transaction');
       return false;
     }
-  }, [hasEnoughCredits]);
+  }, [hasEnoughCredits, status, session]);
 
   const value = {
     credits,

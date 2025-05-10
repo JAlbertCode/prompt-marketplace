@@ -29,6 +29,13 @@ export function formatNumber(num: number): string {
 }
 
 /**
+ * Format credits with appropriate suffix
+ */
+export function formatCredits(credits: number): string {
+  return formatNumber(credits);
+}
+
+/**
  * Convert credits to dollar equivalent
  * 1 credit = $0.000001
  */
