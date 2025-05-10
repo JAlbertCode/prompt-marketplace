@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { forceReloadStore } from '@/lib/hydrationHelper';
 import Link from 'next/link';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFlowStore } from '@/store/useFlowStore';
@@ -25,21 +24,7 @@ export default function HomePage() {
   
   // Force refresh of data when component mounts
   useEffect(() => {
-    console.log('Home component mounted, refreshing data');
-    
-    // Attempt to force reload store data from localStorage
-    if (typeof window !== 'undefined') {
-      // Small delay to ensure the component is fully mounted
-      setTimeout(() => {
-        const storeReloaded = forceReloadStore('prompt-storage');
-        console.log('Prompt store reloaded:', storeReloaded);
-        
-        // If reload was successful, trigger a re-render
-        if (storeReloaded) {
-          setRefreshKey(prev => prev + 1);
-        }
-      }, 100);
-    }
+    console.log('Home component mounted, fetching data from API');
   }, []);
   
   // For the MVP, we'll use a mock current user ID
@@ -114,15 +99,6 @@ export default function HomePage() {
     });
   }, [availableFlows, searchQuery, creditFilter, showPrivateOnly, showDrafts, itemTypeFilter]);
   
-  const resetPromptStore = () => {
-    if (window.confirm('This will reset both the prompt and flow stores to their initial state. Any custom prompts and flows will be lost. Continue?')) {
-      promptStore.resetStore?.();
-      flowStore.resetStore?.();
-      unlockedFlowStore.resetStore?.();
-      toast.success('Stores reset successfully');
-    }
-  };
-  
   const resetFilters = () => {
     setSearchQuery('');
     setModelFilter('all');
@@ -153,41 +129,6 @@ export default function HomePage() {
         </div>
         
         <div className="flex space-x-2">
-          <button 
-            onClick={resetPromptStore}
-            className="text-xs text-blue-600 hover:text-blue-800 hover:underline mr-2"
-          >
-            Reset Stores
-          </button>
-          <button 
-            onClick={() => {
-              // Force reload data from localStorage
-              const reloaded = forceReloadStore('prompt-storage');
-              console.log('Manually reloaded store:', reloaded);
-              
-              // Force a re-render
-              setRefreshKey(prev => prev + 1);
-              
-              toast.success('Data refreshed');
-            }}
-            className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline mr-2"
-          >
-            Refresh Data
-          </button>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowPrivateOnly(!showPrivateOnly)}
-              className={`px-3 py-1 text-xs rounded-md ${showPrivateOnly ? 'bg-indigo-100 text-indigo-800 border border-indigo-300' : 'bg-gray-100 text-gray-600 border border-gray-300'}`}
-            >
-              {showPrivateOnly ? 'Private Only' : 'All Items'}
-            </button>
-            <button
-              onClick={() => setShowDrafts(!showDrafts)}
-              className={`px-3 py-1 text-xs rounded-md ${showDrafts ? 'bg-indigo-100 text-indigo-800 border border-indigo-300' : 'bg-gray-100 text-gray-600 border border-gray-300'}`}
-            >
-              {showDrafts ? 'Show Drafts' : 'Hide Drafts'}
-            </button>
-          </div>
           <Link href="/create">
             <Button>
               Create New

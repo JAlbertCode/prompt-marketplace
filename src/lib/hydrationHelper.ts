@@ -3,74 +3,36 @@
  */
 
 /**
- * Force reload Zustand from localStorage to ensure prompt display
- * 
- * @param storeName Name of the localStorage key
- * @returns Boolean indicating if reload was successful
+ * Fetch fresh data from the API
+ *
+ * @param endpoint API endpoint to fetch from
+ * @returns Promise with the data
  */
-export function forceReloadStore(storeName: string): boolean {
+export async function fetchFromApi<T>(endpoint: string): Promise<T> {
   try {
-    // Check if we're in the browser
-    if (typeof window === 'undefined') {
-      console.warn('Attempted to reload store on server-side');
-      return false;
+    const response = await fetch(`/api/${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
     }
-    
-    // Get the current store data
-    const storedData = localStorage.getItem(storeName);
-    if (!storedData) {
-      console.warn(`No data found for store: ${storeName}`);
-      return false;
-    }
-    
-    // Parse the store data
-    const parsedData = JSON.parse(storedData);
-    
-    // Re-apply it to force a refresh
-    localStorage.setItem(storeName, JSON.stringify(parsedData));
-    
-    return true;
+    return await response.json();
   } catch (error) {
-    console.error(`Failed to reload store ${storeName}:`, error);
-    return false;
+    console.error(`Failed to fetch from API (${endpoint}):`, error);
+    throw error;
   }
 }
 
 /**
- * Check if a new entity was added to a store
- * 
- * @param storeName Name of the localStorage key
- * @param entityType Type of entity to check (e.g., 'prompts')
- * @param savedCount Known previous count of entities
- * @returns New count of entities or 0 if unavailable
+ * Check if the API endpoint is available
+ *
+ * @param endpoint API endpoint to check
+ * @returns Boolean indicating if the endpoint is available
  */
-export function checkNewEntities(storeName: string, entityType: string, savedCount: number): number {
+export async function checkApiEndpoint(endpoint: string): Promise<boolean> {
   try {
-    // Check if we're in the browser
-    if (typeof window === 'undefined') {
-      return 0;
-    }
-    
-    // Get the current store data
-    const storedData = localStorage.getItem(storeName);
-    if (!storedData) {
-      return 0;
-    }
-    
-    // Parse the store data
-    const parsedData = JSON.parse(storedData);
-    
-    // Check the entity count
-    const currentCount = parsedData?.state?.[entityType]?.length || 0;
-    
-    // Log if there are new entities
-    if (currentCount > savedCount) {
-      console.log(`New ${entityType} detected: ${savedCount} → ${currentCount}`);
-    }
-    
-    return currentCount;
+    const response = await fetch(`/api/${endpoint}`, { method: 'HEAD' });
+    return response.ok;
   } catch (error) {
-    console.error(`Failed to check ${entityType} count:`, error);
-    return 0;
+    console.error(`Failed to check API endpoint (${endpoint}):`, error);
+    return false;
   }
 }
