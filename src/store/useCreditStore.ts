@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { PromptLength } from '@/lib/models/modelRegistry';
 
 interface CreditTransaction {
@@ -40,18 +39,17 @@ interface CreditStore {
 }
 
 export const useCreditStore = create<CreditStore>(
-  persist(
-    (set, get) => ({
-      credits: 0,
-      isLoading: false,
-      error: null,
-      creditBreakdown: {
-        purchased: 0,
-        bonus: 0,
-        referral: 0
-      },
-      recentTransactions: [],
-      warningLevel: 'none',
+  (set, get) => ({
+    credits: 0,
+    isLoading: false,
+    error: null,
+    creditBreakdown: {
+      purchased: 0,
+      bonus: 0,
+      referral: 0
+    },
+    recentTransactions: [],
+    warningLevel: 'none',
       
       fetchCredits: async () => {
         try {
@@ -145,15 +143,14 @@ export const useCreditStore = create<CreditStore>(
         try {
           set({ isLoading: true, error: null });
           
-          // For this dummy function, we'll just assume it's working using a generic model
-          // In real implementation, you'd need to call the API with full model details
+          // Call the API to deduct credits
           const response = await fetch('/api/credits/deduct', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              modelId: 'gpt-4o', // Placeholder model
+              modelId: 'gpt-4o',
               promptLength: 'medium',
               itemType,
               itemId
@@ -213,10 +210,6 @@ export const useCreditStore = create<CreditStore>(
       clearError: () => {
         set({ error: null });
       }
-    }),
-    {
-      name: 'credit-store',
-      getStorage: () => localStorage,
     }
   )
 );

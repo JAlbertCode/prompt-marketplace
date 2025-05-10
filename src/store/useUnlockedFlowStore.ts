@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 interface UnlockedFlowState {
   // The list of flow IDs that the user has unlocked
@@ -16,29 +15,24 @@ interface UnlockedFlowState {
 }
 
 export const useUnlockedFlowStore = create<UnlockedFlowState>(
-  persist(
-    (set, get) => ({
-      unlockedFlows: [],
-      
-      isFlowUnlocked: (flowId: string) => {
-        return get().unlockedFlows.includes(flowId);
-      },
-      
-      unlockFlow: (flowId: string) => {
-        // Only add the flow if it's not already unlocked
-        if (!get().isFlowUnlocked(flowId)) {
-          set((state) => ({
-            unlockedFlows: [...state.unlockedFlows, flowId],
-          }));
-        }
-      },
-      
-      setUnlockedFlows: (flowIds: string[]) => {
-        set({ unlockedFlows: flowIds });
-      },
-    }),
-    {
-      name: 'unlocked-flows-storage',
-    }
-  )
+  (set, get) => ({
+    unlockedFlows: [],
+    
+    isFlowUnlocked: (flowId: string) => {
+      return get().unlockedFlows.includes(flowId);
+    },
+    
+    unlockFlow: (flowId: string) => {
+      // Only add the flow if it's not already unlocked
+      if (!get().isFlowUnlocked(flowId)) {
+        set((state) => ({
+          unlockedFlows: [...state.unlockedFlows, flowId],
+        }));
+      }
+    },
+    
+    setUnlockedFlows: (flowIds: string[]) => {
+      set({ unlockedFlows: flowIds });
+    },
+  })
 );

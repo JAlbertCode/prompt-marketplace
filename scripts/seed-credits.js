@@ -58,8 +58,8 @@ async function main() {
         data: {
           userId: user.id,
           type: 'bonus',
-          amount: 100000, // 100,000 bonus credits = $0.10
-          remaining: 100000,
+          amount: 1000000, // 1,000,000 bonus credits = $1.00
+          remaining: 1000000,
           source: 'new_user_bonus',
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days expiry
           createdAt: new Date(),

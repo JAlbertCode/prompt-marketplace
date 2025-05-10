@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import { prismaFallback } from './db-fallback';
 
 // Define a type for the extended global object
 declare global {
@@ -7,7 +6,6 @@ declare global {
 }
 
 // Environment config
-const USE_FALLBACK = process.env.USE_DB_FALLBACK === 'true';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // Prisma client with logging in development only
@@ -33,12 +31,6 @@ if (IS_PRODUCTION) {
   // Set up connection error handling
   prisma.$on('error', (e) => {
     console.error('Prisma Client Error:', e);
-
-    // If fallback is enabled, attempt to switch to fallback mode
-    if (USE_FALLBACK) {
-      console.warn('Switching to database fallback mode...');
-      prisma = prismaFallback;
-    }
   });
   
   // Connection pool keep-alive ping (every 30 minutes)
@@ -50,10 +42,6 @@ if (IS_PRODUCTION) {
         });
     }, 30 * 60 * 1000);
   }
-} else if (USE_FALLBACK) {
-  // In development with fallback enabled
-  prisma = prismaFallback;
-  console.info('Using database fallback mode');
 } else {
   // In development with real DB connection
   // Reuse connection during hot reloads
@@ -75,7 +63,7 @@ if (IS_PRODUCTION) {
 
 // Add a safe disconnect method for cleanup/testing
 export const disconnectPrisma = async () => {
-  if (prisma && prisma !== prismaFallback) {
+  if (prisma) {
     await prisma.$disconnect();
   }
 };

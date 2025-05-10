@@ -20,7 +20,16 @@ const CreditStatusSummary: React.FC<CreditStatusSummaryProps> = ({
   
   // Fetch credits when component mounts
   React.useEffect(() => {
+    // Initial fetch
     fetchCredits();
+    
+    // Set up an interval to refresh credits regularly
+    const intervalId = setInterval(() => {
+      fetchCredits();
+    }, 15000); // Every 15 seconds
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, [fetchCredits]);
   
   if (isLoading) {

@@ -1,16 +1,3 @@
 {
-  "emails": [
-    {
-      "email": "jonathanalbert0115@gmail.com",
-      "joinedAt": "2025-05-07T21:10:41.741Z",
-      "ipAddress": "::1",
-      "source": "http://localhost:3000/waitlist"
-    },
-    {
-      "email": "Jay@Lilypad.tech",
-      "joinedAt": "2025-05-07T22:50:41.105Z",
-      "ipAddress": "::1",
-      "source": "http://localhost:3000/waitlist"
-    }
-  ]
+  "emails": []
 }

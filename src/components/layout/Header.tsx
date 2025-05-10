@@ -23,7 +23,16 @@ const Header: React.FC = () => {
   // Refresh credits when component mounts or session changes
   React.useEffect(() => {
     if (status === 'authenticated') {
+      // Always fetch the latest credits when the header loads
       fetchCredits();
+
+      // Set up an interval to refresh credits regularly
+      const intervalId = setInterval(() => {
+        fetchCredits();
+      }, 30000); // Every 30 seconds
+
+      // Cleanup interval on unmount
+      return () => clearInterval(intervalId);
     }
   }, [status, fetchCredits]);
   
@@ -32,13 +41,6 @@ const Header: React.FC = () => {
     return pathname === path;
   };
   
-  // Add 1,000,000 credits for testing
-  const handleAddTestCredits = () => {
-    addCredits(1000000, 'Test credit addition');
-    toast.success('Added 1,000,000 test credits!');
-    fetchCredits(); // Refresh credits immediately
-  };
-
   const toggleUserMenu = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
   };
@@ -216,14 +218,6 @@ const Header: React.FC = () => {
               </div>
             )}
             
-            {process.env.NODE_ENV === 'development' && (
-              <button
-                onClick={handleAddTestCredits}
-                className="ml-2 text-xs px-2 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                Test: Add 1M Credits
-              </button>
-            )}
           </nav>
         </div>
       </div>
