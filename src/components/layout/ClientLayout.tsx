@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import { useSession } from 'next-auth/react';
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -12,29 +13,29 @@ interface ClientLayoutProps {
 const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
   // Ensure consistent hydration
   const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
   
   useEffect(() => {
     // Initialize authentication state if needed
     try {
       if (typeof window !== 'undefined') {
-        // Check and set localStorage auth state
-        const authState = localStorage.getItem('isAuthenticated');
-        if (authState === null) {
-          // Default to not authenticated if not set
-          localStorage.setItem('isAuthenticated', 'false');
-        }
+        // Check and set localStorage auth state based on session data
+        const isAuthenticated = status === 'authenticated' && !!session?.user;
+        localStorage.setItem('isAuthenticated', isAuthenticated ? 'true' : 'false');
+        
+        // Debug logging
+        console.log('ClientLayout auth state:', { status, userId: session?.user?.id });
         
         // Ensure auth state is also saved in a cookie for server-side redirects
         // This helps with Vercel's redirect rules
-        const isAuth = authState === 'true';
-        document.cookie = `isAuthenticated=${isAuth ? 'true' : 'false'}; path=/; max-age=2592000`;
+        document.cookie = `isAuthenticated=${isAuthenticated ? 'true' : 'false'}; path=/; max-age=2592000`;
       }
     } catch (error) {
       console.error('LocalStorage access error:', error);
     }
     
     setMounted(true);
-  }, []);
+  }, [session, status]);
   
   // Show loading spinner while mounting
   if (!mounted) {

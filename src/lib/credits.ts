@@ -38,15 +38,28 @@ export interface BurnCreditsOptions {
  */
 export async function getUserCreditBuckets(userId: string) {
   try {
-    const buckets = await prisma.creditBucket.findMany({
+    // Prisma doesn't support OR with null values in the same property filter
+    // We need to use two separate queries and combine the results
+    
+    // Fetch buckets that never expire (expiresAt is null)
+    const neverExpiringBuckets = await prisma.creditBucket.findMany({
+      where: {
+        userId,
+        remaining: { gt: 0 },
+        expiresAt: null
+      },
+      orderBy: [
+        { createdAt: 'asc' } // Oldest first within each type
+      ]
+    });
+
+    // Fetch buckets that have not expired yet
+    const notYetExpiredBuckets = await prisma.creditBucket.findMany({
       where: {
         userId,
         remaining: { gt: 0 },
         expiresAt: {
-          OR: [
-            { equals: null }, // Never expires
-            { gt: new Date() }  // Not expired yet
-          ]
+          gt: new Date()  // Not expired yet
         }
       },
       orderBy: [
@@ -54,8 +67,11 @@ export async function getUserCreditBuckets(userId: string) {
       ]
     });
     
+    // Combine both result sets
+    const allBuckets = [...neverExpiringBuckets, ...notYetExpiredBuckets];
+    
     // Custom sort to enforce exact priority: purchased → bonus → referral
-    return buckets.sort((a, b) => {
+    return allBuckets.sort((a, b) => {
       const priorityOrder: Record<string, number> = {
         purchased: 0,
         bonus: 1,
@@ -300,7 +316,6 @@ export async function getUserCreditHistory(userId: string, limit: number = 10, o
       ]
     },
     include: {
-      model: true,
       creator: {
         select: {
           id: true,

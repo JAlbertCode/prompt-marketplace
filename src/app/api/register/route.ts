@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       data: {
         name,
         email,
-        hashedPassword,
+        password: hashedPassword, // Store the hashed password in the password field
       },
     });
 

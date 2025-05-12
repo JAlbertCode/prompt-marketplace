@@ -22,7 +22,10 @@ const Header: React.FC = () => {
   
   // Refresh credits when component mounts or session changes
   React.useEffect(() => {
-    if (status === 'authenticated') {
+    // Add debug logging for session state
+    console.log('Session state in Header:', status, session?.user?.id);
+    
+    if (status === 'authenticated' && session?.user?.id) {
       // Always fetch the latest credits when the header loads
       fetchCredits();
 
@@ -34,7 +37,7 @@ const Header: React.FC = () => {
       // Cleanup interval on unmount
       return () => clearInterval(intervalId);
     }
-  }, [status, fetchCredits]);
+  }, [status, fetchCredits, session]);
   
   // Check if a navigation link is active
   const isActive = (path: string) => {

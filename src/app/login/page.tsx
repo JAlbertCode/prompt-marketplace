@@ -38,12 +38,18 @@ export default function LoginPage() {
 
         if (result?.error) {
           setError("Invalid login credentials");
+          console.error("Login error:", result.error);
         } else {
           toast.success("Welcome back!");
+          // Use router.push and then force a refresh to ensure the session is loaded
           router.push("/dashboard");
-          router.refresh();
+          // Force a hard refresh to rebuild the page with the new auth state
+          setTimeout(() => {
+            window.location.href = "/dashboard";
+          }, 300);
         }
       } catch (error) {
+        console.error("Login error:", error);
         setError("An unexpected error occurred");
       } finally {
         setIsLoading(false);
