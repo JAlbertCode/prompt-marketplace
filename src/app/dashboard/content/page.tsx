@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { usePromptStore } from '@/store/usePromptStore';
 import { useFlowStore } from '@/store/useFlowStore';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { forceReloadStore } from '@/lib/hydrationHelper';
 import PromptCard from '@/components/ui/PromptCard';
@@ -15,7 +16,8 @@ export default function ContentPage() {
   
   // Get prompts from the store
   const promptStore = usePromptStore();
-  const currentUserId = 'current-user';
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id || 'current-user';
   
   // Force load prompts when component mounts
   useEffect(() => {
@@ -31,12 +33,18 @@ export default function ContentPage() {
     
     // Get prompts where this user is the creator
     const userPrompts = promptStore.prompts?.filter(
-      prompt => prompt.creatorId === currentUserId || prompt.ownerId === currentUserId
+      prompt => {
+        // Only include prompts that the user explicitly created (not system prompts)
+        // Exclude any prompts where creatorId is 'system' or where creatorName is 'PromptFlow'
+        return (prompt.creatorId === currentUserId || prompt.ownerId === currentUserId) &&
+               prompt.creatorId !== 'system' && 
+               prompt.creatorName !== 'PromptFlow';
+      }
     ) || [];
     
     setMyPrompts(userPrompts);
     console.log(`Found ${userPrompts.length} prompts created by user`);
-  }, [promptStore, refreshKey]);
+  }, [promptStore, refreshKey, currentUserId]);
   
   // Add listener for storage events to catch updates
   useEffect(() => {
