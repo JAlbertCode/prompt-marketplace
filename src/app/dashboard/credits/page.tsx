@@ -1,11 +1,11 @@
 import React from 'react';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getUserTotalCredits } from '@/lib/credits';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { checkServerAuth } from '@/lib/auth/helpers/serverAuth';
+import CreditDisplay from '@/components/dashboard/CreditDisplay';
 
 export const metadata = {
   title: 'Purchase Credits - PromptFlow',
@@ -98,17 +98,30 @@ function CreditPackage({
 }
 
 export default async function CreditsPage() {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication using our helper
+  const { isAuthenticated, userId } = await checkServerAuth();
   
-  if (!session?.user) {
+  if (!isAuthenticated) {
     redirect('/login?returnUrl=/dashboard/credits');
   }
   
   // Get user's current credit balance and monthly burn
-  const userId = session.user.id;
-  const creditBalance = await getUserTotalCredits(userId);
-  const monthlyBurn = await getMonthlyBurn(userId);
+  let creditBalance = 0;
+  let monthlyBurn = 0;
+  
+  // We'll get the credit balance directly from the client side to avoid
+  // authentication issues with the server-side auth
+  // Monthly burn is not critical, so we'll keep that server-side
+  try {
+    if (userId && userId !== 'unknown') {
+      // Only try to get monthly burn (non-critical) from server-side
+      monthlyBurn = await getMonthlyBurn(userId);
+    }
+  } catch (error) {
+    console.error("Error fetching monthly burn:", error);
+    // Continue with 0 monthly burn on error
+  }
+  
   const creditTier = getCreditTier(monthlyBurn);
   
   return (
@@ -123,13 +136,7 @@ export default async function CreditsPage() {
       
       {/* Credit overview cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-5">
-          <div className="text-sm font-medium text-gray-500 mb-1">Available Credits</div>
-          <div className="text-3xl font-bold mb-1">{creditBalance.toLocaleString()}</div>
-          <div className="text-sm text-gray-600">
-            = ${(creditBalance * 0.000001).toFixed(6)} USD
-          </div>
-        </div>
+        <CreditDisplay />
         
         <div className="bg-white rounded-lg border border-gray-200 p-5">
           <div className="text-sm font-medium text-gray-500 mb-1">30-Day Usage</div>

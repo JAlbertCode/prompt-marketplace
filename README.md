@@ -34,7 +34,7 @@ Unlike traditional subscription models, PromptFlow uses a threshold-based auto-r
 - System automatically purchases new credits when balance falls below threshold
 - Payment uses customer's default payment method stored in Stripe
 
-See [THRESHOLD_RENEWAL.md](THRESHOLD_RENEWAL.md) for detailed implementation.
+Details for threshold-based renewal implementation are included in this README.
 
 ## Credit Bundles
 | Price | Base | Bonus | Total | Price/Million |
@@ -272,6 +272,17 @@ USE_DB_FALLBACK=true
 
 This will allow the application to function using localStorage instead of requiring a database connection.
 
+## Migration to Supabase
+
+PromptFlow has been migrated from Neon/Prisma to Supabase for its database and authentication needs. The migration includes:
+
+- Replacing Prisma with Supabase client for database operations
+- Moving from NextAuth to Supabase Auth for authentication
+- Converting database schema to follow Supabase conventions
+- Updated credit system to use the new Supabase tables
+
+Detailed information about the migration is included in the sections below.
+
 ## Development Tips
 
 ### Environment Setup
@@ -288,7 +299,7 @@ The application includes a database fallback mode to handle database connection 
 
 - If you encounter Prisma errors in the console, make sure your database is properly configured
 - By default, the application uses `USE_DB_FALLBACK=true` and can work without a real database
-- See [DATABASE_FALLBACK.md](DATABASE_FALLBACK.md) for more details on troubleshooting database issues
+- See the troubleshooting section of this README for more details on handling database issues
 
 > NOTE: The application uses client-safe API routes for database operations. All direct Prisma usage is kept server-side to prevent browser compatibility issues.
 

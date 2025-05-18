@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcrypt";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { supabase } from "@/lib/supabase";
+import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request) {
   try {
@@ -16,12 +14,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
+    // Check if the email exists in our users table first
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
     if (existingUser) {
       return NextResponse.json(
@@ -30,42 +28,69 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Create the user in Supabase Auth with email confirmation enabled (best practice)
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name
+        },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/auth/callback`,
+        // Set a longer expiration time for the confirmation link (24 hours)
+        emailRedirectToExpiry: 86400
+        // Let Supabase handle email confirmation by default (emailConfirm: true is default)
+      }
+    });
 
-    // Create the user
-    const user = await prisma.user.create({
-      data: {
-        name,
+    if (signUpError) {
+      console.error("Error creating user in Supabase Auth:", signUpError);
+      return NextResponse.json(
+        { error: "Error creating user" },
+        { status: 500 }
+      );
+    }
+
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: "Error creating user - no user returned" },
+        { status: 500 }
+      );
+    }
+
+    // Create user record in users table
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
         email,
-        password: hashedPassword, // Store the hashed password in the password field
-      },
-    });
+        name
+      });
 
-    // Create initial credit bucket with 1M credits ($1.00)
-    await prisma.creditBucket.create({
-      data: {
-        userId: user.id,
-        type: 'bonus',
-        amount: 1000000, // 1,000,000 credits = $1.00
-        remaining: 1000000,
-        source: 'new_user_bonus',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days expiry
-      },
-    });
+    if (profileError) {
+      console.error("Error creating user profile:", profileError);
+      // Continue anyway since auth user was created
+    }
 
-    // Record the initial credit transaction
-    await prisma.creditTransaction.create({
-      data: {
-        userId: user.id,
-        amount: 1000000,
-        type: "BONUS",
-        description: "Initial signup bonus credits",
-      },
-    });
+    // Add 100k welcome bonus credits (NOT 1M)
+    const { error: creditError } = await supabase
+      .from('credit_ledger')
+      .insert({
+        id: uuidv4(),
+        user_id: authData.user.id,
+        amount: 100000, // 100k welcome credits
+        remaining: 100000,
+        source: 'bonus',
+        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString() // 90 days expiry
+      });
+
+    if (creditError) {
+      console.error("Error adding welcome credits:", creditError);
+      // Continue anyway since user was created
+    }
 
     return NextResponse.json(
-      { message: "User created successfully" },
+      { message: "User created successfully", user: { id: authData.user.id, email, name } },
       { status: 201 }
     );
   } catch (error) {

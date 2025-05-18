@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
@@ -10,18 +9,26 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
+  const verified = searchParams.get("verified");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Show success toast if user just registered
-  useState(() => {
+  // Show success toast if user just registered or verified email
+  useEffect(() => {
     if (registered) {
       toast.success("Account created! Please log in.");
     }
-  });
+    
+    if (verified) {
+      toast.success("Email verified successfully! You can now log in.");
+      
+      // Set the auth_verified flag to help with the login process
+      localStorage.setItem("auth_verified", "true");
+    }
+  }, [registered, verified]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -30,23 +37,74 @@ export default function LoginPage() {
       setError("");
 
       try {
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: false,
+        // Force cleanup localStorage to prevent issues
+        if (localStorage.getItem("auth_verified") && !verified) {
+          localStorage.removeItem("auth_verified");
+        }
+        
+        // Use our Supabase login endpoint
+        const response = await fetch("/api/auth/supabase/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
         });
 
-        if (result?.error) {
-          setError("Invalid login credentials");
-          console.error("Login error:", result.error);
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (data.needsEmailConfirmation) {
+            if (data.rateLimited) {
+              toast.error("Please check your email for the confirmation link that was recently sent.");
+            } else {
+              toast.success("Confirmation email sent! Please check your inbox.");
+            }
+            setError(data.error || "Please verify your email before logging in.");
+            
+            // If the user is verified but still getting this error, try to force confirm
+            if (verified || localStorage.getItem("auth_verified")) {
+              try {
+                const confirmResponse = await fetch("/api/auth/supabase/confirm-email", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ email }),
+                });
+                
+                const confirmData = await confirmResponse.json();
+                
+                if (confirmResponse.ok && confirmData.success) {
+                  toast.success("Email confirmed! Please try logging in again.");
+                  // Don't auto-retry the login to avoid infinite loops
+                }
+              } catch (confirmError) {
+                console.error("Error confirming email:", confirmError);
+              }
+            }
+          } else {
+            setError(data.error || "Invalid login credentials");
+          }
+          
+          console.error("Login error:", data.error);
         } else {
+          // Store session info for the app to use
+          localStorage.setItem("supabase_user", JSON.stringify(data.user));
+          localStorage.setItem("supabase_session", JSON.stringify(data.session));
+          
+          // Clean up auth_verified flag as it's no longer needed
+          localStorage.removeItem("auth_verified");
+          
           toast.success("Welcome back!");
-          // Use router.push and then force a refresh to ensure the session is loaded
-          router.push("/dashboard");
-          // Force a hard refresh to rebuild the page with the new auth state
-          setTimeout(() => {
-            window.location.href = "/dashboard";
-          }, 300);
+          
+          // Ensure application knows about the logged in state
+          // Set cookie for redundancy
+          document.cookie = `supabase_auth=true; path=/; max-age=86400; SameSite=Lax`;
+          document.cookie = `isAuthenticated=true; path=/; max-age=86400; SameSite=Lax`;
+          
+          // Force full page reload to ensure all components pick up the authentication state
+          window.location.href = "/home";
         }
       } catch (error) {
         console.error("Login error:", error);
@@ -122,6 +180,17 @@ export default function LoginPage() {
             </div>
           </div>
 
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <Link
+                href="/reset-password"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                Forgot your password?
+              </Link>
+            </div>
+          </div>
+
           <div>
             <button
               type="submit"
@@ -147,7 +216,7 @@ export default function LoginPage() {
 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
-              onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
+              onClick={() => toast.error("GitHub login is currently being updated to work with Supabase")}
               className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
             >
               <svg
@@ -165,7 +234,7 @@ export default function LoginPage() {
             </button>
 
             <button
-              onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+              onClick={() => toast.error("Google login is currently being updated to work with Supabase")}
               className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
             >
               <svg

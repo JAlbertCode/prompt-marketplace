@@ -1,8 +1,5 @@
 import React from 'react';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getUserTotalCredits } from '@/lib/credits';
 import Link from 'next/link';
 import { 
   CreditCard, 
@@ -13,6 +10,8 @@ import {
   FileText
 } from 'lucide-react';
 import { formatCredits } from '@/lib/creditHelpers';
+import { checkServerAuth } from '@/lib/auth/helpers/serverAuth';
+import DashboardCreditCard from '@/components/dashboard/DashboardCreditCard';
 
 // Sample data for recent activity
 const recentActivity = [
@@ -50,22 +49,11 @@ const recentActivity = [
 ];
 
 export default async function DashboardPage() {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication using our helper
+  const { isAuthenticated, userId, user } = await checkServerAuth();
   
-  if (!session?.user) {
+  if (!isAuthenticated) {
     redirect('/login?returnUrl=/dashboard');
-  }
-  
-  // Get user's current credit balance
-  const userId = session.user.id;
-  let creditBalance = 0;
-  
-  try {
-    creditBalance = await getUserTotalCredits(userId);
-  } catch (error) {
-    console.error('Error fetching credit balance:', error);
-    // Continue with 0 balance on error
   }
   
   return (
@@ -74,7 +62,7 @@ export default async function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-gray-600 mt-1">
-          Welcome back, {session.user.name || 'User'}
+          Welcome back, {user?.name || 'User'}
         </p>
       </div>
       
@@ -155,18 +143,7 @@ export default async function DashboardPage() {
         </div>
         
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h3 className="text-sm text-gray-500 uppercase tracking-wider font-medium mb-2">Available Credits</h3>
-            <div className="text-3xl font-bold text-gray-900">{formatCredits(creditBalance)}</div>
-            <div className="mt-1 text-sm text-gray-500">= ${(creditBalance * 0.000001).toFixed(2)} USD</div>
-            
-            <Link
-              href="/dashboard/credits"
-              className="mt-4 inline-flex items-center text-sm text-blue-600 font-medium"
-            >
-              Purchase Credits <ArrowRight className="ml-1 h-3.5 w-3.5" />
-            </Link>
-          </div>
+          <DashboardCreditCard />
           
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h3 className="text-sm text-gray-500 uppercase tracking-wider font-medium mb-2">Current Month Usage</h3>

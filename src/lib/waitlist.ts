@@ -1,36 +1,33 @@
-import fs from 'fs';
-import path from 'path';
-
-const waitlistFilePath = path.join(process.cwd(), 'src', 'data', 'waitlist.json');
+import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 interface WaitlistEntry {
   email: string;
-  joinedAt: string;
+  name?: string;
+  joinedAt?: string;
   ipAddress?: string;
   source?: string;
-}
-
-interface WaitlistData {
-  emails: WaitlistEntry[];
 }
 
 /**
  * Get all waitlist entries
  * @returns Array of waitlist entries
  */
-export function getWaitlistEntries(): WaitlistEntry[] {
+export async function getWaitlistEntries(): Promise<WaitlistEntry[]> {
   try {
-    if (!fs.existsSync(waitlistFilePath)) {
-      // Create the file with empty array if it doesn't exist
-      fs.writeFileSync(waitlistFilePath, JSON.stringify({ emails: [] }), 'utf8');
+    const { data, error } = await supabase
+      .from('waitlist_users')
+      .select('*')
+      .order('joined_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching waitlist entries:', error);
       return [];
     }
     
-    const rawData = fs.readFileSync(waitlistFilePath, 'utf8');
-    const data: WaitlistData = JSON.parse(rawData);
-    return data.emails || [];
+    return data || [];
   } catch (error) {
-    console.error('Error reading waitlist file:', error);
+    console.error('Error getting waitlist entries:', error);
     return [];
   }
 }
@@ -40,9 +37,24 @@ export function getWaitlistEntries(): WaitlistEntry[] {
  * @param email Email to check
  * @returns Boolean indicating if email exists
  */
-export function emailExists(email: string): boolean {
-  const entries = getWaitlistEntries();
-  return entries.some(entry => entry.email.toLowerCase() === email.toLowerCase());
+export async function emailExists(email: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('waitlist_users')
+      .select('email')
+      .ilike('email', email)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking email existence:', error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Error checking if email exists:', error);
+    return false;
+  }
 }
 
 /**
@@ -50,25 +62,28 @@ export function emailExists(email: string): boolean {
  * @param entry Waitlist entry to add
  * @returns Boolean indicating success
  */
-export function addToWaitlist(entry: WaitlistEntry): boolean {
+export async function addToWaitlist(entry: WaitlistEntry): Promise<boolean> {
   try {
     // Check if email already exists
-    if (emailExists(entry.email)) {
+    const exists = await emailExists(entry.email);
+    if (exists) {
       return false;
     }
     
-    // Get existing entries
-    const entries = getWaitlistEntries();
-    
     // Add new entry
-    entries.push({
-      ...entry,
-      joinedAt: entry.joinedAt || new Date().toISOString(),
-    });
+    const { error } = await supabase
+      .from('waitlist_users')
+      .insert({
+        id: uuidv4(),
+        email: entry.email,
+        name: entry.name || null,
+        joined_at: entry.joinedAt || new Date().toISOString()
+      });
     
-    // Save updated entries
-    const data: WaitlistData = { emails: entries };
-    fs.writeFileSync(waitlistFilePath, JSON.stringify(data, null, 2), 'utf8');
+    if (error) {
+      console.error('Error adding to waitlist:', error);
+      return false;
+    }
     
     return true;
   } catch (error) {

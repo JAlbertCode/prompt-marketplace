@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -11,33 +9,61 @@ import { logout as clearCustomAuth } from '@/lib/auth/authHelpers';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  session: any;
+  status: string;
+}
+
+const Header: React.FC<HeaderProps> = ({ session, status }) => {
   const { credits, addCredits, fetchCredits } = useCreditStore();
   const { favorites } = useFavoriteStore();
   const pathname = usePathname();
   const isLowCredits = credits < 5000;
-  const { data: session, status } = useSession();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const router = useRouter();
   
   // Refresh credits when component mounts or session changes
-  React.useEffect(() => {
+  useEffect(() => {
     // Add debug logging for session state
     console.log('Session state in Header:', status, session?.user?.id);
     
     if (status === 'authenticated' && session?.user?.id) {
       // Always fetch the latest credits when the header loads
-      fetchCredits();
+      fetchCredits().catch(error => {
+        console.error('Failed to fetch credits:', error);
+        toast.error('Error loading credits: ' + (error.message || 'Unknown error'));
+      });
 
       // Set up an interval to refresh credits regularly
       const intervalId = setInterval(() => {
-        fetchCredits();
+        fetchCredits().catch(error => console.error('Error refreshing credits:', error));
       }, 30000); // Every 30 seconds
 
       // Cleanup interval on unmount
       return () => clearInterval(intervalId);
     }
   }, [status, fetchCredits, session]);
+  
+  // Fetch credits when component mounts, but only if we're authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      console.log('Triggering initial credit fetch for authenticated user');
+      fetchCredits().catch(error => {
+        console.error('Initial credit fetch failed:', error);
+      });
+
+      // Set up a refresh interval for credits
+      const intervalId = setInterval(() => {
+        fetchCredits().catch(error => console.error('Interval credit refresh failed:', error));
+      }, 10000); // Every 10 seconds while developing
+      
+      return () => clearInterval(intervalId);
+    } else if (status === 'loading') {
+      console.log('Auth status still loading, waiting to fetch credits');
+    } else {
+      console.log('Not authenticated, skipping credit fetch');
+    }
+  }, [status, fetchCredits]); // Re-run when authentication status changes
   
   // Check if a navigation link is active
   const isActive = (path: string) => {
@@ -48,19 +74,12 @@ const Header: React.FC = () => {
     setIsUserMenuOpen(!isUserMenuOpen);
   };
 
-  const handleSignOut = async () => {
-    // Clear custom auth first
-    clearCustomAuth();
+  const handleSignOut = () => {
+    // Close the user menu
+    setIsUserMenuOpen(false);
     
-    // Then try next-auth signout
-    try {
-      await signOut({ callbackUrl: '/waitlist' });
-    } catch (error) {
-      // If next-auth fails, just redirect manually
-      router.push('/waitlist');
-    }
-    
-    toast.success('Signed out successfully');
+    // Redirect to dedicated signout page that handles everything
+    window.location.href = '/signout';
   };
   
   return (

@@ -12,7 +12,7 @@
  * $1 = 1,000,000 credits
  */
 
-import { prisma } from '@/lib/db';
+import { supabase, querySupabase } from '@/lib/supabase';
 import { PromptLength, calculatePromptCreditCost, getModelById } from '@/lib/models/modelRegistry';
 import { checkAutoRenewalThreshold } from '@/lib/autoRenewal';
 
@@ -31,6 +31,35 @@ export interface BurnCreditsOptions {
 }
 
 /**
+ * Get user's total available credits directly from the database
+ * Bypasses authentication middleware for displaying in UI
+ */
+export async function getDirectUserCredits(userId: string): Promise<number> {
+  if (!userId) return 0;
+  
+  try {
+    // Query the database directly to get credit buckets
+    const { data: creditBuckets, error } = await supabase
+      .from('credit_ledger')
+      .select('remaining')
+      .eq('user_id', userId)
+      .gt('remaining', 0)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+    
+    if (error) {
+      console.error('Error getting direct credits:', error);
+      return 0;
+    }
+    
+    // Sum the remaining credits
+    return creditBuckets?.reduce((total, bucket) => total + bucket.remaining, 0) || 0;
+  } catch (error) {
+    console.error('Error in direct credit fetch:', error);
+    return 0;
+  }
+}
+
+/**
  * Get user's credit buckets with proper burn priority:
  * 1. purchased
  * 2. bonus
@@ -38,37 +67,31 @@ export interface BurnCreditsOptions {
  */
 export async function getUserCreditBuckets(userId: string) {
   try {
-    // Prisma doesn't support OR with null values in the same property filter
-    // We need to use two separate queries and combine the results
-    
-    // Fetch buckets that never expire (expiresAt is null)
-    const neverExpiringBuckets = await prisma.creditBucket.findMany({
-      where: {
-        userId,
-        remaining: { gt: 0 },
-        expiresAt: null
-      },
-      orderBy: [
-        { createdAt: 'asc' } // Oldest first within each type
-      ]
-    });
+    // Fetch buckets that never expire (expires_at is null)
+    const { data: neverExpiringBuckets, error: error1 } = await supabase
+      .from('credit_ledger')
+      .select('*')
+      .eq('user_id', userId)
+      .gt('remaining', 0)
+      .is('expires_at', null)
+      .order('created_at', { ascending: true });
 
     // Fetch buckets that have not expired yet
-    const notYetExpiredBuckets = await prisma.creditBucket.findMany({
-      where: {
-        userId,
-        remaining: { gt: 0 },
-        expiresAt: {
-          gt: new Date()  // Not expired yet
-        }
-      },
-      orderBy: [
-        { createdAt: 'asc' } // Oldest first within each type
-      ]
-    });
+    const { data: notYetExpiredBuckets, error: error2 } = await supabase
+      .from('credit_ledger')
+      .select('*')
+      .eq('user_id', userId)
+      .gt('remaining', 0)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true });
+    
+    if (error1 || error2) {
+      console.error('Error fetching credit buckets:', error1 || error2);
+      return [];
+    }
     
     // Combine both result sets
-    const allBuckets = [...neverExpiringBuckets, ...notYetExpiredBuckets];
+    const allBuckets = [...(neverExpiringBuckets || []), ...(notYetExpiredBuckets || [])];
     
     // Custom sort to enforce exact priority: purchased → bonus → referral
     return allBuckets.sort((a, b) => {
@@ -78,7 +101,7 @@ export async function getUserCreditBuckets(userId: string) {
         referral: 2
       };
       
-      return priorityOrder[a.type] - priorityOrder[b.type];
+      return priorityOrder[a.source] - priorityOrder[b.source];
     });
   } catch (error) {
     console.error('Error getting credit buckets:', error);
@@ -93,6 +116,11 @@ export async function getUserCreditBuckets(userId: string) {
  * Get user's total available credits
  */
 export async function getUserTotalCredits(userId: string): Promise<number> {
+  // Don't try to load user-specific data if we don't have a real user ID
+  if (!userId || userId === 'unknown') {
+    return 0; // Default to 0 when we can't identify the user
+  }
+  
   try {
     const buckets = await getUserCreditBuckets(userId);
     return buckets.reduce((total, bucket) => total + bucket.remaining, 0);
@@ -163,65 +191,104 @@ export async function burnCredits(options: BurnCreditsOptions): Promise<boolean>
     ? Math.floor(baseCost * (creatorFeePercentage / 100)) 
     : 0;
   
-  // Execute transaction
-  return await prisma.$transaction(async (tx) => {
+  try {
+    // Start a transaction (we'll use multiple operations with error handling)
     let remainingToBurn = requiredCredits;
-    
+    let burnDetails = [];
+      
     // Burn from buckets in priority order
     for (const bucket of buckets) {
       if (remainingToBurn <= 0) break;
-      
+        
       const burnAmount = Math.min(bucket.remaining, remainingToBurn);
-      
-      await tx.creditBucket.update({
-        where: { id: bucket.id },
-        data: { remaining: { decrement: burnAmount } }
+      const newRemaining = bucket.remaining - burnAmount;
+
+      // Track updates to be made
+      burnDetails.push({
+        bucketId: bucket.id,
+        burnAmount,
+        newRemaining
       });
-      
+        
       remainingToBurn -= burnAmount;
     }
-    
-    // Log the transaction
-    await tx.creditTransaction.create({
-      data: {
-        userId,
-        modelId,
-        creditsUsed: requiredCredits,
-        flowId: flowId || null,
-        creatorId: creatorId || null,
-        creatorFeePercentage: creatorFeePercentage || 0,
-        itemType: itemType || 'completion',
-        itemId: itemId || null,
-        promptLength: effectivePromptLength
+
+    // Exit if we couldn't satisfy the total burn amount
+    if (remainingToBurn > 0) {
+      console.error('Failed to burn all required credits');
+      return false;
+    }
+      
+    // Apply all the burns
+    for (const detail of burnDetails) {
+      const { error } = await supabase
+        .from('credit_ledger')
+        .update({ remaining: detail.newRemaining })
+        .eq('id', detail.bucketId);
+        
+      if (error) {
+        console.error('Error updating credit bucket:', error);
+        throw error; // Will be caught by outer try/catch
       }
-    });
-    
+
+      // Record the burn in the credit_burns table
+      const { error: burnError } = await supabase
+        .from('credit_burns')
+        .insert({
+          user_id: userId,
+          prompt_id: itemType === 'prompt' ? itemId : null,
+          flow_id: flowId || null,
+          model_id: modelId,
+          length: effectivePromptLength,
+          credits_used: detail.burnAmount,
+          from_bucket_id: detail.bucketId,
+          creator_id: creatorId || null,
+          creator_fee: creatorId && creatorFee > 0 ? Math.floor(detail.burnAmount * (creatorFee / requiredCredits)) : 0
+        });
+
+      if (burnError) {
+        console.error('Error recording credit burn:', burnError);
+        throw burnError;
+      }
+    }
+      
     // If there's a creator fee, distribute it
     if (creatorId && creatorFee > 0) {
       const platformShare = Math.floor(creatorFee * 0.2); // Platform takes 20%
       const creatorShare = creatorFee - platformShare;
-      
+        
       // Credit creator's account (80% of the creator fee)
       if (creatorShare > 0) {
-        await tx.creditBucket.create({
-          data: {
-            userId: creatorId,
-            type: 'bonus',
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 90); // 90 days from now
+          
+        const { error: creditError } = await supabase
+          .from('credit_ledger')
+          .insert({
+            user_id: creatorId,
             amount: creatorShare,
             remaining: creatorShare,
-            source: `prompt_execution:${userId}`,
-            // Set expiry for 90 days from now
-            expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-          }
-        });
+            source: 'bonus',
+            stripe_payment_id: null,
+            expires_at: expiresAt.toISOString()
+          });
+          
+        if (creditError) {
+          console.error('Error crediting creator:', creditError);
+          // We don't throw here to avoid failing the whole transaction
+          // The platform got paid, but creator didn't - this should be handled by admin
+        }
       }
     }
-    
+      
     // Check if auto-renewal threshold is reached
     await checkAutoRenewalThreshold(userId);
-    
+      
     return true;
-  });
+  } catch (error) {
+    console.error('Error in credit burn transaction:', error);
+    return false;
+  }
 }
 
 /**
@@ -237,16 +304,24 @@ export async function addCredits(
   try {
     const expiresAt = expiryDays ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000) : null;
     
-    return await prisma.creditBucket.create({
-      data: {
-        userId,
-        type,
+    const { data, error } = await supabase
+      .from('credit_ledger')
+      .insert({
+        user_id: userId,
         amount,
         remaining: amount,
-        source,
-        expiresAt
-      }
-    });
+        source: type,  // We're using 'source' field to identify the bucket type
+        stripe_payment_id: type === 'purchased' ? source : null,
+        expires_at: expiresAt?.toISOString()
+      })
+      .select('*')
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data;
   } catch (error) {
     console.error('Error adding credits:', error);
     throw error; // Propagate the error to be handled by caller
@@ -271,6 +346,7 @@ export async function addAutomationBonus(userId: string, monthlyBurn: number) {
   }
   
   if (bonusAmount > 0) {
+    // Add credits with 30 days expiry
     await addCredits(
       userId, 
       bonusAmount, 
@@ -279,15 +355,22 @@ export async function addAutomationBonus(userId: string, monthlyBurn: number) {
       30 // 30 days expiry
     );
     
-    // Also log the bonus allocation
-    await prisma.creditBonus.create({
-      data: {
-        userId,
-        amount: bonusAmount,
-        reason: 'automation_monthly',
-        monthlyBurn
-      }
-    });
+    // Instead of using a separate table for bonus tracking,
+    // we'll log the allocation in a bonus_history table if needed later
+    // For now, we just include it in our automation_webhooks table
+    
+    // Update the monthly_credit_burn field in automation_webhooks
+    const { error } = await supabase
+      .from('automation_webhooks')
+      .update({ 
+        monthly_credit_burn: monthlyBurn,
+        last_triggered_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Error updating automation webhook data:', error);
+    }
   }
 }
 
@@ -295,10 +378,15 @@ export async function addAutomationBonus(userId: string, monthlyBurn: number) {
  * Get credit breakdown by bucket type
  */
 export async function getUserCreditBreakdown(userId: string): Promise<Record<CreditBucketType, number>> {
+  // Don't try to load user-specific data if we don't have a real user ID
+  if (!userId || userId === 'unknown') {
+    return { purchased: 0, bonus: 0, referral: 0 }; // Default empty breakdown
+  }
+  
   const buckets = await getUserCreditBuckets(userId);
   
   return buckets.reduce((acc, bucket) => {
-    const type = bucket.type as CreditBucketType;
+    const type = bucket.source as CreditBucketType;
     acc[type] = (acc[type] || 0) + bucket.remaining;
     return acc;
   }, { purchased: 0, bonus: 0, referral: 0 } as Record<CreditBucketType, number>);
@@ -308,33 +396,29 @@ export async function getUserCreditBreakdown(userId: string): Promise<Record<Cre
  * Get user's credit history (transactions)
  */
 export async function getUserCreditHistory(userId: string, limit: number = 10, offset: number = 0) {
-  return await prisma.creditTransaction.findMany({
-    where: { 
-      OR: [
-        { userId },
-        { creatorId: userId }
-      ]
-    },
-    include: {
-      creator: {
-        select: {
-          id: true,
-          name: true,
-          image: true
-        }
-      },
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true
-        }
-      }
-    },
-    orderBy: { createdAt: 'desc' },
-    skip: offset,
-    take: limit
-  });
+  // Don't try to load user-specific data if we don't have a real user ID
+  if (!userId || userId === 'unknown') {
+    return []; // Return empty history
+  }
+  
+  // Get burns where the user is either the consumer or creator
+  const { data: burns, error } = await supabase
+    .from('credit_burns')
+    .select(`
+      *,
+      user:user_id(*),
+      creator:creator_id(*)
+    `)
+    .or(`user_id.eq.${userId},creator_id.eq.${userId}`)
+    .order('timestamp', { ascending: false })
+    .range(offset, offset + limit - 1);
+  
+  if (error) {
+    console.error('Error fetching credit history:', error);
+    return [];
+  }
+  
+  return burns || [];
 }
 
 /**

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Metadata } from 'next';
 import DashboardShell from '@/components/layout/dashboard/DashboardShell';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { checkServerAuth } from '@/lib/auth/helpers/serverAuth';
 
 export const metadata: Metadata = {
   title: 'Dashboard - PromptFlow',
@@ -15,10 +14,10 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication with both NextAuth and Supabase
+  const { isAuthenticated } = await checkServerAuth();
   
-  if (!session?.user) {
+  if (!isAuthenticated) {
     redirect('/login?returnUrl=/dashboard');
   }
   

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 import { Redis } from '@upstash/redis';
 
@@ -130,6 +131,13 @@ async function applyRateLimit(request: NextRequest): Promise<NextResponse | null
 }
 
 export async function middleware(request: NextRequest) {
+  // Create a Supabase client for middleware
+  const res = NextResponse.next();
+  const supabase = createMiddlewareClient({ req: request, res });
+  
+  // Refresh session if expired
+  await supabase.auth.getSession();
+  
   // Apply rate limiting for API routes
   const rateLimitResponse = await applyRateLimit(request);
   if (rateLimitResponse) return rateLimitResponse;
@@ -145,9 +153,11 @@ export async function middleware(request: NextRequest) {
     '/api/auth',
     '/api/health', // Health check endpoint
     '/api/cron',   // Cron jobs with proper verification
-    '/auth',
+    '/auth',       // Auth endpoints including callback
     '/login',
     '/register',
+    '/signout',    // Add signout path
+    '/reset-password', // Add reset password path
     '/_next',
     '/static',
     '/assets',
@@ -195,13 +205,17 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Check for authentication
-  const authCookie = request.cookies.get('auth');
-  const sessionCookie = request.cookies.get('next-auth.session-token') || 
-                        request.cookies.get('__Secure-next-auth.session-token');
+  // Check for authentication from multiple sources
+  const authCookie = await request.cookies.get('auth');
+  const sessionCookie = await request.cookies.get('next-auth.session-token') || 
+                      await request.cookies.get('__Secure-next-auth.session-token');
+  const supabaseAuthCookie = (await request.cookies.get('supabase_auth'))?.value === 'true';
   
-  // If user has either authentication method, allow access
-  if (authCookie?.value === 'true' || sessionCookie) {
+  // Get Supabase auth status
+  const { data: { session: supabaseSession } } = await supabase.auth.getSession();
+  
+  // If user has any authentication method, allow access
+  if (authCookie?.value === 'true' || sessionCookie || supabaseAuthCookie || supabaseSession) {
     const response = NextResponse.next();
     
     // Apply security headers
@@ -213,7 +227,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Otherwise, redirect to login
-  return NextResponse.redirect(new URL('/api/auth/signin', request.url));
+  const redirectUrl = new URL('/login', request.url);
+  redirectUrl.searchParams.set('returnUrl', path);
+  return NextResponse.redirect(redirectUrl);
 }
 
 // Configure which paths the middleware runs on
