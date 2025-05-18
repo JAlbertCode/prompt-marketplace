@@ -206,16 +206,18 @@ export async function middleware(request: NextRequest) {
   }
 
   // Check for authentication from multiple sources
-  const authCookie = await request.cookies.get('auth');
-  const sessionCookie = await request.cookies.get('next-auth.session-token') || 
-                      await request.cookies.get('__Secure-next-auth.session-token');
-  const supabaseAuthCookie = (await request.cookies.get('supabase_auth'))?.value === 'true';
+  const cookieStore = await request.cookies;
+  const authCookie = cookieStore.get('auth');
+  const sessionCookie = cookieStore.get('next-auth.session-token') || 
+                      cookieStore.get('__Secure-next-auth.session-token');
+  const supabaseAuthCookie = cookieStore.get('supabase_auth');
+  const supabaseAuthValue = supabaseAuthCookie?.value === 'true';
   
   // Get Supabase auth status
   const { data: { session: supabaseSession } } = await supabase.auth.getSession();
   
   // If user has any authentication method, allow access
-  if (authCookie?.value === 'true' || sessionCookie || supabaseAuthCookie || supabaseSession) {
+  if (authCookie?.value === 'true' || sessionCookie || supabaseAuthValue || supabaseSession) {
     const response = NextResponse.next();
     
     // Apply security headers

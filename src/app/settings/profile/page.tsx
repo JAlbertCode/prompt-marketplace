@@ -1,10 +1,10 @@
 import React from 'react';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { User } from 'lucide-react';
 import { getUserTotalCredits } from '@/lib/credits';
 import Link from 'next/link';
+import { checkServerAuth, redirectToLogin } from '@/lib/auth/helpers/serverAuth';
 
 export const metadata = {
   title: 'Profile Settings - PromptFlow',
@@ -12,17 +12,22 @@ export const metadata = {
 };
 
 export default async function ProfilePage() {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication using our helper that works in the dashboard
+  const { isAuthenticated, userId, user } = await checkServerAuth();
   
-  if (!session?.user) {
-    redirect('/login?returnUrl=/settings/profile');
+  // Check for Supabase auth cookie explicitly - needs await in Next.js 15
+  const cookieStore = await cookies();
+  const supabaseAuth = cookieStore.get('supabase_auth');
+  const isAuthenticatedByCookie = supabaseAuth && supabaseAuth.value === 'true';
+  
+  if (!isAuthenticated && !isAuthenticatedByCookie) {
+    return redirectToLogin('/settings/profile');
   }
   
   // Get user's credit balance (for display purposes)
   let creditBalance = 0;
   try {
-    creditBalance = await getUserTotalCredits(session.user.id);
+    creditBalance = await getUserTotalCredits(userId || 'unknown');
   } catch (error) {
     console.error('Error fetching credit balance:', error);
     // Continue with 0 balance on error
@@ -43,10 +48,10 @@ export default async function ProfilePage() {
           <h2 className="text-lg font-medium mb-4">Profile Picture</h2>
           <div className="flex items-center">
             <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mr-6 overflow-hidden">
-              {session?.user?.image ? (
+              {user?.image ? (
                 <img 
-                  src={session.user.image} 
-                  alt={session.user.name || 'Profile'} 
+                  src={user.image} 
+                  alt={user.name || 'Profile'} 
                   className="w-full h-full object-cover" 
                 />
               ) : (
@@ -78,7 +83,7 @@ export default async function ProfilePage() {
               <input
                 id="displayName"
                 type="text"
-                defaultValue={session?.user?.name || ''}
+                defaultValue={user?.name || ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -90,7 +95,7 @@ export default async function ProfilePage() {
               <input
                 id="email"
                 type="email"
-                defaultValue={session?.user?.email || ''}
+                defaultValue={user?.email || ''}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-500"
               />

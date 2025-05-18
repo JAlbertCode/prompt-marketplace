@@ -1,6 +1,8 @@
 // src/lib/auth/authHelpers.ts
 'use client';
 
+import { redirect } from 'next/navigation';
+
 /**
  * Gets a cookie by name
  * @param name Cookie name
@@ -53,5 +55,16 @@ export const logout = (): void => {
   // Expire the auth cookie
   if (typeof window !== 'undefined') {
     document.cookie = 'auth=false; path=/; max-age=0';
+    document.cookie = 'supabase_auth=false; path=/; max-age=0';
+    document.cookie = 'isAuthenticated=false; path=/; max-age=0';
   }
+};
+
+/**
+ * Redirects to login with proper returnUrl handling
+ * @param currentPath - The current path to redirect back to after login
+ */
+export const redirectToLogin = (currentPath: string): void => {
+  const returnUrl = encodeURIComponent(currentPath);
+  redirect(`/login?returnUrl=${returnUrl}`);
 };

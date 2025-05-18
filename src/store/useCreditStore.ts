@@ -53,7 +53,10 @@ export const useCreditStore = create<CreditStore>(
       
     fetchCredits: async () => {
       try {
-        set({ isLoading: true, error: null });
+        // Don't set isLoading to true if we already have credits
+        // This prevents the UI from flashing "Loading..." when we already have data
+        const hasCredits = get().credits > 0;
+        set({ isLoading: !hasCredits, error: null });
         
         console.log('Fetching credits from balance API...');
         const response = await fetch(`/api/credits/balance?_t=${Date.now()}`, {
@@ -85,11 +88,18 @@ export const useCreditStore = create<CreditStore>(
           warningLevel,
           isLoading: false
         });
+        
+        // Store the last updated time to avoid too frequent updates
+        localStorage.setItem('last_credit_update', Date.now().toString());
       } catch (error) {
         console.error('Error fetching credits:', error);
+        // If we have existing credits, don't clear them on error
+        const existingCredits = get().credits;
         set({ 
           error: error instanceof Error ? error.message : 'Failed to fetch credits',
-          isLoading: false
+          isLoading: false,
+          // Keep existing credits on error if we have them
+          credits: existingCredits > 0 ? existingCredits : 0
         });
       }
     },

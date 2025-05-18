@@ -1,8 +1,7 @@
 import React from 'react';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { checkServerAuth } from '@/lib/auth/helpers/serverAuth';
 import { 
   PlusCircle, 
   FolderOpen, 
@@ -96,10 +95,10 @@ const sampleCollections = [
 ];
 
 export default async function PromptsPage() {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication using the same helper that works on the dashboard
+  const { isAuthenticated, userId, user } = await checkServerAuth();
   
-  if (!session?.user) {
+  if (!isAuthenticated) {
     redirect('/login?returnUrl=/dashboard/prompts');
   }
   

@@ -15,17 +15,20 @@ const DashboardCreditCard = () => {
   // Fetch credits when component mounts
   useEffect(() => {
     console.log('Dashboard credit card mounted, fetching credits...');
-    fetchCredits().catch(error => {
-      console.error('Error fetching credits in dashboard:', error);
-    });
-  }, [fetchCredits]);
+    // Only fetch if credits are 0 (initial) or we have an error
+    if (credits === 0 || isLoading) {
+      fetchCredits().catch(error => {
+        console.error('Error fetching credits in dashboard:', error);
+      });
+    }
+  }, [fetchCredits, credits, isLoading]);
   
   return (
     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
       <h3 className="text-sm text-gray-500 uppercase tracking-wider font-medium mb-2">Available Credits</h3>
       
       <div className="text-3xl font-bold text-gray-900">
-        {isLoading ? (
+        {isLoading && credits === 0 ? (
           <span className="animate-pulse">Loading...</span>
         ) : (
           formatCredits(credits)

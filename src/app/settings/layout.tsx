@@ -1,10 +1,10 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import DashboardShell from '@/components/layout/dashboard/DashboardShell';
 import SettingsSidebar from '@/components/layout/settings/SettingsSidebar';
+import { checkServerAuth, redirectToLogin } from '@/lib/auth/helpers/serverAuth';
 
 export const metadata: Metadata = {
   title: 'Settings - PromptFlow',
@@ -16,11 +16,16 @@ export default async function SettingsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Check authentication
-  const session = await getServerSession(authOptions);
+  // Check authentication using our helper
+  const { isAuthenticated } = await checkServerAuth();
   
-  if (!session?.user) {
-    redirect('/login?returnUrl=/settings');
+  // Check for Supabase auth cookie explicitly - needs await in Next.js 15
+  const cookieStore = await cookies();
+  const supabaseAuth = cookieStore.get('supabase_auth');
+  const isAuthenticatedByCookie = supabaseAuth && supabaseAuth.value === 'true';
+  
+  if (!isAuthenticated && !isAuthenticatedByCookie) {
+    return redirectToLogin('/settings');
   }
   
   return (

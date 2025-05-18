@@ -3,6 +3,7 @@
  */
 
 import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 
@@ -25,10 +26,11 @@ export async function checkServerAuth() {
   // If not authenticated with NextAuth, try with Supabase
   // Just check for a Supabase auth cookie existence
   try {
-    // Get the auth cookie - in Next.js 15, headers() should be awaited before accessing its properties
+    // Get the auth cookie - in Next.js 15, headers() and cookies() should be awaited
     const headersList = await headers();
-    const cookieHeader = headersList.get('cookie') || '';
-    const hasSupabaseAuth = cookieHeader.includes('supabase_auth=true');
+    const cookieStore = await cookies();
+    const supabaseAuthCookie = cookieStore.get('supabase_auth');
+    const hasSupabaseAuth = supabaseAuthCookie?.value === 'true';
     
     if (hasSupabaseAuth) {
       // We're authenticated with Supabase, but we don't know the user ID
@@ -59,4 +61,13 @@ export async function checkServerAuth() {
 export async function getCurrentUserId(): Promise<string | null> {
   const { isAuthenticated, userId } = await checkServerAuth();
   return isAuthenticated && userId ? userId : null;
+}
+
+/**
+ * Redirects to login with return URL for protected routes
+ * @param path The path to return to after login
+ */
+export function redirectToLogin(path: string) {
+  const returnUrl = encodeURIComponent(path);
+  return redirect(`/login?returnUrl=${returnUrl}`);
 }

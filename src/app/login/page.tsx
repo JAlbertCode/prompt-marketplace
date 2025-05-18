@@ -103,8 +103,16 @@ export default function LoginPage() {
           document.cookie = `supabase_auth=true; path=/; max-age=86400; SameSite=Lax`;
           document.cookie = `isAuthenticated=true; path=/; max-age=86400; SameSite=Lax`;
           
+          // Check if there's a returnUrl in the query parameters
+          const urlParams = new URLSearchParams(window.location.search);
+          const returnUrl = urlParams.get('returnUrl');
+          
           // Force full page reload to ensure all components pick up the authentication state
-          window.location.href = "/home";
+          if (returnUrl) {
+            window.location.href = decodeURIComponent(returnUrl);
+          } else {
+            window.location.href = "/home";
+          }
         }
       } catch (error) {
         console.error("Login error:", error);

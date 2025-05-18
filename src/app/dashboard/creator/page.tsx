@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/layout/system/PageHeader';
 import ContentCard from '@/components/layout/system/ContentCard';
@@ -16,10 +15,11 @@ interface EarningMetrics {
 }
 
 export default function CreatorDashboardPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+
   const [metrics, setMetrics] = useState<EarningMetrics>({
     totalEarnings: 0,
     monthlyEarnings: 0,
@@ -29,28 +29,51 @@ export default function CreatorDashboardPage() {
   });
 
   useEffect(() => {
-    // Check if user is authenticated
-    if (status === 'unauthenticated') {
-      router.replace('/login?returnUrl=/dashboard/creator');
-      return;
-    }
-
-    // For demonstration purposes, set some example metrics
-    // In production, this would fetch data from API
-    if (status === 'authenticated') {
-      // Simulate API fetch
-      setTimeout(() => {
-        setMetrics({
-          totalEarnings: 50000, // 50,000 credits = $0.05
-          monthlyEarnings: 15000, // 15,000 credits = $0.015
-          totalPromptUses: 25,
-          totalFlowUses: 12,
-          totalFlowUnlocks: 3,
+    // Simple check for authentication by checking if the cookie exists
+    const checkAuth = async () => {
+      try {
+        // Use the credits API as a simple auth check
+        const response = await fetch('/api/credits/balance', {
+          credentials: 'include'
         });
-        setLoading(false);
-      }, 1000);
-    }
-  }, [status, router]);
+        
+        if (response.status === 401) {
+          // Unauthorized, redirect to login
+          router.replace('/login?returnUrl=/dashboard/creator');
+          return;
+        }
+        
+        if (response.ok) {
+          // We're authenticated, get user info from the response
+          const data = await response.json();
+          setUser({
+            id: data.userId || 'unknown',
+            name: 'User'
+          });
+          
+          // Load metrics data
+          setTimeout(() => {
+            setMetrics({
+              totalEarnings: 50000,
+              monthlyEarnings: 15000,
+              totalPromptUses: 25,
+              totalFlowUses: 12,
+              totalFlowUnlocks: 3,
+            });
+            setLoading(false);
+          }, 500);
+        } else {
+          // Other error, redirect to login
+          router.replace('/login?returnUrl=/dashboard/creator');
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+        router.replace('/login?returnUrl=/dashboard/creator');
+      }
+    };
+    
+    checkAuth();
+  }, [router]);
 
   // Format credits as dollar amount
   const formatCreditsToUsd = (credits: number) => {
@@ -63,7 +86,7 @@ export default function CreatorDashboardPage() {
     return num.toLocaleString();
   };
 
-  if (status === 'loading' || loading) {
+  if (loading) {
     return (
       <div className="p-8 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
