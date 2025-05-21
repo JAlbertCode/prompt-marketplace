@@ -9,7 +9,8 @@ import {
   Settings, 
   Sparkles,
   User,
-  FileText
+  FileText,
+  Zap
 } from 'lucide-react';
 import CreditsSidebar from './CreditsSidebar';
 
@@ -31,6 +32,11 @@ export default function DashboardShell({ children }: DashboardShellProps) {
       label: 'Prompts', 
       href: '/dashboard/prompts', 
       icon: <FileText className="h-5 w-5" /> 
+    },
+    { 
+      label: 'Flows', 
+      href: '/dashboard/flows', 
+      icon: <Zap className="h-5 w-5" /> 
     },
     { 
       label: 'Creator Tools', 

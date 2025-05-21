@@ -3,7 +3,6 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from './db';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcrypt';
 import { completeUserOnboarding } from './userOnboarding';
 
 export const authOptions: NextAuthOptions = {
@@ -24,32 +23,29 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+        // Instead of using bcrypt directly, call the API endpoint
+        // This keeps bcrypt on the server side only
+        try {
+          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password
+            })
+          });
+
+          const data = await response.json();
+          
+          if (!response.ok || !data.success) {
+            return null;
           }
-        });
-
-        if (!user || !user.password) {
+          
+          return data.user;
+        } catch (error) {
+          console.error('Error verifying credentials:', error);
           return null;
         }
-
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isCorrectPassword) {
-          return null;
-        }
-
-        // Update lastLogin timestamp
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastLogin: new Date() }
-        });
-
-        return user;
       }
     })
   ],

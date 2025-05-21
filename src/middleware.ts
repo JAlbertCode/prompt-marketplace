@@ -145,7 +145,7 @@ export async function middleware(request: NextRequest) {
   // Get current path
   const path = request.nextUrl.pathname;
 
-  // Public paths that should always be accessible
+  // Public paths that don't require authentication
   const publicPaths = [
     '/',
     '/waitlist',
@@ -158,6 +158,7 @@ export async function middleware(request: NextRequest) {
     '/register',
     '/signout',    // Add signout path
     '/reset-password', // Add reset password path
+    '/create',     // Create page is public but requires auth to save
     '/_next',
     '/static',
     '/assets',

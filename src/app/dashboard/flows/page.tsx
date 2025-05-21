@@ -1,118 +1,218 @@
-'use client';
+import React from 'react';
+import Link from 'next/link';
+import { PlayCircle, Edit, Star, StarOff, Plus, Filter, ArrowUpDown } from 'lucide-react';
+import { getCurrentUser } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import Button from '@/components/shared/Button';
-import { getFlows } from '@/lib/flows';
-import { Flow } from '@/types/flow';
-import FlowCard from '@/components/dashboard/FlowCard';
-import PromptFilters from '@/components/dashboard/PromptFilters';
-import { toast } from 'react-hot-toast';
-
-export default function FlowsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [flows, setFlows] = useState<Flow[]>([]);
-  const [filters, setFilters] = useState({ type: 'all', search: '' });
-  const [sort, setSort] = useState('newest');
-  const [view, setView] = useState<'grid' | 'list'>('grid');
-
-  useEffect(() => {
-    // Check if user is authenticated
-    if (status === 'unauthenticated') {
-      router.replace('/login?returnUrl=/dashboard/flows');
-      return;
-    }
-
-    // Load flows
-    async function loadFlows() {
-      setLoading(true);
-      try {
-        const flowsData = await getFlows(filters, sort);
-        setFlows(flowsData);
-      } catch (error) {
-        console.error('Failed to load flows:', error);
-        toast.error('Failed to load flows');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadFlows();
-  }, [filters, sort, status, router]);
-
-  const handleCreateFlow = () => {
-    router.push('/create?tab=flow');
+interface FlowsPageProps {
+  searchParams: {
+    view?: string;
+    sort?: string;
+    filter?: string;
   };
+}
 
-  const handleFilterChange = (newFilters: any) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  };
-
-  const handleSortChange = (newSort: string) => {
-    setSort(newSort);
-  };
-
-  const handleViewChange = (newView: 'grid' | 'list') => {
-    setView(newView);
-  };
-
-  if (status === 'loading' || loading) {
-    return (
-      <div className="p-8 flex justify-center items-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+// Function to get user's flows from Supabase
+async function getUserFlows(userId: string, view = 'all') {
+  const { createSupabaseServerClient } = await import('@/lib/supabase/server');
+  const supabase = createSupabaseServerClient();
+  
+  let query = supabase
+    .from('flows')
+    .select(`
+      *,
+      flow_steps (count)
+    `)
+    .order('created_at', { ascending: false });
+  
+  // Apply filters based on view
+  switch (view) {
+    case 'drafts':
+      query = query.eq('user_id', userId).eq('is_public', false);
+      break;
+    case 'published':
+      query = query.eq('user_id', userId).eq('is_public', true);
+      break;
+    case 'public':
+      query = query.eq('is_public', true);
+      break;
+    case 'favorites':
+      // We would need a favorites table to properly implement this
+      query = query.eq('user_id', userId);
+      break;
+    default:
+      // Default to showing user's flows
+      query = query.eq('user_id', userId);
   }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching flows:', error);
+    return [];
+  }
+  
+  return data || [];
+}
 
+export default async function FlowsPage({ searchParams }: FlowsPageProps) {
+  // Authentication check
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    redirect('/login?returnUrl=/dashboard/flows');
+  }
+  
+  // Get the current view from search params or default to "all"
+  const currentView = searchParams.view || 'all';
+  
+  // Get flows based on the current view
+  const flows = await getUserFlows(user.id, currentView);
+  
+  // Navigation tabs
+  const tabs = [
+    { id: 'all', label: 'All Flows' },
+    { id: 'drafts', label: 'Drafts' },
+    { id: 'published', label: 'Published' },
+    { id: 'favorites', label: 'Favorites' },
+    { id: 'public', label: 'Public' },
+  ];
+  
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Flows</h1>
-        <Button 
-          className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded flex items-center gap-2"
-          onClick={handleCreateFlow}
-        >
-          <Plus size={16} />
-          Create New Flow
-        </Button>
-      </div>
-
-      <PromptFilters 
-        onFilterChange={handleFilterChange}
-        onSortChange={handleSortChange}
-        onViewChange={handleViewChange}
-        view={view}
-      />
-
-      {flows.length === 0 ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center mt-6">
-          <p className="text-gray-500 mb-4">You don't have any flows yet.</p>
-          <Button 
-            className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded flex items-center gap-2 mx-auto"
-            onClick={handleCreateFlow}
+    <div>
+      {/* Page header */}
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Flows</h1>
+          <p className="text-gray-600 mt-1">
+            Create and run multi-step prompt automations
+          </p>
+        </div>
+        
+        <div className="mt-4 md:mt-0">
+          <Link
+            href="/create/flow"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <Plus size={16} />
-            Create Your First Flow
-          </Button>
+            <Plus className="mr-2 h-4 w-4" />
+            New Flow
+          </Link>
+        </div>
+      </div>
+      
+      {/* Tabs */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="flex overflow-x-auto py-1">
+          {tabs.map(tab => (
+            <Link
+              key={tab.id}
+              href={`/dashboard/flows?view=${tab.id}`}
+              className={`whitespace-nowrap px-4 py-2 border-b-2 font-medium text-sm ${
+                currentView === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+      
+      {/* Filters and Sort */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+        <div className="mb-4 md:mb-0">
+          <span className="text-sm text-gray-500">{flows.length} flows</span>
+        </div>
+        
+        <div className="flex space-x-2">
+          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <Filter className="mr-1.5 h-4 w-4" />
+            Filter
+          </button>
+          
+          <button className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <ArrowUpDown className="mr-1.5 h-4 w-4" />
+            Sort
+          </button>
+        </div>
+      </div>
+      
+      {/* Flows Grid */}
+      {flows.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {flows.map((flow) => (
+            <div key={flow.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{flow.name}</h3>
+                  <button className="text-gray-400 hover:text-yellow-500">
+                    <StarOff className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4">{flow.description || 'No description provided'}</p>
+                
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center text-gray-500">
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-medium">
+                      {flow.flow_steps?.count || 0} steps
+                    </span>
+                  </div>
+                  <div className="text-gray-500">
+                    {flow.is_public ? 'Public' : 'Private'}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 flex justify-between">
+                <div className="flex space-x-1">
+                  <Link
+                    href={`/flow/${flow.id}`}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <PlayCircle className="mr-1.5 h-3.5 w-3.5" />
+                    Run
+                  </Link>
+                  
+                  <Link
+                    href={`/create/flow?id=${flow.id}`}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <Edit className="mr-1.5 h-3.5 w-3.5" />
+                    Edit
+                  </Link>
+                </div>
+                
+                {flow.price ? (
+                  <div className="flex items-center">
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800">
+                      {flow.price.toLocaleString()} credits
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
-        <div className={`mt-6 ${view === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}`}>
-          {flows.map((flow) => (
-            <FlowCard
-              key={flow.id}
-              id={flow.id}
-              title={flow.title}
-              description={flow.description}
-              author={flow.author}
-              steps={flow.steps}
-              isFavorite={flow.isFavorite}
-              createdAt={flow.createdAt}
-            />
-          ))}
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No flows found</h3>
+          <p className="text-gray-600 mb-6">
+            {currentView === 'public' 
+              ? "No public flows are available at the moment."
+              : currentView === 'favorites'
+                ? "You haven't favorited any flows yet."
+                : "You haven't created any flows yet."}
+          </p>
+          
+          <Link
+            href="/create/flow"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create your first flow
+          </Link>
         </div>
       )}
     </div>

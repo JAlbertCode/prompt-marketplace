@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useCreditStore } from '@/store/useCreditStore';
-import { formatCredits } from '@/lib/creditHelpers';
+import { formatCredits } from '@/lib/credits/supabase';
 
 /**
  * Client-side component for displaying credit balance

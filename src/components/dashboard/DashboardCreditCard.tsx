@@ -4,7 +4,8 @@ import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { useCreditStore } from '@/store/useCreditStore';
-import { formatCredits } from '@/lib/creditHelpers';
+import { formatCredits } from '@/lib/credits/supabase';
+
 
 /**
  * Dashboard-specific credit display component

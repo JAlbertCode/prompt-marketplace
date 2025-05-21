@@ -1,3 +1,36 @@
+## Supabase Implementation
+
+PromptFlow uses Supabase as the primary database and authentication provider. The implementation includes:
+
+### Authentication
+- Email/password login
+- Google OAuth
+- GitHub OAuth
+
+### Database Schema
+- `users` - User profiles linked to Supabase Auth
+- `credit_ledger` - Credit buckets (purchase, bonus, referral)
+- `credit_burns` - Credit usage transactions
+- `prompts` - User-created prompts
+- `flows` - Multi-step prompt flows
+- `flow_steps` - Steps within flows
+- `models` - AI model registry
+- `payments` - Stripe payment records
+- `payouts` - Creator earnings
+- `automation_webhooks` - Webhook configurations for n8n
+
+### Credit System
+- 1 credit = $0.000001 USD
+- Credits stored in buckets with source type
+- Burn priority: purchased → bonus → referral
+
+### Core Features
+- Dashboard for prompts, flows, and creator revenue
+- Credit balance and usage tracking
+- Model cost based on prompt length
+- Creator revenue calculations (80% to creator)
+- Automation bonus credits
+
 # PromptFlow: AI Prompt Marketplace & Automation Platform
 
 PromptFlow is a comprehensive platform for AI prompt management, automation, and monetization.

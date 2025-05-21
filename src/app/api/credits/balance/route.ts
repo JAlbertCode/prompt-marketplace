@@ -1,83 +1,76 @@
-/**
- * Direct credits balance API - bypasses complex auth to get credits directly
- */
-
-import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getUserTotalCredits, getUserCreditBreakdown } from '@/lib/credits';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+import { Database } from "@/types/supabase";
 
 export async function GET(req: NextRequest) {
+  // Create a Supabase client
+  const supabase = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      cookies: {
+        get(name: string) {
+          return cookies().get(name)?.value;
+        },
+      },
+    }
+  );
+
+  // Get the user from the Supabase session
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized", message: "You must be logged in to view your credits" },
+      { status: 401 }
+    );
+  }
+
   try {
-    // Parse user ID from query string (if provided)
-    const userIdParam = req.nextUrl.searchParams.get('userId');
-    
-    // Try to get user ID from NextAuth session
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
-    
-    // Use the userId from query parameter if provided (for debugging)
-    if (userIdParam) {
-      userId = userIdParam;
+    // Get all credit buckets for the user
+    const { data: creditBuckets, error: creditError } = await supabase
+      .from("credit_ledger")
+      .select("*")
+      .eq("user_id", user.id)
+      .gt("remaining", 0)
+      .order("created_at", { ascending: true });
+
+    if (creditError) {
+      console.error("Error fetching credit buckets:", creditError);
+      return NextResponse.json(
+        { error: "Database error", message: creditError.message },
+        { status: 500 }
+      );
     }
-    
-    // If we don't have a user ID from NextAuth, try Supabase
-    if (!userId) {
-      // Get the Supabase user if available
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        userId = user.id;
-      }
-    }
-    
-    if (!userId) {
-      // Last resort - get the first user ID for testing
-      const { data: users } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1);
-      
-      if (users && users.length > 0) {
-        userId = users[0].id;
-        console.log('Using first user for testing:', userId);
-      } else {
-        return NextResponse.json({ 
-          error: 'No user ID available', 
-          userId: null,
-          totalCredits: 0,
-          creditBreakdown: {
-            purchased: 0,
-            bonus: 0,
-            referral: 0
-          }
-        });
-      }
-    }
-    
-    console.log('Getting credits for user:', userId);
-    
-    // Get credit data directly from the database
-    const totalCredits = await getUserTotalCredits(userId);
-    const creditBreakdown = await getUserCreditBreakdown(userId);
-    
-    console.log('Total credits found:', totalCredits);
-    
-    return NextResponse.json({
-      userId,
-      totalCredits,
-      creditBreakdown
+
+    // Calculate total credits
+    let totalCredits = 0;
+    let creditBreakdown = {
+      purchased: 0,
+      bonus: 0,
+      referral: 0,
+    };
+
+    creditBuckets.forEach((bucket) => {
+      totalCredits += bucket.remaining;
+      const source = bucket.source as keyof typeof creditBreakdown;
+      creditBreakdown[source] += bucket.remaining;
+    });
+
+    return NextResponse.json({ 
+      totalCredits, 
+      creditBreakdown 
     });
   } catch (error) {
-    console.error('Error getting credits balance:', error);
-    return NextResponse.json({ 
-      error: 'Error getting credit balance',
-      totalCredits: 0,
-      creditBreakdown: {
-        purchased: 0,
-        bonus: 0,
-        referral: 0
-      }
-    });
+    console.error("Unexpected error in credits API:", error);
+    return NextResponse.json(
+      { error: "Server error", message: "Failed to fetch credits" },
+      { status: 500 }
+    );
   }
 }

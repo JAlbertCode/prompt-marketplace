@@ -49,12 +49,21 @@ const recentActivity = [
 ];
 
 export default async function DashboardPage() {
-  // Check authentication using our helper
-  const { isAuthenticated, userId, user } = await checkServerAuth();
+  // Check authentication with Supabase
+  const user = await getCurrentUser();
   
-  if (!isAuthenticated) {
+  if (!user) {
     redirect('/login?returnUrl=/dashboard');
   }
+  
+  // Get user profile data
+  const profile = await getUserProfile(user.id);
+  
+  // Get recent activity
+  const recentActivity = await getUserRecentTransactions(user.id, 5);
+  
+  // Get monthly burn rate
+  const monthlyBurn = await getUserMonthlyBurn(user.id);
   
   return (
     <div>
@@ -62,7 +71,7 @@ export default async function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-gray-600 mt-1">
-          Welcome back, {user?.name || 'User'}
+          Welcome back, {profile?.name || user?.email || 'User'}
         </p>
       </div>
       
@@ -74,7 +83,7 @@ export default async function DashboardPage() {
               <FileText className="h-5 w-5" />
             </div>
             <div className="ml-4">
-              <h3 className="font-semibold text-gray-900">My Prompts</h3>
+              <h3 className="font-semibold text-gray-900">My Content</h3>
               <p className="text-sm text-gray-500">Create and manage your prompts</p>
             </div>
           </div>
@@ -147,8 +156,8 @@ export default async function DashboardPage() {
           
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
             <h3 className="text-sm text-gray-500 uppercase tracking-wider font-medium mb-2">Current Month Usage</h3>
-            <div className="text-3xl font-bold text-gray-900">3.2M</div>
-            <div className="mt-1 text-sm text-gray-500">= $3.20 USD</div>
+            <div className="text-3xl font-bold text-gray-900">{formatCredits(monthlyBurn)}</div>
+            <div className="mt-1 text-sm text-gray-500">= ${(monthlyBurn * 0.000001).toFixed(2)} USD</div>
             
             <Link
               href="/dashboard/credits/usage"
@@ -208,51 +217,55 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {recentActivity.map((activity) => (
-                <tr key={activity.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
-                        activity.type === 'prompt' ? 'bg-blue-100 text-blue-600' :
-                        activity.type === 'flow' ? 'bg-purple-100 text-purple-600' :
-                        'bg-amber-100 text-amber-600'
-                      }`}>
-                        {activity.type === 'prompt' ? <FileText className="h-4 w-4" /> :
-                         activity.type === 'flow' ? <ListTodo className="h-4 w-4" /> :
-                         <CreditCard className="h-4 w-4" />}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {activity.name}
+              {recentActivity.length > 0 ? (
+                recentActivity.map((activity) => (
+                  <tr key={activity.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                          activity.type === 'prompt' ? 'bg-blue-100 text-blue-600' :
+                          activity.type === 'flow' ? 'bg-purple-100 text-purple-600' :
+                          'bg-amber-100 text-amber-600'
+                        }`}>
+                          {activity.type === 'prompt' ? <FileText className="h-4 w-4" /> :
+                           activity.type === 'flow' ? <ListTodo className="h-4 w-4" /> :
+                           <CreditCard className="h-4 w-4" />}
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {activity.name || 'Untitled ' + activity.type}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {activity.model || (activity.type === 'purchase' ? 'Credit Bundle' : 'N/A')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="text-sm font-medium text-gray-900">
-                      {activity.type === 'purchase' 
-                        ? `+${formatCredits(activity.amount)}` 
-                        : `-${formatCredits(activity.credits)}`}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {activity.type === 'purchase'
-                        ? `+$${(activity.amount * 0.000001).toFixed(2)}`
-                        : `-$${(activity.credits * 0.000001).toFixed(6)}`}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
-                    {activity.time}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {activity.model || 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="text-sm font-medium text-gray-900">
+                        {`-${formatCredits(activity.credits)}`}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {`-${(activity.credits * 0.000001).toFixed(6)}`}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                      {new Date(activity.time).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    No recent activity found
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

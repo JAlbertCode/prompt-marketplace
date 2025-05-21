@@ -31,6 +31,14 @@ export interface Database {
           stripe_id?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "users_id_fkey"
+            columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       waitlist_users: {
         Row: {
@@ -51,6 +59,7 @@ export interface Database {
           name?: string | null
           joined_at?: string
         }
+        Relationships: []
       }
       credit_ledger: {
         Row: {
@@ -58,7 +67,7 @@ export interface Database {
           user_id: string
           amount: number
           remaining: number
-          source: string
+          source: 'purchase' | 'bonus' | 'referral'
           stripe_payment_id: string | null
           created_at: string
           expires_at: string | null
@@ -68,7 +77,7 @@ export interface Database {
           user_id: string
           amount: number
           remaining: number
-          source: string
+          source: 'purchase' | 'bonus' | 'referral'
           stripe_payment_id?: string | null
           created_at?: string
           expires_at?: string | null
@@ -78,11 +87,19 @@ export interface Database {
           user_id?: string
           amount?: number
           remaining?: number
-          source?: string
+          source?: 'purchase' | 'bonus' | 'referral'
           stripe_payment_id?: string | null
           created_at?: string
           expires_at?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       credit_burns: {
         Row: {
@@ -91,7 +108,7 @@ export interface Database {
           prompt_id: string | null
           flow_id: string | null
           model_id: string
-          length: string
+          length: 'short' | 'medium' | 'long'
           credits_used: number
           from_bucket_id: string
           creator_id: string | null
@@ -104,7 +121,7 @@ export interface Database {
           prompt_id?: string | null
           flow_id?: string | null
           model_id: string
-          length: string
+          length: 'short' | 'medium' | 'long'
           credits_used: number
           from_bucket_id: string
           creator_id?: string | null
@@ -117,13 +134,33 @@ export interface Database {
           prompt_id?: string | null
           flow_id?: string | null
           model_id?: string
-          length?: string
+          length?: 'short' | 'medium' | 'long'
           credits_used?: number
           from_bucket_id?: string
           creator_id?: string | null
           creator_fee?: number | null
           timestamp?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "credit_burns_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_burns_from_bucket_id_fkey"
+            columns: ["from_bucket_id"]
+            referencedRelation: "credit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_burns_creator_id_fkey"
+            columns: ["creator_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       payments: {
         Row: {
@@ -132,7 +169,7 @@ export interface Database {
           amount_usd: number
           credits_granted: number
           bonus_credits: number
-          stripe_txn_id: string
+          stripe_txn_id: string | null
           created_at: string
         }
         Insert: {
@@ -141,7 +178,7 @@ export interface Database {
           amount_usd: number
           credits_granted: number
           bonus_credits: number
-          stripe_txn_id: string
+          stripe_txn_id?: string | null
           created_at?: string
         }
         Update: {
@@ -150,9 +187,17 @@ export interface Database {
           amount_usd?: number
           credits_granted?: number
           bonus_credits?: number
-          stripe_txn_id?: string
+          stripe_txn_id?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       prompts: {
         Row: {
@@ -161,9 +206,9 @@ export interface Database {
           name: string
           description: string | null
           system_prompt: string
-          input_schema: Json
+          input_schema: Json | null
           model_id: string
-          creator_fee: number
+          creator_fee: number | null
           is_public: boolean
           created_at: string
         }
@@ -173,9 +218,9 @@ export interface Database {
           name: string
           description?: string | null
           system_prompt: string
-          input_schema?: Json
+          input_schema?: Json | null
           model_id: string
-          creator_fee?: number
+          creator_fee?: number | null
           is_public?: boolean
           created_at?: string
         }
@@ -185,12 +230,20 @@ export interface Database {
           name?: string
           description?: string | null
           system_prompt?: string
-          input_schema?: Json
+          input_schema?: Json | null
           model_id?: string
-          creator_fee?: number
+          creator_fee?: number | null
           is_public?: boolean
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "prompts_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       flows: {
         Row: {
@@ -199,7 +252,7 @@ export interface Database {
           name: string
           description: string | null
           is_public: boolean
-          price: number
+          price: number | null
           created_at: string
         }
         Insert: {
@@ -208,7 +261,7 @@ export interface Database {
           name: string
           description?: string | null
           is_public?: boolean
-          price?: number
+          price?: number | null
           created_at?: string
         }
         Update: {
@@ -217,9 +270,17 @@ export interface Database {
           name?: string
           description?: string | null
           is_public?: boolean
-          price?: number
+          price?: number | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "flows_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       flow_steps: {
         Row: {
@@ -227,22 +288,36 @@ export interface Database {
           flow_id: string
           prompt_id: string
           step_order: number
-          input_mapping: Json
+          input_mapping: Json | null
         }
         Insert: {
           id?: string
           flow_id: string
           prompt_id: string
           step_order: number
-          input_mapping?: Json
+          input_mapping?: Json | null
         }
         Update: {
           id?: string
           flow_id?: string
           prompt_id?: string
           step_order?: number
-          input_mapping?: Json
+          input_mapping?: Json | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "flow_steps_flow_id_fkey"
+            columns: ["flow_id"]
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flow_steps_prompt_id_fkey"
+            columns: ["prompt_id"]
+            referencedRelation: "prompts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       models: {
         Row: {
@@ -266,6 +341,7 @@ export interface Database {
           cost_medium?: number
           cost_long?: number
         }
+        Relationships: []
       }
       payouts: {
         Row: {
@@ -273,8 +349,8 @@ export interface Database {
           creator_id: string
           credits_earned: number
           usd_equivalent: number
-          source_type: string
-          source_id: string
+          source_type: 'prompt' | 'flow'
+          source_id: string | null
           created_at: string
         }
         Insert: {
@@ -282,8 +358,8 @@ export interface Database {
           creator_id: string
           credits_earned: number
           usd_equivalent: number
-          source_type: string
-          source_id: string
+          source_type: 'prompt' | 'flow'
+          source_id?: string | null
           created_at?: string
         }
         Update: {
@@ -291,36 +367,65 @@ export interface Database {
           creator_id?: string
           credits_earned?: number
           usd_equivalent?: number
-          source_type?: string
-          source_id?: string
+          source_type?: 'prompt' | 'flow'
+          source_id?: string | null
           created_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_creator_id_fkey"
+            columns: ["creator_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       automation_webhooks: {
         Row: {
           id: string
           user_id: string
           flow_id: string
-          monthly_credit_burn: number
-          last_triggered_at: string
+          monthly_credit_burn: number | null
+          last_triggered_at: string | null
         }
         Insert: {
           id?: string
           user_id: string
           flow_id: string
-          monthly_credit_burn?: number
-          last_triggered_at?: string
+          monthly_credit_burn?: number | null
+          last_triggered_at?: string | null
         }
         Update: {
           id?: string
           user_id?: string
           flow_id?: string
-          monthly_credit_burn?: number
-          last_triggered_at?: string
+          monthly_credit_burn?: number | null
+          last_triggered_at?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "automation_webhooks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_webhooks_flow_id_fkey"
+            columns: ["flow_id"]
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
-    Functions: {}
-    Enums: {}
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
   }
 }
